@@ -71,6 +71,21 @@ class DashboardScreen extends ConsumerWidget {
                 child: Image.asset('img/icon-colored.png', width: 140),
               ),
             ),
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: GestureDetector(
+                onLongPress: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sistem Pelaporan Masalah (Fitur akan datang)')),
+                  );
+                },
+                child: const Text(
+                  'v1.0.0+1',
+                  style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
             SafeArea(
               child: Column(
                 children: [
@@ -128,10 +143,10 @@ class DashboardScreen extends ConsumerWidget {
                                       ],
                                     ),
                                     const SizedBox(width: 12),
-                                    IconButton(
-                                      icon: const Icon(Icons.logout, color: SolluColors.danger, size: 20),
-                                      tooltip: 'Logout',
-                                      onPressed: () {
+                                      IconButton(
+                                        icon: const Icon(Icons.logout, color: SolluColors.danger, size: 20),
+                                        tooltip: 'Keluar',
+                                        onPressed: () {
                                         ref.read(activeEmployeeProvider.notifier).logout();
                                       },
                                     )

@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/features/pos/presentation/widgets/variant_dialog.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 
-class ProductGrid extends StatelessWidget {
+class ProductGrid extends StatefulWidget {
   final FocusNode? searchFocusNode;
 
   const ProductGrid({super.key, this.searchFocusNode});
+
+  @override
+  State<ProductGrid> createState() => _ProductGridState();
+}
+
+class _ProductGridState extends State<ProductGrid> {
+  int _selectedCategoryIndex = 0;
+
+  final List<String> _categories = [
+    'Semua',
+    'Makanan',
+    'Minuman',
+    'Cemilan',
+    'Paket Hemat',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +34,6 @@ class ProductGrid extends StatelessWidget {
       },
     );
 
-    final List<String> categories = ['Semua', 'Makanan', 'Minuman', 'Cemilan', 'Paket Hemat'];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -28,10 +41,13 @@ class ProductGrid extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: TextField(
-            focusNode: searchFocusNode,
+            focusNode: widget.searchFocusNode,
             decoration: InputDecoration(
               hintText: 'Cari produk atau scan barcode... (F1)',
-              prefixIcon: const Icon(Icons.search, color: SolluColors.neutralMuted),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: SolluColors.neutralMuted,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: SolluColors.neutral),
@@ -42,7 +58,10 @@ class ProductGrid extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+                borderSide: const BorderSide(
+                  color: SolluColors.primary,
+                  width: 2,
+                ),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -57,14 +76,27 @@ class ProductGrid extends StatelessWidget {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
+            itemCount: _categories.length,
             separatorBuilder: (context, index) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
-              final isSelected = index == 0;
+              final isSelected = _selectedCategoryIndex == index;
               return ChoiceChip(
-                label: Text(categories[index]),
+                avatar: isSelected
+                    ? const Icon(
+                        Icons.check_circle_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      )
+                    : null,
+                label: Text(_categories[index]),
                 selected: isSelected,
-                onSelected: (bool selected) {},
+                onSelected: (bool selected) {
+                  if (selected) {
+                    setState(() {
+                      _selectedCategoryIndex = index;
+                    });
+                  }
+                },
                 selectedColor: SolluColors.primary,
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : SolluColors.textDark,
@@ -74,7 +106,9 @@ class ProductGrid extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(
-                    color: isSelected ? SolluColors.primary : SolluColors.neutral,
+                    color: isSelected
+                        ? SolluColors.primary
+                        : SolluColors.neutral,
                   ),
                 ),
               );
@@ -140,10 +174,16 @@ class _ProductCard extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: SolluColors.secondary.withOpacity(0.1),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
                   ),
                   child: Center(
-                    child: Icon(Icons.fastfood_rounded, size: 48, color: SolluColors.secondary.withOpacity(0.5)),
+                    child: Icon(
+                      Icons.fastfood_rounded,
+                      size: 48,
+                      color: SolluColors.secondary.withOpacity(0.5),
+                    ),
                   ),
                 ),
               ),
@@ -161,14 +201,21 @@ class _ProductCard extends StatelessWidget {
                         children: [
                           Text(
                             product['name'],
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: SolluColors.textDark),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: SolluColors.textDark,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Stok: ${product['stock']}',
-                            style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: SolluColors.textMuted,
+                            ),
                           ),
                         ],
                       ),

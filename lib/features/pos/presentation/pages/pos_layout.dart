@@ -39,17 +39,26 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       case 'F1':
         _searchFocusNode.requestFocus();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fokusan kursor dipindah ke Pencarian Produk (F1)'), duration: Duration(seconds: 1)),
+          const SnackBar(
+            content: Text('Fokusan kursor dipindah ke Pencarian Produk (F1)'),
+            duration: Duration(seconds: 1),
+          ),
         );
         break;
       case 'F2':
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Panel Keranjang Terpilih (F2)'), duration: Duration(seconds: 1)),
+          const SnackBar(
+            content: Text('Panel Keranjang Terpilih (F2)'),
+            duration: Duration(seconds: 1),
+          ),
         );
         break;
       case 'F3':
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pesanan Berhasil Ditahan / Hold Order (F3)'), duration: Duration(seconds: 2)),
+          const SnackBar(
+            content: Text('Pesanan Berhasil Ditahan (F3)'),
+            duration: Duration(seconds: 2),
+          ),
         );
         break;
       case 'F4':
@@ -63,7 +72,10 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         break;
       case 'F10':
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mencetak ulang struk transaksi terakhir... (F10)'), duration: Duration(seconds: 2)),
+          const SnackBar(
+            content: Text('Mencetak ulang struk transaksi terakhir... (F10)'),
+            duration: Duration(seconds: 2),
+          ),
         );
         break;
       case 'F12':
@@ -91,12 +103,14 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           children: [
             Image.asset('img/logo-colored.png', height: 32),
             const SizedBox(width: 12),
-            const Text('Kasir POS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: SolluColors.textDark)),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.keyboard_alt_outlined, color: SolluColors.textDark),
+            icon: const Icon(
+              Icons.keyboard_alt_outlined,
+              color: SolluColors.textDark,
+            ),
             tooltip: 'Panduan Shortcut (F1-F12)',
             onPressed: () => ShortcutHelpDialog.show(context),
           ),
@@ -105,7 +119,10 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: SolluColors.background,
                   borderRadius: BorderRadius.circular(20),
@@ -113,7 +130,11 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                 ),
                 child: const Text(
                   'Shift: Siang  •  Kasir: Budi',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: SolluColors.textDark,
+                  ),
                 ),
               ),
             ),
@@ -121,17 +142,21 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           ElevatedButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Menyingkronkan Master Data ke SQLite...')),
+                const SnackBar(
+                  content: Text('Menyingkronkan Master Data ke SQLite...'),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: SolluColors.secondary,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             icon: const Icon(Icons.sync, size: 18),
-            label: const Text('Sync Data'),
+            label: const Text('Sinkronisasi Data'),
           ),
           const SizedBox(width: 16),
         ],
@@ -142,16 +167,14 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           Expanded(
             flex: 2,
             child: Container(
-              color: SolluColors.background, // Sedikit abu-abu agar kontras dengan keranjang yang putih
+              color: SolluColors
+                  .background, // Sedikit abu-abu agar kontras dengan keranjang yang putih
               child: ProductGrid(searchFocusNode: _searchFocusNode),
             ),
           ),
           // Right Pane: Cart Panel (1/3 of the screen)
           // Menghapus VerticalDivider dan menggunakan BoxShadow dari CartPanel
-          const Expanded(
-            flex: 1,
-            child: CartPanel(),
-          ),
+          const Expanded(flex: 1, child: CartPanel()),
         ],
       ),
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_app/core/theme/sollu_spacing.dart';
 
 class OpenShiftDialog extends StatelessWidget {
   const OpenShiftDialog({super.key});
@@ -14,23 +16,28 @@ class OpenShiftDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Buka Shift'),
+      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
+      title: const Text('Buka Shift', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 400,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Selamat datang! Silakan masukkan modal awal (kas) di laci untuk memulai shift Anda.', style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 24),
-            const Text('Modal Awal (Kas)', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            const Text(
+              'Selamat datang! Silakan masukkan modal awal (kas) di laci untuk memulai shift Anda.',
+              style: TextStyle(color: SolluColors.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: SolluSpacing.xxl),
+            const Text('Modal Awal (Kas)', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+            const SizedBox(height: SolluSpacing.sm),
             TextField(
               keyboardType: TextInputType.number,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: SolluColors.primary),
               decoration: InputDecoration(
                 prefixText: 'Rp ',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: SolluSpacing.inputPadding,
+                border: OutlineInputBorder(borderRadius: SolluSpacing.radiusSm),
               ),
             ),
           ],
@@ -39,13 +46,12 @@ class OpenShiftDialog extends StatelessWidget {
       actions: [
         ElevatedButton(
           onPressed: () {
-            // TODO: Start shift
             Navigator.of(context).pop();
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            backgroundColor: SolluColors.primary,
+            foregroundColor: Colors.white,
+            padding: SolluSpacing.buttonPadding,
           ),
           child: const Text('Mulai Shift'),
         ),
@@ -67,49 +73,51 @@ class CloseShiftDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Tutup Shift'),
+      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
+      title: const Text('Tutup Shift', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 400,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SummaryRow('Modal Awal', 'Rp 500.000'),
-            const SizedBox(height: 8),
-            _SummaryRow('Total Penjualan Tunai', 'Rp 1.250.000'),
-            const SizedBox(height: 8),
-            _SummaryRow('Kas Masuk/Keluar', 'Rp -50.000'),
-            const Divider(height: 24),
-            _SummaryRow('Ekspektasi Kas di Laci', 'Rp 1.700.000', isBold: true),
-            const SizedBox(height: 24),
-            const Text('Kas Aktual di Laci', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            const _SummaryRow('Modal Awal', 'Rp 500.000'),
+            const SizedBox(height: SolluSpacing.sm),
+            const _SummaryRow('Total Penjualan Tunai', 'Rp 1.250.000'),
+            const SizedBox(height: SolluSpacing.sm),
+            const _SummaryRow('Kas Masuk/Keluar', 'Rp -50.000'),
+            const Divider(height: 24, color: SolluColors.neutral),
+            const _SummaryRow('Ekspektasi Kas di Laci', 'Rp 1.700.000', isBold: true),
+            const SizedBox(height: SolluSpacing.xxl),
+            const Text('Kas Aktual di Laci', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+            const SizedBox(height: SolluSpacing.sm),
             TextField(
               keyboardType: TextInputType.number,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: SolluColors.primary),
               decoration: InputDecoration(
                 prefixText: 'Rp ',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: SolluSpacing.inputPadding,
+                border: OutlineInputBorder(borderRadius: SolluSpacing.radiusSm),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text('Selisih: Rp 0', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            const SizedBox(height: SolluSpacing.lg),
+            const Text('Selisih: Rp 0', style: TextStyle(color: SolluColors.success, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal (Esc)'),
+          child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
         ),
         ElevatedButton(
           onPressed: () {
-            // TODO: End shift logic
             Navigator.of(context).pop();
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+            backgroundColor: SolluColors.danger,
             foregroundColor: Colors.white,
+            padding: SolluSpacing.buttonPadding,
           ),
           child: const Text('Akhiri Shift'),
         ),
@@ -130,8 +138,20 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-        Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: isBold ? SolluColors.textDark : SolluColors.textMuted,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: isBold ? SolluColors.primary : SolluColors.textDark,
+          ),
+        ),
       ],
     );
   }

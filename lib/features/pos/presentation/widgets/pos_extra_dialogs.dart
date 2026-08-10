@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_app/core/theme/sollu_spacing.dart';
 
 class DiscountDialog extends StatelessWidget {
   const DiscountDialog({super.key});
@@ -14,7 +15,7 @@ class DiscountDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Diskon Bill (F4)', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('Diskon Bill (F4)', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -24,7 +25,8 @@ class DiscountDialog extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Persentase (%) atau Nominal (Rp)',
                 prefixIcon: const Icon(Icons.discount),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: SolluSpacing.inputPadding,
+                border: OutlineInputBorder(borderRadius: SolluSpacing.radiusSm),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -34,11 +36,15 @@ class DiscountDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal (Esc)'),
+          child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(),
-          style: ElevatedButton.styleFrom(backgroundColor: SolluColors.primary),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: SolluColors.primary,
+            foregroundColor: Colors.white,
+            padding: SolluSpacing.buttonPadding,
+          ),
           child: const Text('Terapkan Diskon'),
         ),
       ],
@@ -61,7 +67,7 @@ class CustomerDialog extends StatelessWidget {
     final mockCustomers = ['Pelanggan Umum', 'Budi Harapan (Member)', 'PT Solusi Makmur (B2B)'];
 
     return AlertDialog(
-      title: const Text('Pilih Pelanggan (F5)', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('Pilih Pelanggan (F5)', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 380,
         child: Column(
@@ -71,19 +77,21 @@ class CustomerDialog extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Cari pelanggan...',
                 prefixIcon: const Icon(Icons.person_search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: SolluSpacing.inputPadding,
+                border: OutlineInputBorder(borderRadius: SolluSpacing.radiusSm),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: SolluSpacing.lg),
             SizedBox(
-              height: 200,
+              height: 220,
               child: ListView.separated(
                 itemCount: mockCustomers.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1, color: SolluColors.neutral),
                 itemBuilder: (context, index) {
                   return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     leading: const Icon(Icons.person, color: SolluColors.primary),
-                    title: Text(mockCustomers[index]),
+                    title: Text(mockCustomers[index], style: const TextStyle(fontWeight: FontWeight.w600)),
                     onTap: () => Navigator.of(context).pop(),
                   );
                 },
@@ -95,7 +103,7 @@ class CustomerDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal (Esc)'),
+          child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
         ),
       ],
     );
@@ -127,12 +135,12 @@ class ShortcutHelpDialog extends StatelessWidget {
     ];
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       title: const Row(
         children: [
           Icon(Icons.keyboard, color: SolluColors.primary),
-          SizedBox(width: 12),
-          Text('Panduan Keyboard Shortcut', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          SizedBox(width: SolluSpacing.md),
+          Text('Panduan Keyboard Shortcut', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark)),
         ],
       ),
       content: SizedBox(
@@ -141,13 +149,16 @@ class ShortcutHelpDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Gunakan tombol fungsi pada keyboard untuk mempercepat navigasi kasir:', style: TextStyle(color: Colors.grey, fontSize: 13)),
-            const SizedBox(height: 16),
+            const Text(
+              'Gunakan tombol fungsi pada keyboard untuk mempercepat navigasi kasir:',
+              style: TextStyle(color: SolluColors.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: SolluSpacing.lg),
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: shortcuts.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1, color: SolluColors.neutral),
                 itemBuilder: (context, index) {
                   final s = shortcuts[index];
                   return Padding(
@@ -157,18 +168,18 @@ class ShortcutHelpDialog extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: SolluColors.primary.withOpacity(0.1),
+                            color: SolluColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: SolluColors.primaryLight.withOpacity(0.3)),
+                            border: Border.all(color: SolluColors.primaryLight.withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             s['key']!,
                             style: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.primary),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: SolluSpacing.lg),
                         Expanded(
-                          child: Text(s['desc']!, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                          child: Text(s['desc']!, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: SolluColors.textDark)),
                         ),
                       ],
                     ),
@@ -182,7 +193,11 @@ class ShortcutHelpDialog extends StatelessWidget {
       actions: [
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(),
-          style: ElevatedButton.styleFrom(backgroundColor: SolluColors.primary),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: SolluColors.primary,
+            foregroundColor: Colors.white,
+            padding: SolluSpacing.buttonPadding,
+          ),
           child: const Text('Tutup (Esc)'),
         ),
       ],

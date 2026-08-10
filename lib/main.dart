@@ -21,13 +21,13 @@ class SolluPosApp extends ConsumerWidget {
 
     return _GlobalShortcutWrapper(
       child: MaterialApp.router(
-        title: 'Sollu POS',
+        title: 'Sollu POS App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: SolluColors.primary,
             primary: SolluColors.primary,
             secondary: SolluColors.secondary,
-            background: SolluColors.background,
+            surface: SolluColors.background,
           ),
           textTheme: GoogleFonts.plusJakartaSansTextTheme(),
           scaffoldBackgroundColor: SolluColors.background,
@@ -35,7 +35,41 @@ class SolluPosApp extends ConsumerWidget {
           cardTheme: CardThemeData(
             color: Colors.white,
             elevation: 2,
+            margin: const EdgeInsets.all(8),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SolluColors.neutral),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          dialogTheme: DialogThemeData(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 8,
+            actionsPadding: const EdgeInsets.all(20),
           ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.white,
@@ -62,6 +96,13 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
       autofocus: true,
       onKeyEvent: (FocusNode node, KeyEvent event) {
         if (event is KeyDownEvent || event is KeyRepeatEvent) {
+          final primaryFocus = FocusManager.instance.primaryFocus;
+          final isTextFieldFocused = primaryFocus?.context?.widget is EditableText;
+          
+          if (isTextFieldFocused) {
+            return KeyEventResult.ignored;
+          }
+
           final logicalKey = event.logicalKey;
           
           if (logicalKey == LogicalKeyboardKey.f1) {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_app/core/theme/sollu_spacing.dart';
 
 class PaymentDialog extends StatelessWidget {
   final int totalAmount;
@@ -15,11 +17,11 @@ class PaymentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       child: Container(
-        width: 800,
-        height: 600,
-        padding: const EdgeInsets.all(24),
+        width: 840,
+        height: 620,
+        padding: SolluSpacing.containerPadding,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -29,37 +31,38 @@ class PaymentDialog extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Pembayaran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 24),
-                  const Text('Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
+                  const Text('Pembayaran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                  const SizedBox(height: SolluSpacing.xxl),
+                  const Text('Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                  const SizedBox(height: SolluSpacing.lg),
                   Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
+                    spacing: SolluSpacing.md,
+                    runSpacing: SolluSpacing.md,
+                    children: const [
                       _PaymentMethodBtn('Tunai', Icons.money, isSelected: true),
                       _PaymentMethodBtn('QRIS', Icons.qr_code, isSelected: false),
                       _PaymentMethodBtn('EDC / Kartu', Icons.credit_card, isSelected: false),
                       _PaymentMethodBtn('Transfer Bank', Icons.account_balance, isSelected: false),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  const Text('Uang Diterima (Tunai)', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: SolluSpacing.xxxl),
+                  const Text('Uang Diterima (Tunai)', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                  const SizedBox(height: SolluSpacing.lg),
                   TextField(
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.primary),
                     decoration: InputDecoration(
                       prefixText: 'Rp ',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: SolluSpacing.inputPadding,
+                      border: OutlineInputBorder(borderRadius: SolluSpacing.radiusMd),
                     ),
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: SolluSpacing.lg),
                   // Quick Cash Buttons
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
+                    spacing: SolluSpacing.sm,
+                    runSpacing: SolluSpacing.sm,
+                    children: const [
                       _QuickCashBtn('Uang Pas'),
                       _QuickCashBtn('Rp 20.000'),
                       _QuickCashBtn('Rp 50.000'),
@@ -69,7 +72,7 @@ class PaymentDialog extends StatelessWidget {
                 ],
               ),
             ),
-            const VerticalDivider(width: 48, thickness: 1),
+            const VerticalDivider(width: 48, thickness: 1, color: SolluColors.neutral),
             // Right Column (Summary & Submit)
             Expanded(
               flex: 2,
@@ -77,30 +80,31 @@ class PaymentDialog extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: SolluSpacing.containerPadding,
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
+                      color: SolluColors.background,
+                      borderRadius: SolluSpacing.radiusMd,
+                      border: Border.all(color: SolluColors.neutral),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text('Total Tagihan', style: TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 8),
+                        const Text('Total Tagihan', style: TextStyle(color: SolluColors.textMuted)),
+                        const SizedBox(height: SolluSpacing.sm),
                         Text(
                           'Rp $totalAmount',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: SolluColors.primary,
                           ),
                         ),
-                        const Divider(height: 32),
-                        const Text('Kembalian', style: TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 8),
+                        const Divider(height: 32, color: SolluColors.neutral),
+                        const Text('Kembalian', style: TextStyle(color: SolluColors.textMuted)),
+                        const SizedBox(height: SolluSpacing.sm),
                         const Text(
                           'Rp 0',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
                         ),
                       ],
                     ),
@@ -109,26 +113,25 @@ class PaymentDialog extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: () {},
                     icon: const Icon(Icons.add),
-                    label: const Text('Split Payment'),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                    label: const Text('Pembayaran Terpisah'),
+                    style: OutlinedButton.styleFrom(padding: SolluSpacing.buttonPadding),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: SolluSpacing.lg),
                   ElevatedButton(
                     onPressed: () {
-                      // TODO: Process payment
                       Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(24),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      backgroundColor: SolluColors.primary,
+                      foregroundColor: Colors.white,
                     ),
-                    child: const Text('Bayar & Cetak Struk', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: const Text('Bayar & Cetak Struk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: SolluSpacing.md),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Batal (Esc)'),
+                    child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
                   ),
                 ],
               ),
@@ -151,24 +154,32 @@ class _PaymentMethodBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {},
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: SolluSpacing.radiusMd,
       child: Container(
         width: 120,
         height: 100,
+        padding: SolluSpacing.cardPadding,
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+            color: isSelected ? SolluColors.primary : SolluColors.neutral,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
-          color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : Colors.white,
+          borderRadius: SolluSpacing.radiusMd,
+          color: isSelected ? SolluColors.primaryLighter.withValues(alpha: 0.2) : Colors.white,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 32, color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey),
-            const SizedBox(height: 8),
-            Text(label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+            Icon(icon, size: 32, color: isSelected ? SolluColors.primary : SolluColors.neutralMuted),
+            const SizedBox(height: SolluSpacing.sm),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? SolluColors.primary : SolluColors.textDark,
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
       ),
@@ -185,6 +196,9 @@ class _QuickCashBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton(
       onPressed: () {},
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      ),
       child: Text(label),
     );
   }

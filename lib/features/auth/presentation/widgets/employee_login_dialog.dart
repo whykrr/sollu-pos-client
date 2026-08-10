@@ -16,7 +16,8 @@ class EmployeeLoginDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<EmployeeLoginDialog> createState() => _EmployeeLoginDialogState();
+  ConsumerState<EmployeeLoginDialog> createState() =>
+      _EmployeeLoginDialogState();
 }
 
 class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
@@ -47,8 +48,10 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 420,
-        padding: const EdgeInsets.all(28),
-        child: _selectedEmployee == null ? _buildEmployeeSelection() : _buildPinVerification(),
+        padding: const EdgeInsets.all(20),
+        child: _selectedEmployee == null
+            ? _buildEmployeeSelection()
+            : _buildPinVerification(),
       ),
     );
   }
@@ -58,14 +61,24 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Pilih Karyawan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+        const Text(
+          'Pilih Karyawan',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: SolluColors.textDark,
+          ),
+        ),
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
             hintText: 'Cari nama karyawan...',
             prefixIcon: const Icon(Icons.search),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 0,
+              horizontal: 16,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -79,9 +92,18 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: SolluColors.primaryLight,
-                  child: Text(emp['name'][0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    emp['name'][0],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                title: Text(emp['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  emp['name'],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(emp['role']),
                 onTap: () {
                   setState(() {
@@ -116,7 +138,11 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
             const Expanded(
               child: Text(
                 'Masukkan PIN',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -127,13 +153,30 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
         CircleAvatar(
           radius: 32,
           backgroundColor: SolluColors.primary,
-          child: Text(_selectedEmployee!['name'][0], style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+          child: Text(
+            _selectedEmployee!['name'][0],
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(height: 8),
-        Text(_selectedEmployee!['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark)),
-        Text(_selectedEmployee!['role'], style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(
+          _selectedEmployee!['name'],
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: SolluColors.textDark,
+          ),
+        ),
+        Text(
+          _selectedEmployee!['role'],
+          style: const TextStyle(color: Colors.grey, fontSize: 13),
+        ),
         const SizedBox(height: 28),
-        
+
         // Single Character PIN Input (6 Boxes)
         _PinSingleCharForm(
           errorMessage: _errorMessage,
@@ -162,13 +205,17 @@ class _PinSingleCharForm extends StatefulWidget {
 }
 
 class _PinSingleCharFormState extends State<_PinSingleCharForm> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   @override
   void didUpdateWidget(covariant _PinSingleCharForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.errorMessage.isNotEmpty && oldWidget.errorMessage != widget.errorMessage) {
+    if (widget.errorMessage.isNotEmpty &&
+        oldWidget.errorMessage != widget.errorMessage) {
       for (var c in _controllers) {
         c.clear();
       }
@@ -211,7 +258,8 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
       child: KeyboardListener(
         focusNode: FocusNode(),
         onKeyEvent: (event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.backspace) {
             if (_controllers[index].text.isEmpty && index > 0) {
               _focusNodes[index - 1].requestFocus();
             }
@@ -225,7 +273,11 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
           maxLength: 1,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.primary),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: SolluColors.primary,
+          ),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             counterText: '',
@@ -270,7 +322,11 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
           const SizedBox(height: 12),
           Text(
             widget.errorMessage,
-            style: const TextStyle(color: SolluColors.danger, fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+              color: SolluColors.danger,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
         ],
       ],
