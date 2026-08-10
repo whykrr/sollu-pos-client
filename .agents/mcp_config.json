@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sollu-db": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://whykrr@127.0.0.1:5432/sollu_core"
+      ]
+    }
+  }
+}
