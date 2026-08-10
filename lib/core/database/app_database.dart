@@ -1,0 +1,40 @@
+import 'dart:io';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+
+import 'package:sollu_pos_app/core/database/tables/master_data_tables.dart';
+import 'package:sollu_pos_app/core/database/tables/transaction_tables.dart';
+
+part 'app_database.g.dart';
+
+@DriftDatabase(tables: [
+  Products,
+  Variants,
+  Inventories,
+  PaymentMethods,
+  OutletSettings,
+  Shifts,
+  ShiftCashLogs,
+  Transactions,
+  TransactionItems,
+  TransactionItemModifiers,
+  TransactionPayments,
+])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase() : super(_openConnection());
+
+  @override
+  int get schemaVersion => 1;
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'sollu_pos.sqlite'));
+    
+    // Gunakan logStatements: true jika perlu debug query di terminal
+    return NativeDatabase.createInBackground(file);
+  });
+}

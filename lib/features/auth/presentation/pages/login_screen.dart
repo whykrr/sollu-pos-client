@@ -1,0 +1,227 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  String _otpCode = '';
+  bool _isLoading = false;
+
+  void _verifyOtp(String otp) {
+    setState(() {
+      _otpCode = otp;
+      _isLoading = true;
+    });
+
+    // Simulate API verification
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        context.go('/dashboard');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              SolluColors.background,
+              Color(0xFFEFF6FF),
+              Color(0xFFE0F2FE),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Background Decorative Shape
+            Positioned(
+              bottom: -100,
+              right: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: SolluColors.primary.withOpacity(0.04),
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 520,
+                padding: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: SolluColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: SolluColors.primary.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('img/logo-colored.png', width: 180),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Hubungkan Perangkat',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Masukkan 8-digit OTP dari Dashboard Outlet Anda',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: SolluColors.textMuted, fontSize: 14),
+                    ),
+                    const SizedBox(height: 36),
+                    
+                    // Single Character OTP Form ____-____
+                    _OtpSingleCharForm(
+                      onCompleted: (otp) {
+                        _verifyOtp(otp);
+                      },
+                    ),
+
+                    const SizedBox(height: 36),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: (_otpCode.length == 8 && !_isLoading) ? () => _verifyOtp(_otpCode) : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: SolluColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Hubungkan Perangkat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OtpSingleCharForm extends StatefulWidget {
+  final Function(String) onCompleted;
+
+  const _OtpSingleCharForm({required this.onCompleted});
+
+  @override
+  State<_OtpSingleCharForm> createState() => _OtpSingleCharFormState();
+}
+
+class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
+  final List<TextEditingController> _controllers = List.generate(8, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(8, (_) => FocusNode());
+
+  @override
+  void dispose() {
+    for (var c in _controllers) {
+      c.dispose();
+    }
+    for (var f in _focusNodes) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onChanged(int index, String value) {
+    if (value.isNotEmpty) {
+      if (index < 7) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        _focusNodes[index].unfocus();
+      }
+    }
+    final otp = _controllers.map((c) => c.text).join();
+    if (otp.length == 8) {
+      widget.onCompleted(otp);
+    }
+  }
+
+  Widget _buildSingleBox(int index) {
+    return SizedBox(
+      width: 44,
+      height: 54,
+      child: KeyboardListener(
+        focusNode: FocusNode(),
+        onKeyEvent: (event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+            if (_controllers[index].text.isEmpty && index > 0) {
+              _focusNodes[index - 1].requestFocus();
+            }
+          }
+        },
+        child: TextField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          maxLength: 1,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+            filled: true,
+            fillColor: Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SolluColors.neutral, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+            ),
+          ),
+          onChanged: (val) => _onChanged(index, val),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < 4; i++) ...[
+          _buildSingleBox(i),
+          if (i < 3) const SizedBox(width: 6),
+        ],
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10.0),
+          child: Text('-', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: SolluColors.neutralDark)),
+        ),
+        for (int i = 4; i < 8; i++) ...[
+          _buildSingleBox(i),
+          if (i < 7) const SizedBox(width: 6),
+        ],
+      ],
+    );
+  }
+}
