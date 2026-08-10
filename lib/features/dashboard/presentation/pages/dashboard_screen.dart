@@ -24,45 +24,9 @@ class DashboardScreen extends ConsumerWidget {
     final activeEmployee = ref.watch(activeEmployeeProvider);
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              SolluColors.background,
-              Color(0xFFEFF6FF),
-              Color(0xFFE0F2FE),
-            ],
-          ),
-        ),
-        child: Stack(
+      backgroundColor: SolluColors.background,
+      body: Stack(
           children: [
-            // Background Decorative Shapes & Illustration Motifs
-            Positioned(
-              top: -120,
-              left: -120,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: SolluColors.secondary.withOpacity(0.06),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -150,
-              right: -100,
-              child: Container(
-                width: 600,
-                height: 600,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: SolluColors.primary.withOpacity(0.04),
-                ),
-              ),
-            ),
             Positioned(
               bottom: 80,
               left: 60,
@@ -187,7 +151,6 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -209,40 +172,51 @@ class _DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 6,
-      shadowColor: color.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 280,
-          height: 280,
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 280,
+            height: 280,
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 64, color: color),
                 ),
-                child: Icon(icon, size: 64, color: color),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                ),
+              ],
+            ),
           ),
         ),
       ),

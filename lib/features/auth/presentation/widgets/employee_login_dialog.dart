@@ -45,7 +45,6 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 420,
         padding: const EdgeInsets.all(20),
@@ -285,14 +284,14 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
             filled: true,
             fillColor: Colors.white,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
                 color: hasError ? SolluColors.danger : SolluColors.neutral,
                 width: hasError ? 2 : 1.5,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
                 color: hasError ? SolluColors.danger : SolluColors.primary,
                 width: 2,

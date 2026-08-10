@@ -135,7 +135,6 @@ class ShortcutHelpDialog extends StatelessWidget {
     ];
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       title: const Row(
         children: [
           Icon(Icons.keyboard, color: SolluColors.primary),

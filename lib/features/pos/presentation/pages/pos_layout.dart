@@ -7,6 +7,7 @@ import 'package:sollu_pos_app/features/pos/presentation/widgets/product_grid.dar
 import 'package:sollu_pos_app/features/pos/presentation/widgets/cart_panel.dart';
 import 'package:sollu_pos_app/features/pos/presentation/widgets/pos_extra_dialogs.dart';
 import 'package:sollu_pos_app/features/shift/presentation/widgets/shift_dialogs.dart';
+import 'package:sollu_pos_app/features/pos/presentation/widgets/category_sidebar.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -100,81 +101,124 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         elevation: 1,
         titleSpacing: 16,
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Image.asset('img/logo-colored.png', height: 32),
-            const SizedBox(width: 12),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.keyboard_alt_outlined,
-              color: SolluColors.textDark,
-            ),
-            tooltip: 'Panduan Shortcut (F1-F12)',
-            onPressed: () => ShortcutHelpDialog.show(context),
-          ),
-          const SizedBox(width: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: SolluColors.background,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: SolluColors.neutral),
-                ),
-                child: const Text(
-                  'Shift: Siang  •  Kasir: Budi',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: SolluColors.textDark,
+            const SizedBox(width: 20),
+            Expanded(
+              child: SizedBox(
+                height: 40,
+                child: TextField(
+                  focusNode: _searchFocusNode,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Cari produk atau scan barcode... (F1)',
+                    hintStyle: const TextStyle(fontSize: 13, color: SolluColors.textMuted),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: SolluColors.neutralMuted,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: SolluColors.neutral),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: SolluColors.neutral),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: SolluColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: SolluColors.background,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: IconButton(
+              icon: const Icon(
+                Icons.keyboard_alt_outlined,
+                color: SolluColors.textDark,
+              ),
+              tooltip: 'Panduan Shortcut (F1-F12)',
+              onPressed: () => ShortcutHelpDialog.show(context),
+            ),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Menyingkronkan Master Data ke SQLite...'),
+          const SizedBox(width: 8),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: SolluColors.background,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: SolluColors.neutral),
+              ),
+              child: const Text(
+                'Shift: Siang  •  Kasir: Budi',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: SolluColors.textDark,
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SolluColors.secondary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            icon: const Icon(Icons.sync, size: 18),
-            label: const Text('Sinkronisasi Data'),
+          ),
+          const SizedBox(width: 8),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Menyingkronkan Master Data ke SQLite...'),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SolluColors.secondary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.sync, size: 18),
+              label: const Text('Sinkronisasi Data'),
+            ),
           ),
           const SizedBox(width: 16),
         ],
       ),
       body: Row(
         children: [
-          // Left Pane: Product Grid (2/3 of the screen)
-          Expanded(
+          // Left Pane: Category Sidebar (2/10 of screen)
+          const Expanded(
             flex: 2,
+            child: CategorySidebar(),
+          ),
+          // Middle Pane: Product Grid (5/10 of screen)
+          Expanded(
+            flex: 5,
             child: Container(
-              color: SolluColors
-                  .background, // Sedikit abu-abu agar kontras dengan keranjang yang putih
+              color: const Color(0xFFF8FAFC),
               child: ProductGrid(searchFocusNode: _searchFocusNode),
             ),
           ),
-          // Right Pane: Cart Panel (1/3 of the screen)
-          // Menghapus VerticalDivider dan menggunakan BoxShadow dari CartPanel
-          const Expanded(flex: 1, child: CartPanel()),
+          // Right Pane: Cart Panel (3/10 of screen)
+          const Expanded(flex: 3, child: CartPanel()),
         ],
       ),
     );

@@ -67,21 +67,22 @@ The application uses **Plus Jakarta Sans** for all text hierarchies (headings, b
 ## 💠 Component Styling
 
 ### 1. Buttons
-- **Shape**: Rounded corners. The web app uses Tailwind's `rounded-lg` (8px). Use `RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))` in Flutter.
-- **Elevation**: Flat by default, slight shadow on hover/active (use `elevation: 0` for `ElevatedButton` normally).
-- **Primary Button**: `SolluColors.primary` background with white text.
+- **Shape**: Rounded corners. Use `RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))` for smaller buttons, or up to `20` for larger primary buttons if needed.
+- **Elevation**: Flat by default, `elevation: 0`.
+- **Primary Button**: `SolluColors.primary` background with bold white text.
+- **Secondary/Action Button**: Flat with light slate background `Color(0xFFE2E8F0).withValues(alpha: 0.5)`, muted text/icons (`SolluColors.textMuted`), no borders.
 
-### 2. Cards & Widgets
-- **Background**: `SolluColors.surface` (White).
-- **BorderRadius**: 8px (`BorderRadius.circular(8)`).
-- **Border**: 1px solid border using a light gray like `Color(0xFFE5E7EB)` or `SolluColors.neutral`.
-- **Shadows**: Very subtle shadow if any, or a glassmorphism/backdrop blur effect for floating elements (similar to the web app's `backdrop-blur-sm bg-white/50`).
+### 2. Cards, Dialogs, & Containers
+- **Background**: `SolluColors.surface` (White) or `Color(0xFFF8FAFC)` for app background. No complex gradients.
+- **BorderRadius**: 20px (`BorderRadius.circular(20)`) for all major containers, cards, and dialogs.
+- **Shadows**: Extremely soft ambient shadow replacing default Material elevation. Always use: `BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: Offset(0, 5))`.
+- **Border**: Avoid heavy borders. If needed, use a very light `SolluColors.neutral`.
 
 ### 3. Inputs & Forms
-- **Border**: 1px solid `Color(0xFFE5E7EB)` (Gray 200).
-- **Focus Ring**: `SolluColors.primary` with a slight opacity (like `primary.withOpacity(0.1)` for the ring and `primary` for the border).
-- **BorderRadius**: 8px.
-- **Background**: White, changing slightly to a very light gray (`#F9FAFB`) on hover or disabled.
+- **Border**: 1px solid `SolluColors.neutral`.
+- **Focus Ring**: `SolluColors.primary` 2px border.
+- **BorderRadius**: 12px.
+- **Background**: White (`Colors.white`).
 
 ### 4. Navigation
 - Use a `BottomNavigationBar` or a clean drawer sidebar (`NavigationDrawer`).

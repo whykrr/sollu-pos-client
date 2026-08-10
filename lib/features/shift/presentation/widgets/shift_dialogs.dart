@@ -16,7 +16,6 @@ class OpenShiftDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       title: const Text('Buka Shift', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 400,
@@ -73,7 +72,6 @@ class CloseShiftDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       title: const Text('Tutup Shift', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
       content: SizedBox(
         width: 400,

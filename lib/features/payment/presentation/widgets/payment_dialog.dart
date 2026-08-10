@@ -17,7 +17,6 @@ class PaymentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: SolluSpacing.radiusLg),
       child: Container(
         width: 840,
         height: 620,
