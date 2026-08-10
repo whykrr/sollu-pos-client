@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/pos/presentation/pos_layout.dart';
+
 void main() {
   runApp(const ProviderScope(child: SolluPosApp()));
 }
@@ -12,7 +14,7 @@ final _router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const PosPlaceholderScreen(),
+      builder: (context, state) => const PosLayout(),
     ),
   ],
 );
@@ -74,18 +76,4 @@ class _GlobalShortcutWrapper extends StatelessWidget {
 class PosIntent extends Intent {
   final String shortcut;
   const PosIntent(this.shortcut);
-}
-
-class PosPlaceholderScreen extends StatelessWidget {
-  const PosPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Sollu POS')),
-      body: const Center(
-        child: Text('POS Screen Scaffolded'),
-      ),
-    );
-  }
 }
