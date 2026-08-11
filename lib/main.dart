@@ -6,10 +6,21 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/core/routing/app_router.dart';
 import 'package:sollu_pos_app/features/pos/presentation/providers/shortcut_provider.dart';
+import 'package:sollu_pos_app/core/providers/preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: SolluPosApp()));
+  final sharedPreferences = await SharedPreferences.getInstance();
+  
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],
+      child: const SolluPosApp(),
+    ),
+  );
 }
 
 class SolluPosApp extends ConsumerWidget {
@@ -122,6 +133,9 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
             return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.f5) {
             ref.read(shortcutProvider.notifier).trigger('F5');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f6) {
+            ref.read(shortcutProvider.notifier).trigger('F6');
             return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.f8) {
             ref.read(shortcutProvider.notifier).trigger('F8');

@@ -5,6 +5,7 @@ import 'package:sollu_pos_app/core/services/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_app/features/settings/presentation/providers/sync_provider.dart';
+import 'package:sollu_pos_app/core/providers/preferences_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -105,6 +106,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 onTap: () {},
+              ),
+              const Divider(height: 24),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.dashboard_customize, color: Colors.purple),
+                ),
+                title: const Text(
+                  'Mode Tampilan Kasir',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text('Pilih cara menampilkan produk di layar kasir'),
+                trailing: DropdownButton<String>(
+                  value: ref.watch(posDisplayModeProvider),
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(value: 'product', child: Text('Berbasis Produk')),
+                    DropdownMenuItem(value: 'variant', child: Text('Berbasis Varian')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      ref.read(posDisplayModeProvider.notifier).setMode(val);
+                    }
+                  },
+                ),
               ),
               const Divider(height: 24),
               ListTile(

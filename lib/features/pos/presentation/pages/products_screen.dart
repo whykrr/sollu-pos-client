@@ -2,45 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 
-class ProductsScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sollu_pos_app/features/pos/presentation/providers/pos_provider.dart';
+
+class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState();
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   String _searchQuery = '';
-
-  final List<Map<String, dynamic>> _allProducts = [
-    {'name': 'Bakmi Special', 'category': 'MAIN DISH', 'price': 25455, 'stock': 45, 'isActive': true},
-    {'name': 'Bakmi Komplit Special', 'category': 'MAIN DISH', 'price': 31818, 'stock': 30, 'isActive': true},
-    {'name': 'Bakmi Ayam Teriyaki', 'category': 'MAIN DISH', 'price': 29091, 'stock': 20, 'isActive': false},
-    {'name': 'Bakmi Kuah Sapi', 'category': 'MAIN DISH', 'price': 27273, 'stock': 18, 'isActive': true},
-    {'name': 'Bakmi Sapi Lada Hitam', 'category': 'MAIN DISH', 'price': 32727, 'stock': 15, 'isActive': true},
-    {'name': 'Bakmi Seafood Pedas', 'category': 'MAIN DISH', 'price': 32727, 'stock': 12, 'isActive': true},
-    {'name': 'Bakmi Goreng Ayam', 'category': 'MAIN DISH', 'price': 29091, 'stock': 25, 'isActive': true},
-    {'name': 'Bakmi Goreng Seafood', 'category': 'MAIN DISH', 'price': 32727, 'stock': 14, 'isActive': true},
-    {'name': 'Bakmi Capcay', 'category': 'MAIN DISH', 'price': 31818, 'stock': 22, 'isActive': true},
-    {'name': 'Nasi Goreng Special', 'category': 'MAIN DISH', 'price': 28000, 'stock': 50, 'isActive': true},
-    {'name': 'Beef Steak Sirloin', 'category': 'MAIN DISH', 'price': 65000, 'stock': 10, 'isActive': true},
-    {'name': 'Bakso Sapi Urat', 'category': 'MAIN DISH', 'price': 22000, 'stock': 35, 'isActive': true},
-    {'name': 'Crispy Chicken Extra', 'category': 'LIGHT BITES', 'price': 24000, 'stock': 40, 'isActive': true},
-    {'name': 'Roti Bakar Coklat Keju', 'category': 'LIGHT BITES', 'price': 18000, 'stock': 30, 'isActive': true},
-    {'name': 'French Fries Original', 'category': 'LIGHT BITES', 'price': 17273, 'stock': 60, 'isActive': true},
-    {'name': 'Muffin Chocolate', 'category': 'LIGHT BITES', 'price': 15000, 'stock': 25, 'isActive': true},
-    {'name': 'Coffee Latte Large', 'category': 'DRINKS', 'price': 22000, 'stock': 80, 'isActive': true},
-    {'name': 'Ice Tea Lemon', 'category': 'DRINKS', 'price': 12000, 'stock': 100, 'isActive': true},
-  ];
 
   @override
   Widget build(BuildContext context) {
-    final filteredProducts = _allProducts.where((p) {
-      final name = (p['name'] as String).toLowerCase();
-      final category = (p['category'] as String).toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return name.contains(query) || category.contains(query);
-    }).toList();
+    final posItemsAsync = ref.watch(posItemsProvider);
 
     return Scaffold(
       backgroundColor: SolluColors.background,
@@ -96,7 +73,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'Total: ${filteredProducts.length} Produk',
+                        posItemsAsync.when(
+                          data: (items) => 'Total: ${items.length} Produk',
+                          loading: () => 'Loading...',
+                          error: (_, __) => 'Error',
+                        ),
                         style: const TextStyle(
                           color: SolluColors.primary,
                           fontWeight: FontWeight.bold,
@@ -110,20 +91,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
               const Divider(height: 1, color: SolluColors.neutral),
               // Data Table / List
               Expanded(
-                child: filteredProducts.isEmpty
-                    ? const Center(
+                child: posItemsAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(child: Text('Error: $error')),
+                  data: (items) {
+                    final filteredProducts = items.where((item) {
+                      final name = item.name.toLowerCase();
+                      final category = item.categoryId?.toLowerCase() ?? '';
+                      final query = _searchQuery.toLowerCase();
+                      return name.contains(query) || category.contains(query);
+                    }).toList();
+
+                    if (filteredProducts.isEmpty) {
+                      return const Center(
                         child: Text(
                           'Tidak ada produk ditemukan',
                           style: TextStyle(color: SolluColors.textMuted, fontSize: 16),
                         ),
-                      )
-                    : ListView.separated(
+                      );
+                    }
+
+                    return ListView.separated(
                         padding: const EdgeInsets.all(12),
                         itemCount: filteredProducts.length,
                         separatorBuilder: (_, __) => const Divider(height: 1, color: SolluColors.neutral),
                         itemBuilder: (context, index) {
                           final item = filteredProducts[index];
-                          final bool isActive = item['isActive'] ?? true;
+                          final bool isActive = item.isActive;
+                          final String itemName = item.name;
+                          final double price = item.price;
+                          final double stock = item.stock;
 
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -143,7 +140,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             title: Row(
                               children: [
                                 Text(
-                                  item['name'],
+                                  itemName,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
@@ -170,7 +167,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               ],
                             ),
                             subtitle: Text(
-                              'Kategori: ${item['category']}',
+                              'Kategori: ${item.categoryId ?? "-"}',
                               style: const TextStyle(color: SolluColors.textMuted, fontSize: 12),
                             ),
                             trailing: Row(
@@ -181,7 +178,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      CurrencyFormatter.format(item['price'] as int),
+                                      CurrencyFormatter.format(price.toInt()),
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
@@ -189,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Stok: ${item['stock']} unit',
+                                      'Stok: $stock unit',
                                       style: const TextStyle(color: SolluColors.textMuted, fontSize: 12),
                                     ),
                                   ],
@@ -201,21 +198,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     Switch.adaptive(
                                       value: isActive,
                                       activeTrackColor: SolluColors.success,
-                                      onChanged: (bool value) {
-                                        setState(() {
-                                          item['isActive'] = value;
-                                        });
-                                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              value
-                                                  ? '${item['name']} diaktifkan di kasir'
-                                                  : '${item['name']} dinonaktifkan dari kasir',
+                                      onChanged: (bool value) async {
+                                        await ref.read(posRepositoryProvider).toggleInventoryActiveStatus(item.id, value, item.isProductMode);
+                                        
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                value
+                                                    ? '$itemName diaktifkan di kasir'
+                                                    : '$itemName dinonaktifkan dari kasir',
+                                              ),
+                                              duration: const Duration(seconds: 2),
                                             ),
-                                            duration: const Duration(seconds: 2),
-                                          ),
-                                        );
+                                          );
+                                        }
                                       },
                                     ),
                                   ],
@@ -224,7 +222,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             ),
                           );
                         },
-                      ),
+                      );
+                  },
+                ),
               ),
             ],
           ),

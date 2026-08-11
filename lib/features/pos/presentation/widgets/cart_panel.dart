@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_app/features/payment/presentation/widgets/payment_dialog.dart';
 import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_app/features/pos/presentation/providers/cart_provider.dart';
 
-class CartPanel extends StatelessWidget {
+class CartPanel extends ConsumerWidget {
   const CartPanel({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Mock cart data
-    final List<Map<String, dynamic>> mockCart = [
-      {'name': 'Bakmi Komplit Special', 'price': 31818, 'qty': 2, 'notes': 'Notes'},
-      {'name': 'Bakmi Ayam Teriyaki', 'price': 29091, 'qty': 1, 'notes': 'Jangan terlalu banyak kuah'},
-      {'name': 'French Fries Original', 'price': 17273, 'qty': 3, 'notes': 'Ditambah bumbu keju'},
-      {'name': 'Hot Coffee Large', 'price': 16364, 'qty': 2, 'notes': 'Notes'},
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartProvider);
 
-    final int subtotal = mockCart.fold(0, (sum, item) => sum + ((item['price'] as int) * (item['qty'] as int)));
-    final int tax = (subtotal * 0.1).round(); // 10% tax in image
-    final int total = subtotal + tax;
+    final double subtotal = cart.fold(0, (sum, item) => sum + (item.price * item.qty));
+    final double tax = (subtotal * 0.1); // 10% tax in image
+    final double total = subtotal + tax;
 
     return Container(
       color: Colors.white,
@@ -32,7 +28,7 @@ class CartPanel extends StatelessWidget {
               children: [
                 const Icon(Icons.list, color: SolluColors.textDark),
                 Text(
-                  'Cart (${mockCart.fold(0, (sum, item) => sum + (item['qty'] as int))})',
+                  'Cart (${cart.fold(0, (sum, item) => sum + item.qty)})',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark),
                 ),
                 const Icon(Icons.add, color: SolluColors.textDark),
@@ -62,10 +58,10 @@ class CartPanel extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              itemCount: mockCart.length,
+              itemCount: cart.length,
               separatorBuilder: (_, __) => const SizedBox(height: 24),
               itemBuilder: (context, index) {
-                final item = mockCart[index];
+                final item = cart[index];
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -74,15 +70,15 @@ class CartPanel extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item['name'],
+                            item.name,
                             style: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark, fontSize: 14),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            CurrencyFormatter.format(item['price'] as int),
+                            CurrencyFormatter.format(item.price.toInt()),
                             style: const TextStyle(color: SolluColors.textMuted, fontSize: 13),
                           ),
-                          if (item['notes'] != null) ...[
+                          if (item.notes != null && item.notes!.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
@@ -90,7 +86,7 @@ class CartPanel extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    item['notes'],
+                                    item.notes!,
                                     style: TextStyle(color: SolluColors.textMuted.withValues(alpha: 0.6), fontSize: 12),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -107,16 +103,24 @@ class CartPanel extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildQtyButton(Icons.remove, () {}),
+                        _buildQtyButton(Icons.remove, () {
+                          if (item.qty > 1) {
+                            ref.read(cartProvider.notifier).updateQty(item.id, -1);
+                          } else {
+                            ref.read(cartProvider.notifier).removeItem(item.id);
+                          }
+                        }),
                         Container(
                           width: 32,
                           alignment: Alignment.center,
                           child: Text(
-                            '${item['qty']}',
+                            '${item.qty}',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: SolluColors.textDark),
                           ),
                         ),
-                        _buildQtyButton(Icons.add, () {}),
+                        _buildQtyButton(Icons.add, () {
+                          ref.read(cartProvider.notifier).updateQty(item.id, 1);
+                        }),
                       ],
                     ),
                   ],
@@ -142,11 +146,11 @@ class CartPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 16),
-                _SummaryRow(label: 'Subtotal', value: CurrencyFormatter.format(subtotal)),
+                _SummaryRow(label: 'Subtotal', value: CurrencyFormatter.format(subtotal.toInt())),
                 const SizedBox(height: 8),
                 _SummaryRow(label: 'Discount (0%)', value: CurrencyFormatter.format(0)),
                 const SizedBox(height: 8),
-                _SummaryRow(label: '10% Pajak', value: CurrencyFormatter.format(tax)),
+                _SummaryRow(label: '10% Pajak', value: CurrencyFormatter.format(tax.toInt())),
                 const SizedBox(height: 16),
                 const Divider(color: SolluColors.neutral),
                 const SizedBox(height: 20),
@@ -154,7 +158,7 @@ class CartPanel extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark)),
-                    Text(CurrencyFormatter.format(total), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: SolluColors.textDark)),
+                    Text(CurrencyFormatter.format(total.toInt()), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: SolluColors.textDark)),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -170,7 +174,8 @@ class CartPanel extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          PaymentDialog.show(context, total);
+                          if (cart.isEmpty) return;
+                          PaymentDialog.show(context, total.toInt());
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 20),

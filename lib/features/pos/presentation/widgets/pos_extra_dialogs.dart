@@ -122,12 +122,13 @@ class ShortcutHelpDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shortcuts = [
+    final List<Map<String, String>> shortcuts = [
       {'key': 'F1', 'desc': 'Cari Produk / Scan Barcode'},
       {'key': 'F2', 'desc': 'Fokus Panel Keranjang'},
       {'key': 'F3', 'desc': 'Tahan Pesanan (Hold Order)'},
       {'key': 'F4', 'desc': 'Tambah Diskon Bill'},
       {'key': 'F5', 'desc': 'Pilih Pelanggan / Member'},
+      {'key': 'F6', 'desc': 'Ubah Qty Produk Terakhir'},
       {'key': 'F8', 'desc': 'Checkout & Pembayaran'},
       {'key': 'F10', 'desc': 'Cetak Ulang Struk (Reprint)'},
       {'key': 'F12', 'desc': 'Tutup Shift Kasir'},

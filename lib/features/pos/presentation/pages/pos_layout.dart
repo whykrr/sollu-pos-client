@@ -6,8 +6,12 @@ import 'package:sollu_pos_app/features/payment/presentation/widgets/payment_dial
 import 'package:sollu_pos_app/features/pos/presentation/widgets/product_grid.dart';
 import 'package:sollu_pos_app/features/pos/presentation/widgets/cart_panel.dart';
 import 'package:sollu_pos_app/features/pos/presentation/widgets/pos_extra_dialogs.dart';
+import 'package:sollu_pos_app/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_app/features/pos/presentation/providers/cart_provider.dart';
 import 'package:sollu_pos_app/features/shift/presentation/widgets/shift_dialogs.dart';
 import 'package:sollu_pos_app/features/pos/presentation/widgets/category_sidebar.dart';
+import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_app/features/settings/presentation/providers/sync_provider.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -18,6 +22,8 @@ class PosLayout extends ConsumerStatefulWidget {
 
 class _PosLayoutState extends ConsumerState<PosLayout> {
   final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -29,6 +35,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
@@ -68,6 +75,9 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       case 'F5':
         CustomerDialog.show(context);
         break;
+      case 'F6':
+        _handleChangeQuantity();
+        break;
       case 'F8':
         PaymentDialog.show(context, 27750);
         break;
@@ -83,6 +93,57 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         CloseShiftDialog.show(context);
         break;
     }
+  }
+
+  void _handleChangeQuantity() {
+    final cart = ref.read(cartProvider);
+    if (cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keranjang kosong')),
+      );
+      return;
+    }
+    
+    // In a real app, this would show a dialog to enter quantity for the last/selected item
+    final lastItem = cart.last;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        final ctrl = TextEditingController(text: lastItem.qty.toString());
+        ctrl.selection = TextSelection(baseOffset: 0, extentOffset: ctrl.text.length);
+        
+        return AlertDialog(
+          title: Text('Ubah Qty: ${lastItem.name}'),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+            onSubmitted: (val) {
+              final newQty = int.tryParse(val);
+              if (newQty != null && newQty > 0) {
+                ref.read(cartProvider.notifier).updateQty(lastItem.id, newQty - lastItem.qty);
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () {
+                final newQty = int.tryParse(ctrl.text);
+                if (newQty != null && newQty > 0) {
+                  ref.read(cartProvider.notifier).updateQty(lastItem.id, newQty - lastItem.qty);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -109,7 +170,46 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
               child: SizedBox(
                 height: 40,
                 child: TextField(
+                  controller: _searchController,
                   focusNode: _searchFocusNode,
+                  onChanged: (val) {
+                    ref.read(posSearchQueryProvider.notifier).setQuery(val);
+                  },
+                  onSubmitted: (val) async {
+                    final query = val.trim();
+                    if (query.isEmpty) return;
+                    
+                    final repository = ref.read(posRepositoryProvider);
+                    final matchedItem = await repository.findItemByBarcodeOrSku(query);
+                    
+                    if (matchedItem != null) {
+                      final cartItem = CartItem(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        productId: matchedItem.isProductMode ? matchedItem.id : matchedItem.inventory!.productId,
+                        inventoryItemId: matchedItem.isProductMode ? '' : matchedItem.id,
+                        name: matchedItem.name,
+                        price: matchedItem.price,
+                        qty: 1,
+                      );
+                      ref.read(cartProvider.notifier).addItem(cartItem);
+                      
+                      _searchController.clear();
+                      ref.read(posSearchQueryProvider.notifier).setQuery('');
+                      _searchFocusNode.requestFocus();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Barcode/SKU "$query" tidak ditemukan'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: SolluColors.danger,
+                        ),
+                      );
+                      // Tetap kosongkan dan fokus kembali agar bisa scan ulang
+                      _searchController.clear();
+                      ref.read(posSearchQueryProvider.notifier).setQuery('');
+                      _searchFocusNode.requestFocus();
+                    }
+                  },
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Cari produk atau scan barcode... (F1)',
@@ -179,12 +279,53 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           const SizedBox(width: 8),
           Center(
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: _isSyncing ? null : () async {
+                setState(() {
+                  _isSyncing = true;
+                });
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Menyingkronkan Master Data ke SQLite...'),
+                    content: Text('Menyingkronkan Master Data...'),
+                    duration: Duration(seconds: 1),
                   ),
                 );
+
+                try {
+                  final employeeRepository = ref.read(employeeRepositoryProvider);
+                  await employeeRepository.syncEmployees();
+                  
+                  final syncRepository = ref.read(syncRepositoryProvider);
+                  await syncRepository.syncMasterData();
+                  
+                  ref.invalidate(employeeListProvider);
+                  ref.invalidate(posItemsProvider);
+                  ref.invalidate(posCategoriesProvider);
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sinkronisasi selesai!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal sinkronisasi: $e'),
+                        backgroundColor: SolluColors.danger,
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isSyncing = false;
+                    });
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: SolluColors.secondary,
@@ -195,8 +336,14 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              icon: const Icon(Icons.sync, size: 18),
-              label: const Text('Sinkronisasi Data'),
+              icon: _isSyncing 
+                  ? const SizedBox(
+                      width: 18, 
+                      height: 18, 
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                    )
+                  : const Icon(Icons.sync, size: 18),
+              label: Text(_isSyncing ? 'Sinkronisasi...' : 'Sinkronisasi Data'),
             ),
           ),
           const SizedBox(width: 16),

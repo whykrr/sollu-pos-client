@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -12,7 +11,14 @@ part 'app_database.g.dart';
 
 @DriftDatabase(tables: [
   Products,
-  Variants,
+  ProductCategories,
+  VariantGroups,
+  VariantGroupOptions,
+  InventoryItemVariantGroupOptions,
+  ModifierGroups,
+  ProductModifierGroups,
+  ModifierOptions,
+  ProductPrices,
   Inventories,
   PaymentMethods,
   OutletSettings,
@@ -40,6 +46,6 @@ LazyDatabase _openConnection() {
     final file = File(p.join(databasesPath, 'sollu_pos.sqlite'));
     
     // Gunakan logStatements: true jika perlu debug query di terminal
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(file, logStatements: true);
   });
 }

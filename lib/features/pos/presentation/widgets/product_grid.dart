@@ -3,45 +3,59 @@ import 'package:sollu_pos_app/features/pos/presentation/widgets/variant_dialog.d
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 
-class ProductGrid extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sollu_pos_app/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_app/features/pos/data/pos_repository.dart';
+
+class ProductGrid extends ConsumerStatefulWidget {
   final FocusNode? searchFocusNode;
 
   const ProductGrid({super.key, this.searchFocusNode});
 
   @override
-  State<ProductGrid> createState() => _ProductGridState();
+  ConsumerState<ProductGrid> createState() => _ProductGridState();
 }
 
-class _ProductGridState extends State<ProductGrid> {
+class _ProductGridState extends ConsumerState<ProductGrid> {
   @override
   Widget build(BuildContext context) {
-    // Mock data based on the image
-    final List<Map<String, dynamic>> mockProducts = [
-      {'name': 'Bakmi Special', 'price': 25455, 'hasBadge': false, 'isActive': true},
-      {'name': 'Bakmi Komplit Special', 'price': 31818, 'hasBadge': true, 'isActive': true},
-      {'name': 'Bakmi Ayam Teriyaki', 'price': 29091, 'hasBadge': false, 'isActive': false},
-      {'name': 'Bakmi Kuah Sapi', 'price': 27273, 'hasBadge': true, 'isActive': true},
-      {'name': 'Bakmi Sapi Lada Hitam', 'price': 32727, 'hasBadge': false, 'isActive': true},
-      {'name': 'Bakmi Seafood Pedas', 'price': 32727, 'hasBadge': false, 'isActive': true},
-      {'name': 'Bakmi Goreng Ayam', 'price': 29091, 'hasBadge': false, 'isActive': true},
-      {'name': 'Bakmi Goreng Seafood', 'price': 32727, 'hasBadge': false, 'isActive': true},
-      {'name': 'Bakmi Capcay', 'price': 31818, 'hasBadge': true, 'isActive': true},
-    ];
+    final posItemsAsync = ref.watch(posItemsProvider);
+    final searchQuery = ref.watch(posSearchQueryProvider).toLowerCase();
+    final selectedCategory = ref.watch(posSelectedCategoryProvider);
 
     return Container(
       color: const Color(0xFFF8FAFC), // Light grey background like in image
-      child: GridView.builder(
-        padding: const EdgeInsets.all(24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 24,
-          mainAxisSpacing: 24,
-          childAspectRatio: 0.75, // Adjust for taller cards
-        ),
-        itemCount: mockProducts.length,
-        itemBuilder: (context, index) {
-          final product = mockProducts[index];
-          return _ProductCard(product: product);
+      child: posItemsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('Error: $error')),
+        data: (items) {
+          final filteredItems = items.where((item) {
+            final matchesCategory = selectedCategory == null || item.categoryId == selectedCategory;
+            final matchesSearch = item.name.toLowerCase().contains(searchQuery) ||
+                   (item.product?.barcode?.toLowerCase().contains(searchQuery) ?? false) ||
+                   (item.inventory?.barcode?.toLowerCase().contains(searchQuery) ?? false);
+            
+            return matchesCategory && matchesSearch;
+          }).toList();
+
+          if (filteredItems.isEmpty) {
+            return const Center(child: Text('Tidak ada item yang sesuai'));
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(24),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              childAspectRatio: 0.85,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: filteredItems.length,
+            itemBuilder: (context, index) {
+              final product = filteredItems[index];
+              return _ProductCard(posItem: product);
+            },
+          );
         },
       ),
     );
@@ -49,14 +63,16 @@ class _ProductGridState extends State<ProductGrid> {
 }
 
 class _ProductCard extends StatelessWidget {
-  final Map<String, dynamic> product;
+  final PosItem posItem;
 
-  const _ProductCard({required this.product});
+  const _ProductCard({required this.posItem});
 
   @override
   Widget build(BuildContext context) {
-    final hasBadge = product['hasBadge'] == true;
-    final isActive = product['isActive'] ?? true;
+    final bool isActive = posItem.isActive;
+    final String itemName = posItem.name;
+    final double itemPrice = posItem.price;
+    final bool hasVariantsOrModifiers = posItem.hasVariants || posItem.hasModifiers;
 
     return Container(
       decoration: BoxDecoration(
@@ -78,14 +94,15 @@ class _ProductCard extends StatelessWidget {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('${product['name']} sedang dinonaktifkan dari kasir.'),
+                  content: Text('$itemName sedang dinonaktifkan dari kasir.'),
                   backgroundColor: SolluColors.danger,
                   duration: const Duration(seconds: 2),
                 ),
               );
               return;
             }
-            VariantDialog.show(context, product);
+            // Temporarily pass posItem ID to dialog
+            VariantDialog.show(context, posItem);
           },
           borderRadius: BorderRadius.circular(20),
           child: Stack(
@@ -117,7 +134,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        product['name'],
+                        itemName,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -129,7 +146,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        CurrencyFormatter.format(product['price'] as int),
+                        CurrencyFormatter.format(itemPrice.toInt()),
                         style: const TextStyle(
                           color: SolluColors.textMuted,
                           fontSize: 13,
@@ -165,20 +182,23 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (hasBadge && isActive)
+              if (hasVariantsOrModifiers && isActive)
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFC107), // Yellow badge
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFC107), // Yellow badge
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(
-                      Icons.thumb_up,
-                      color: Colors.white,
-                      size: 14,
+                    child: const Text(
+                      '+ Opsi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 ),
