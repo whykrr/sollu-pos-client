@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:sollu_pos_app/features/auth/presentation/pages/splash_screen.dart';
 import 'package:sollu_pos_app/features/auth/presentation/pages/login_screen.dart';
 import 'package:sollu_pos_app/features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'package:sollu_pos_app/features/pos/presentation/pages/pos_layout.dart';
 import 'package:sollu_pos_app/features/history/presentation/pages/history_screen.dart';
 
+import 'package:sollu_pos_app/features/settings/presentation/pages/settings_screen.dart';
+import 'package:sollu_pos_app/features/pos/presentation/pages/products_screen.dart';
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
@@ -37,6 +45,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/history',
         pageBuilder: (context, state) => CustomTransitionPage(
           child: const HistoryScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/settings',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          child: const SettingsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/products',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          child: const ProductsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

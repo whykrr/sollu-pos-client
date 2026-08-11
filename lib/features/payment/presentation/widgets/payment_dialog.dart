@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/core/theme/sollu_spacing.dart';
+import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 
 class PaymentDialog extends StatelessWidget {
   final int totalAmount;
@@ -61,11 +62,11 @@ class PaymentDialog extends StatelessWidget {
                   Wrap(
                     spacing: SolluSpacing.sm,
                     runSpacing: SolluSpacing.sm,
-                    children: const [
+                    children: [
                       _QuickCashBtn('Uang Pas'),
-                      _QuickCashBtn('Rp 20.000'),
-                      _QuickCashBtn('Rp 50.000'),
-                      _QuickCashBtn('Rp 100.000'),
+                      _QuickCashBtn(CurrencyFormatter.format(20000)),
+                      _QuickCashBtn(CurrencyFormatter.format(50000)),
+                      _QuickCashBtn(CurrencyFormatter.format(100000)),
                     ],
                   ),
                 ],
@@ -91,7 +92,7 @@ class PaymentDialog extends StatelessWidget {
                         const Text('Total Tagihan', style: TextStyle(color: SolluColors.textMuted)),
                         const SizedBox(height: SolluSpacing.sm),
                         Text(
-                          'Rp $totalAmount',
+                          CurrencyFormatter.format(totalAmount),
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -101,9 +102,9 @@ class PaymentDialog extends StatelessWidget {
                         const Divider(height: 32, color: SolluColors.neutral),
                         const Text('Kembalian', style: TextStyle(color: SolluColors.textMuted)),
                         const SizedBox(height: SolluSpacing.sm),
-                        const Text(
-                          'Rp 0',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                        Text(
+                          CurrencyFormatter.format(0),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
                         ),
                       ],
                     ),

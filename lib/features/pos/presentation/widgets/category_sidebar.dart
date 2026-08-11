@@ -9,9 +9,15 @@ class CategorySidebar extends StatefulWidget {
 }
 
 class _CategorySidebarState extends State<CategorySidebar> {
-  String _selectedCategory = 'Bakmi';
+  String _selectedCategory = 'Semua Produk';
 
   final List<Map<String, dynamic>> categoryGroups = [
+    {
+      'groupName': 'KATALOG',
+      'items': [
+        {'name': 'Semua Produk', 'icon': Icons.grid_view_rounded},
+      ]
+    },
     {
       'groupName': 'MAIN DISH',
       'items': [

@@ -55,3 +55,16 @@ class OutletSettings extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+@DataClassName('Employee')
+class Employees extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get name => text()();
+  TextColumn get email => text().nullable()();
+  TextColumn get pin => text().nullable()();
+  TextColumn get photo => text().nullable()();
+  TextColumn get role => text().nullable()();
+  
+  @override
+  Set<Column> get primaryKey => {id};
+}

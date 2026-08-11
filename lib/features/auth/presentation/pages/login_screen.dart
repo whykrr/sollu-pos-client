@@ -1,36 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_app/features/auth/providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _otpCode = '';
-  bool _isLoading = false;
 
   void _verifyOtp(String otp) {
     setState(() {
       _otpCode = otp;
-      _isLoading = true;
     });
-
-    // Simulate API verification
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        context.go('/dashboard');
-      }
-    });
+    ref.read(authNotifierProvider.notifier).connectDevice(otp);
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+    final isLoading = authState == AuthState.loading;
+
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      if (next == AuthState.authenticated) {
+        context.go('/dashboard');
+      } else if (next == AuthState.error) {
+        final error = ref.read(authNotifierProvider.notifier).errorMessage;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error ?? 'Gagal menghubungkan perangkat.'),
+            backgroundColor: SolluColors.danger,
+          ),
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: SolluColors.background,
       body: Stack(
@@ -70,7 +80,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Single Character OTP Form ____-____
                     _OtpSingleCharForm(
                       onCompleted: (otp) {
-                        _verifyOtp(otp);
+                        if (!isLoading) {
+                          _verifyOtp(otp);
+                        }
                       },
                     ),
 
@@ -78,13 +90,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: (_otpCode.length == 8 && !_isLoading) ? () => _verifyOtp(_otpCode) : null,
+                        onPressed: (_otpCode.length == 8 && !isLoading) ? () => _verifyOtp(_otpCode) : null,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: SolluColors.primary,
                           foregroundColor: Colors.white,
                         ),
-                        child: _isLoading
+                        child: isLoading
                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Text('Hubungkan Perangkat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),

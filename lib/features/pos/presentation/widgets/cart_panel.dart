@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/features/payment/presentation/widgets/payment_dialog.dart';
+import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 
 class CartPanel extends StatelessWidget {
@@ -78,7 +79,7 @@ class CartPanel extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Rp ${item['price']},-',
+                            CurrencyFormatter.format(item['price'] as int),
                             style: const TextStyle(color: SolluColors.textMuted, fontSize: 13),
                           ),
                           if (item['notes'] != null) ...[
@@ -140,19 +141,20 @@ class CartPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _SummaryRow(label: 'Subtotal', value: 'Rp $subtotal,-'),
-                const SizedBox(height: 12),
-                _SummaryRow(label: 'Discount (0%)', value: 'Rp 0,-'),
-                const SizedBox(height: 12),
-                _SummaryRow(label: '10% Pajak', value: 'Rp $tax,-'),
-                const SizedBox(height: 20),
-                const Divider(height: 1, color: SolluColors.neutral),
+                const SizedBox(height: 16),
+                _SummaryRow(label: 'Subtotal', value: CurrencyFormatter.format(subtotal)),
+                const SizedBox(height: 8),
+                _SummaryRow(label: 'Discount (0%)', value: CurrencyFormatter.format(0)),
+                const SizedBox(height: 8),
+                _SummaryRow(label: '10% Pajak', value: CurrencyFormatter.format(tax)),
+                const SizedBox(height: 16),
+                const Divider(color: SolluColors.neutral),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: SolluColors.textDark)),
-                    Text('Rp $total,-', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: SolluColors.textDark)),
+                    const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark)),
+                    Text(CurrencyFormatter.format(total), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: SolluColors.textDark)),
                   ],
                 ),
                 const SizedBox(height: 24),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:bcrypt/bcrypt.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_app/core/database/app_database.dart';
 
 class EmployeeLoginDialog extends ConsumerStatefulWidget {
   const EmployeeLoginDialog({super.key});
@@ -21,18 +24,31 @@ class EmployeeLoginDialog extends ConsumerStatefulWidget {
 }
 
 class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
-  final List<Map<String, dynamic>> _dummyEmployees = [
-    {'id': '1', 'name': 'Budi Santoso', 'role': 'Kasir', 'pin': '123456'},
-    {'id': '2', 'name': 'Siti Rahma', 'role': 'Supervisor', 'pin': '654321'},
-  ];
-
-  Map<String, dynamic>? _selectedEmployee;
+  Employee? _selectedEmployee;
   String _errorMessage = '';
+  bool _isSyncing = false;
+
+  bool _isValidPin(String inputPin, String? storedPin) {
+    if (storedPin == null || storedPin.isEmpty) return false;
+    // Fast check if plain match
+    if (inputPin == storedPin) return true;
+    try {
+      return BCrypt.checkpw(inputPin, storedPin);
+    } catch (_) {
+      return false;
+    }
+  }
 
   void _verifyPin(String inputPin) {
-    if (_selectedEmployee != null && inputPin == _selectedEmployee!['pin']) {
+    final storedPin = _selectedEmployee?.pin;
+    if (_selectedEmployee != null && _isValidPin(inputPin, storedPin)) {
       // PIN Benar
-      ref.read(activeEmployeeProvider.notifier).login(_selectedEmployee!);
+      final mapEmployee = {
+        'id': _selectedEmployee!.id,
+        'name': _selectedEmployee!.name,
+        'role': _selectedEmployee!.role ?? 'Kasir',
+      };
+      ref.read(activeEmployeeProvider.notifier).login(mapEmployee);
       Navigator.of(context).pop();
     } else {
       // PIN Salah
@@ -47,7 +63,7 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
     return Dialog(
       child: Container(
         width: 420,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: _selectedEmployee == null
             ? _buildEmployeeSelection()
             : _buildPinVerification(),
@@ -56,62 +72,115 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
   }
 
   Widget _buildEmployeeSelection() {
+    final employeesAsync = ref.watch(employeeListProvider);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Pilih Karyawan',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: SolluColors.textDark,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Pilih Karyawan',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _isSyncing
+                    ? null
+                    : () async {
+                        setState(() {
+                          _isSyncing = true;
+                        });
+                        try {
+                          await ref.read(employeeRepositoryProvider).syncEmployees();
+                          ref.invalidate(employeeListProvider);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        } finally {
+                          setState(() {
+                            _isSyncing = false;
+                          });
+                        }
+                      },
+                icon: _isSyncing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync, size: 18),
+                label: const Text('Load Karyawan'),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
-        TextField(
-          decoration: InputDecoration(
-            hintText: 'Cari nama karyawan...',
-            prefixIcon: const Icon(Icons.search),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 0,
-              horizontal: 16,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Cari nama karyawan...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 0,
+                horizontal: 16,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 16),
         SizedBox(
           height: 280,
-          child: ListView.separated(
-            itemCount: _dummyEmployees.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final emp = _dummyEmployees[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: SolluColors.primaryLight,
-                  child: Text(
-                    emp['name'][0],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+          child: employeesAsync.when(
+            data: (employees) {
+              if (employees.isEmpty) {
+                return const Center(child: Text('Tidak ada data karyawan. Klik Load Karyawan.'));
+              }
+              return ListView.separated(
+                itemCount: employees.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final emp = employees[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: SolluColors.primaryLight,
+                      child: Text(
+                        emp.name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                title: Text(
-                  emp['name'],
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(emp['role']),
-                onTap: () {
-                  setState(() {
-                    _selectedEmployee = emp;
-                    _errorMessage = '';
-                  });
+                    title: Text(
+                      emp.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(emp.role ?? 'Kasir'),
+                    onTap: () {
+                      setState(() {
+                        _selectedEmployee = emp;
+                        _errorMessage = '';
+                      });
+                    },
+                  );
                 },
               );
             },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('Error: $e')),
           ),
         ),
       ],
@@ -153,7 +222,7 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
           radius: 32,
           backgroundColor: SolluColors.primary,
           child: Text(
-            _selectedEmployee!['name'][0],
+            _selectedEmployee!.name[0].toUpperCase(),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -163,7 +232,7 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
         ),
         const SizedBox(height: 8),
         Text(
-          _selectedEmployee!['name'],
+          _selectedEmployee!.name,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -171,7 +240,7 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
           ),
         ),
         Text(
-          _selectedEmployee!['role'],
+          _selectedEmployee!.role ?? 'Kasir',
           style: const TextStyle(color: Colors.grey, fontSize: 13),
         ),
         const SizedBox(height: 28),
@@ -209,6 +278,16 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
     (_) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNodes[0].requestFocus();
+      }
+    });
+  }
 
   @override
   void didUpdateWidget(covariant _PinSingleCharForm oldWidget) {

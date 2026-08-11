@@ -26,131 +26,190 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: SolluColors.background,
       body: Stack(
-          children: [
-            Positioned(
-              bottom: 80,
-              left: 60,
-              child: Opacity(
-                opacity: 0.15,
-                child: Image.asset('img/icon-colored.png', width: 140),
-              ),
+        children: [
+          Positioned(
+            bottom: 80,
+            left: 60,
+            child: Opacity(
+              opacity: 0.15,
+              child: Image.asset('img/icon-colored.png', width: 140),
             ),
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: GestureDetector(
-                onLongPress: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sistem Pelaporan Masalah (Fitur akan datang)')),
-                  );
-                },
-                child: const Text(
-                  'v1.0.0+1',
-                  style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: GestureDetector(
+              onLongPress: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Sistem Pelaporan Masalah (Fitur akan datang)',
+                    ),
+                  ),
+                );
+              },
+              child: const Text(
+                'v1.0.0+1',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            SafeArea(
-              child: Column(
-                children: [
-                  // App Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 20.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Image.asset('img/logo-colored.png', width: 170),
-                        activeEmployee == null
-                            ? ElevatedButton.icon(
-                                onPressed: () => EmployeeLoginDialog.show(context),
-                                icon: const Icon(Icons.login),
-                                label: const Text('Masuk Karyawan'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: SolluColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // App Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32.0,
+                    vertical: 20.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Image.asset('img/logo-colored.png', width: 170),
+                      activeEmployee == null
+                          ? ElevatedButton.icon(
+                              onPressed: () =>
+                                  EmployeeLoginDialog.show(context),
+                              icon: const Icon(Icons.login),
+                              label: const Text('Masuk Karyawan'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SolluColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
                                 ),
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: SolluColors.primary,
-                                      child: Text(activeEmployee['name'][0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          activeEmployee['name'],
-                                          style: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark, fontSize: 14),
-                                        ),
-                                        Text(
-                                          activeEmployee['role'],
-                                          style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 12),
-                                      IconButton(
-                                        icon: const Icon(Icons.logout, color: SolluColors.danger, size: 20),
-                                        tooltip: 'Keluar',
-                                        onPressed: () {
-                                        ref.read(activeEmployeeProvider.notifier).logout();
-                                      },
-                                    )
-                                  ],
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: SolluColors.primary,
+                                    child: Text(
+                                      activeEmployee['name'][0],
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        activeEmployee['name'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: SolluColors.textDark,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        activeEmployee['role'],
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 12),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.logout,
+                                      color: SolluColors.danger,
+                                      size: 20,
+                                    ),
+                                    tooltip: 'Keluar',
+                                    onPressed: () {
+                                      ref
+                                          .read(activeEmployeeProvider.notifier)
+                                          .logout();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
+
+                // Main Content Cards
+                Expanded(
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _DashboardCard(
+                          title: 'Kasir',
+                          subtitle: 'Buka menu POS & transaksi tunai',
+                          icon: Icons.point_of_sale,
+                          color: SolluColors.primary,
+                          onTap: () => _handleMenuClick(context, ref, '/pos'),
+                        ),
+                        const SizedBox(width: 24),
+                        _DashboardCard(
+                          title: 'Data Produk',
+                          subtitle: 'Katalog & stok semua produk',
+                          icon: Icons.inventory_2,
+                          color: SolluColors.success,
+                          onTap: () =>
+                              _handleMenuClick(context, ref, '/products'),
+                        ),
+                        const SizedBox(width: 24),
+                        _DashboardCard(
+                          title: 'Transaksi',
+                          subtitle: 'Lihat daftar & riwayat pesanan',
+                          icon: Icons.receipt_long,
+                          color: SolluColors.secondary,
+                          onTap: () =>
+                              _handleMenuClick(context, ref, '/history'),
+                        ),
+                        const SizedBox(width: 24),
+                        _DashboardCard(
+                          title: 'Pengaturan',
+                          subtitle: 'Konfigurasi printer & profil toko',
+                          icon: Icons.settings,
+                          color: Colors.orange,
+                          onTap: () =>
+                              _handleMenuClick(context, ref, '/settings'),
+                        ),
                       ],
                     ),
                   ),
-
-                  // Main Content Cards
-                  Expanded(
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _DashboardCard(
-                            title: 'Kasir',
-                            subtitle: 'Buka menu POS & transaksi tunai',
-                            icon: Icons.point_of_sale,
-                            color: SolluColors.primary,
-                            onTap: () => _handleMenuClick(context, ref, '/pos'),
-                          ),
-                          const SizedBox(width: 40),
-                          _DashboardCard(
-                            title: 'Transaksi',
-                            subtitle: 'Lihat daftar & riwayat pesanan',
-                            icon: Icons.receipt_long,
-                            color: SolluColors.secondary,
-                            onTap: () => _handleMenuClick(context, ref, '/history'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -207,13 +266,20 @@ class _DashboardCard extends StatelessWidget {
                 const SizedBox(height: 24),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   subtitle,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: SolluColors.textMuted,
+                  ),
                 ),
               ],
             ),

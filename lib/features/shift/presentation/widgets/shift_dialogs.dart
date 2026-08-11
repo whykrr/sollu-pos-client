@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_app/core/theme/sollu_spacing.dart';
+import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
 
 class OpenShiftDialog extends StatelessWidget {
   const OpenShiftDialog({super.key});
@@ -79,13 +80,13 @@ class CloseShiftDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SummaryRow('Modal Awal', 'Rp 500.000'),
+            _SummaryRow('Modal Awal', CurrencyFormatter.format(500000)),
             const SizedBox(height: SolluSpacing.sm),
-            const _SummaryRow('Total Penjualan Tunai', 'Rp 1.250.000'),
+            _SummaryRow('Total Penjualan Tunai', CurrencyFormatter.format(1250000)),
             const SizedBox(height: SolluSpacing.sm),
-            const _SummaryRow('Kas Masuk/Keluar', 'Rp -50.000'),
-            const Divider(height: 24, color: SolluColors.neutral),
-            const _SummaryRow('Ekspektasi Kas di Laci', 'Rp 1.700.000', isBold: true),
+            _SummaryRow('Kas Masuk/Keluar', CurrencyFormatter.format(-50000)),
+            const Divider(height: SolluSpacing.xl),
+            _SummaryRow('Ekspektasi Kas di Laci', CurrencyFormatter.format(1700000), isBold: true),
             const SizedBox(height: SolluSpacing.xxl),
             const Text('Kas Aktual di Laci', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
             const SizedBox(height: SolluSpacing.sm),
