@@ -154,6 +154,19 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
             }
           });
         }
+
+        // Otomatis cetak struk karena user menekan "Bayar & Cetak Struk"
+        printTransactionReceiptAction(ref: ref, transactionId: tx.id).then((result) {
+          if (!result.success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Gagal mencetak struk otomatis: ${result.message}'),
+                backgroundColor: SolluColors.warning,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -275,7 +288,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
               }
             },
             icon: const Icon(Icons.print_outlined, size: 16),
-            label: const Text('Cetak Struk'),
+            label: const Text('Cetak Ulang Struk'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(),

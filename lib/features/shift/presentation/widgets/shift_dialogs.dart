@@ -334,6 +334,29 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
         totalSales: summary.totalSales,
       );
 
+      // --- Cetak otomatis laporan shift jika printer diset ---
+      final printerConfig = ref.read(selectedPrinterProvider);
+      if (printerConfig != null) {
+        final cashierName = await ref.read(cashierNameProvider(shift.userId).future);
+        final printerService = ref.read(printerServiceProvider);
+        printerService.printShiftReport(
+          summary: summary,
+          config: printerConfig,
+          cashierName: cashierName,
+        ).then((result) {
+          if (!result.success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Gagal mencetak laporan otomatis: ${result.message}'),
+                backgroundColor: SolluColors.warning,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        });
+      }
+      // --------------------------------------------------------
+
       if (mounted) {
         Navigator.of(context).pop();
         context.go('/dashboard');
@@ -538,11 +561,12 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                     return;
                   }
                   
+                  final cashierName = await ref.read(cashierNameProvider(shift.userId).future);
                   final printerService = ref.read(printerServiceProvider);
                   final result = await printerService.printShiftReport(
                     summary: summary,
                     config: printerConfig,
-                    cashierName: shift.userId,
+                    cashierName: cashierName,
                   );
                   
                   if (mounted) {

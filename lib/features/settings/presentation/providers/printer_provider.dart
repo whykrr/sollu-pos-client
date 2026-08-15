@@ -5,6 +5,9 @@ import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/printer_service.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 
+import 'package:sollu_pos_client/core/database/database_provider.dart';
+import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+
 final printerServiceProvider = Provider<PrinterService>((ref) {
   return PrinterService();
 });
@@ -33,12 +36,21 @@ Future<({bool success, String message})> printTransactionReceiptAction({
       message: 'Data transaksi tidak ditemukan!',
     );
   }
+  
+  String? resolvedCashierName = cashierName;
+  if (resolvedCashierName == null && detail.transaction.shiftId != null) {
+    final db = ref.read(databaseProvider);
+    final shift = await (db.select(db.shifts)..where((s) => s.id.equals(detail.transaction.shiftId!))).getSingleOrNull();
+    if (shift != null) {
+      resolvedCashierName = await ref.read(cashierNameProvider(shift.userId).future);
+    }
+  }
 
   final service = ref.read(printerServiceProvider);
   return await service.printTransactionReceipt(
     detail: detail,
     config: printerConfig,
-    cashierName: cashierName,
+    cashierName: resolvedCashierName,
     outletName: outletName,
     outletAddress: outletAddress,
     outletPhone: outletPhone,

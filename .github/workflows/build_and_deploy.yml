@@ -3,55 +3,55 @@ name: Build and Deploy (Android & Windows)
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
-  build-android:
-    name: Build Android APK
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  # build-android:
+  #   name: Build Android APK
+  #   runs-on: ubuntu-latest
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         distribution: 'zulu'
+  #         java-version: '17'
 
-      - name: Install Dependencies
-        run: flutter pub get
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
 
-      - name: Create .env File
-        env:
-          APP_ENV_CONTENT: ${{ secrets.APP_ENV_FILE }}
-        run: |
-          if [ -n "$APP_ENV_CONTENT" ]; then
-            printf "%s\n" "$APP_ENV_CONTENT" > .env
-          else
-            cp .env.example .env
-          fi
+  #     - name: Install Dependencies
+  #       run: flutter pub get
 
-      - name: Build APK with Semantic Versioning
-        run: |
-          VERSION_NAME=$(echo "${{ github.ref_name }}" | sed 's/^v//')
-          echo "Building Android APK version: $VERSION_NAME (build: ${{ github.run_number }})"
-          flutter build apk --release --build-name="$VERSION_NAME" --build-number=${{ github.run_number }}
+  #     - name: Create .env File
+  #       env:
+  #         APP_ENV_CONTENT: ${{ secrets.APP_ENV_FILE }}
+  #       run: |
+  #         if [ -n "$APP_ENV_CONTENT" ]; then
+  #           printf "%s\n" "$APP_ENV_CONTENT" > .env
+  #         else
+  #           cp .env.example .env
+  #         fi
 
-      - name: Upload APK to Cloudflare R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          aws s3 cp build/app/outputs/flutter-apk/app-release.apk s3://${{ secrets.R2_BUCKET_NAME }}/android/sollu-pos-android-${{ github.ref_name }}.apk \
-            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  #     - name: Build APK with Semantic Versioning
+  #       run: |
+  #         VERSION_NAME=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+  #         echo "Building Android APK version: $VERSION_NAME (build: ${{ github.run_number }})"
+  #         flutter build apk --release --build-name="$VERSION_NAME" --build-number=${{ github.run_number }}
+
+  #     - name: Upload APK to Cloudflare R2
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  #         AWS_DEFAULT_REGION: auto
+  #       run: |
+  #         aws s3 cp build/app/outputs/flutter-apk/app-release.apk s3://${{ secrets.R2_BUCKET_NAME }}/android/sollu-pos-android-${{ github.ref_name }}.apk \
+  #           --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
 
   build-windows:
     name: Build Windows App
@@ -64,7 +64,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: "stable"
 
       - name: Install Dependencies
         run: flutter pub get
