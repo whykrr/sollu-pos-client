@@ -10,16 +10,33 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_pr
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:ui';
+import 'package:sollu_pos_client/core/providers/error_logging_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.initialize();
   final sharedPreferences = await SharedPreferences.getInstance();
   
+  final container = ProviderContainer(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+    ],
+  );
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    container.read(errorLoggingServiceProvider).logError(details.exception, details.stack);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    container.read(errorLoggingServiceProvider).logError(error, stack);
+    return true;
+  };
+
   runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const SolluPosApp(),
     ),
   );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
@@ -6,6 +7,8 @@ import 'package:sollu_pos_client/core/theme/sollu_spacing.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 
 class DiscountDialog extends ConsumerStatefulWidget {
   const DiscountDialog({super.key});
@@ -42,7 +45,9 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
   }
 
   void _applyManualDiscount() {
-    final val = double.tryParse(_manualValController.text.trim().replaceAll(',', '.')) ?? 0.0;
+    final val = _manualType == 'fixed'
+        ? CurrencyInputFormatter.parse(_manualValController.text)
+        : (double.tryParse(_manualValController.text.trim().replaceAll(',', '.')) ?? 0.0);
     if (val <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -282,7 +287,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                           children: [
                             Expanded(
                               child: InkWell(
-                                onTap: () => setState(() => _manualType = 'percentage'),
+                                onTap: () => setState(() {
+                                  _manualType = 'percentage';
+                                  _manualValController.clear();
+                                }),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -309,7 +317,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                             const SizedBox(width: 12),
                             Expanded(
                               child: InkWell(
-                                onTap: () => setState(() => _manualType = 'fixed'),
+                                onTap: () => setState(() {
+                                  _manualType = 'fixed';
+                                  _manualValController.clear();
+                                }),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -344,6 +355,7 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                         TextField(
                           controller: _manualValController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: _manualType == 'fixed' ? [CurrencyInputFormatter()] : [],
                           autofocus: true,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.primary),
                           decoration: InputDecoration(
@@ -438,6 +450,7 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
           children: [
             TextField(
               controller: _searchController,
+              autofocus: true,
               onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Cari nama atau no HP pelanggan...',
@@ -509,133 +522,224 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
   }
 }
 
-class ChangeQtyDialog extends StatefulWidget {
-  final String itemName;
-  final int initialQty;
-  final ValueChanged<int> onQuantityChanged;
+class EditCartItemDialog extends StatefulWidget {
+  final CartItem item;
+  final void Function(int qty, String? discountType, double? discountValue, String? notes) onSaved;
 
-  const ChangeQtyDialog({
+  const EditCartItemDialog({
     super.key,
-    required this.itemName,
-    required this.initialQty,
-    required this.onQuantityChanged,
+    required this.item,
+    required this.onSaved,
   });
 
   static Future<void> show({
     required BuildContext context,
-    required String itemName,
-    required int initialQty,
-    required ValueChanged<int> onQuantityChanged,
+    required CartItem item,
+    required void Function(int qty, String? discountType, double? discountValue, String? notes) onSaved,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => ChangeQtyDialog(
-        itemName: itemName,
-        initialQty: initialQty,
-        onQuantityChanged: onQuantityChanged,
+      builder: (context) => EditCartItemDialog(
+        item: item,
+        onSaved: onSaved,
       ),
     );
   }
 
   @override
-  State<ChangeQtyDialog> createState() => _ChangeQtyDialogState();
+  State<EditCartItemDialog> createState() => _EditCartItemDialogState();
 }
 
-class _ChangeQtyDialogState extends State<ChangeQtyDialog> {
-  late final TextEditingController _controller;
+class _EditCartItemDialogState extends State<EditCartItemDialog> {
+  late final TextEditingController _qtyController;
+  late final TextEditingController _discountController;
+  late final TextEditingController _notesController;
+  String _discountType = 'fixed';
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialQty.toString());
-    _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+    _qtyController = TextEditingController(text: widget.item.qty.toString());
+    _qtyController.selection = TextSelection(baseOffset: 0, extentOffset: _qtyController.text.length);
+    
+    _discountType = widget.item.discountType ?? 'fixed';
+    _discountController = TextEditingController(
+        text: widget.item.discountValue != null && widget.item.discountValue! > 0
+            ? widget.item.discountValue!.toInt().toString()
+            : '');
+    _notesController = TextEditingController(text: widget.item.notes ?? '');
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _qtyController.dispose();
+    _discountController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
   void _submit() {
-    final newQty = int.tryParse(_controller.text.trim());
+    final newQty = int.tryParse(_qtyController.text.trim());
     if (newQty != null && newQty > 0) {
-      widget.onQuantityChanged(newQty);
+      double? discVal;
+      final discText = _discountController.text.trim().replaceAll(',', '.');
+      if (discText.isNotEmpty) {
+        discVal = double.tryParse(discText);
+      }
+      
+      widget.onSaved(
+        newQty,
+        discVal != null && discVal > 0 ? _discountType : null,
+        discVal != null && discVal > 0 ? discVal : null,
+        _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      );
     }
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: SolluColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent || event is KeyRepeatEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+            _submit();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SolluColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.edit_note, color: SolluColors.primary, size: 22),
             ),
-            child: const Icon(Icons.edit_note, color: SolluColors.primary, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ubah Detail Item',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: SolluColors.textDark),
+                  ),
+                  Text(
+                    widget.item.name,
+                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted, fontWeight: FontWeight.normal),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Ubah Jumlah (Qty)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: SolluColors.textDark),
+                // QTY
+                const Text('Kuantitas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _qtyController,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onSubmitted: (_) => _submit(),
                 ),
-                Text(
-                  widget.itemName,
-                  style: const TextStyle(fontSize: 12, color: SolluColors.textMuted, fontWeight: FontWeight.normal),
+                const SizedBox(height: 16),
+                
+                // DISCOUNT
+                const Text('Diskon Per Item', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: SolluColors.neutral),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _discountType,
+                          items: const [
+                            DropdownMenuItem(value: 'fixed', child: Text('Rp')),
+                            DropdownMenuItem(value: 'percentage', child: Text('%')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _discountType = val);
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _discountController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Nilai Diskon',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onSubmitted: (_) => _submit(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // NOTES
+                const Text('Catatan Tambahan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _notesController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'Misal: Jangan pakai bawang...',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SolluColors.primary,
+              foregroundColor: Colors.white,
+              padding: SolluSpacing.buttonPadding,
+            ),
+            child: const Text('Simpan'),
+          ),
         ],
       ),
-      content: SizedBox(
-        width: 320,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Masukkan kuantitas baru:', style: TextStyle(fontSize: 13, color: SolluColors.textMuted)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
-        ),
-        ElevatedButton(
-          onPressed: _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: SolluColors.primary,
-            foregroundColor: Colors.white,
-            padding: SolluSpacing.buttonPadding,
-          ),
-          child: const Text('Simpan'),
-        ),
-      ],
     );
   }
 }

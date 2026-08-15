@@ -78,6 +78,8 @@ class TransactionItems extends Table {
   TextColumn get productName => text()(); // Denormalized
   RealColumn get price => real()();
   RealColumn get qty => real()();
+  TextColumn get discountType => text().nullable()();
+  RealColumn get discountValue => real().nullable()();
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
   TextColumn get promoName => text().nullable()();
   RealColumn get subtotal => real()();

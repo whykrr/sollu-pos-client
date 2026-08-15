@@ -45,6 +45,21 @@ Future<({bool success, String message})> printTransactionReceiptAction({
   );
 }
 
+Future<({bool success, String message})> openCashDrawerAction({
+  required WidgetRef ref,
+}) async {
+  final printerConfig = ref.read(selectedPrinterProvider);
+  if (printerConfig == null) {
+    return (
+      success: false,
+      message: 'Printer belum diatur! Silakan pilih printer di Pengaturan.',
+    );
+  }
+
+  final service = ref.read(printerServiceProvider);
+  return await service.openCashDrawer(printerConfig);
+}
+
 class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
   static const String _key = 'sollu_saved_printer_config';
 

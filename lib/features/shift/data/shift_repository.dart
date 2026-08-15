@@ -10,6 +10,7 @@ class ShiftSummary {
   final double cashIn;
   final double cashOut;
   final double expectedCash;
+  final Map<String, double> salesByPaymentMethod;
 
   ShiftSummary({
     required this.openingCash,
@@ -19,6 +20,7 @@ class ShiftSummary {
     required this.cashIn,
     required this.cashOut,
     required this.expectedCash,
+    required this.salesByPaymentMethod,
   });
 }
 
@@ -96,6 +98,7 @@ class ShiftRepository {
     double totalSales = 0.0;
     double cashSales = 0.0;
     double nonCashSales = 0.0;
+    Map<String, double> salesByPaymentMethod = {};
 
     for (final tx in transactions) {
       totalSales += tx.total;
@@ -108,11 +111,15 @@ class ShiftRepository {
       if (payments.isEmpty) {
         // Default jika tanpa payment detail
         cashSales += tx.total;
+        salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + tx.total;
       } else {
         for (final p in payments) {
           // Ambil tipe payment method
           if (p.paymentMethodId != null) {
             final pm = await (_database.select(_database.paymentMethods)..where((m) => m.id.equals(p.paymentMethodId!))).getSingleOrNull();
+            final methodName = pm?.name ?? 'Lainnya';
+            salesByPaymentMethod[methodName] = (salesByPaymentMethod[methodName] ?? 0) + p.amount;
+            
             if (pm?.type == 'cash' || pm?.name.toLowerCase().contains('tunai') == true) {
               cashSales += p.amount;
             } else {
@@ -120,6 +127,7 @@ class ShiftRepository {
             }
           } else {
             cashSales += p.amount;
+            salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + p.amount;
           }
         }
       }
@@ -148,6 +156,7 @@ class ShiftRepository {
       cashIn: cashIn,
       cashOut: cashOut,
       expectedCash: expectedCash,
+      salesByPaymentMethod: salesByPaymentMethod,
     );
   }
 

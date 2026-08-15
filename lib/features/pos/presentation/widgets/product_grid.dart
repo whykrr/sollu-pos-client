@@ -30,8 +30,15 @@ class ProductGrid extends ConsumerStatefulWidget {
 
 class _ProductGridState extends ConsumerState<ProductGrid> {
   int _localSelectedIndex = 0;
+  final ScrollController _scrollController = ScrollController();
 
   int get _currentIndex => widget.selectedIndex ?? _localSelectedIndex;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _setIndex(int idx, int totalItems) {
     if (totalItems <= 0) return;
@@ -42,6 +49,26 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
       setState(() {
         _localSelectedIndex = clamped;
       });
+    }
+    _scrollToIndex(clamped);
+  }
+
+  void _scrollToIndex(int index) {
+    if (!_scrollController.hasClients) return;
+    
+    final row = index ~/ 4;
+    // Lowered the estimation slightly to ensure the targetTop triggers the scroll up earlier
+    const double estimatedRowHeight = 180.0; 
+    final targetTop = (row * estimatedRowHeight) - 40; // Buffer for top padding
+    final targetBottom = targetTop + estimatedRowHeight + 80; // Buffer for bottom padding
+    
+    final currentOffset = _scrollController.offset;
+    final viewportHeight = _scrollController.position.viewportDimension;
+    
+    if (targetTop < currentOffset) {
+       _scrollController.animateTo((targetTop < 0 ? 0 : targetTop), duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+    } else if (targetBottom > currentOffset + viewportHeight) {
+       _scrollController.animateTo(targetBottom - viewportHeight, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
     }
   }
 
@@ -58,12 +85,14 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
       return;
     }
 
-    if (product.hasVariants || product.hasModifiers) {
+    final hasVariantsOrModifiers = product.hasVariants || product.hasModifiers;
+
+    if (hasVariantsOrModifiers) {
       VariantDialog.show(context, product);
     } else {
       final cartItem = CartItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        productId: product.isProductMode ? product.id : (product.inventory?.productId ?? product.id),
+        productId: product.isProductMode ? product.id : product.inventory!.productId,
         inventoryItemId: product.isProductMode ? '' : product.id,
         name: product.name,
         price: product.price,
@@ -74,8 +103,9 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${product.name} ditambahkan ke keranjang'),
-          duration: const Duration(milliseconds: 900),
+          content: Text('${product.name} ditambahkan'),
+          backgroundColor: SolluColors.success,
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -83,36 +113,14 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final posItemsAsync = ref.watch(posItemsProvider);
-    final categoriesAsync = ref.watch(posCategoriesProvider);
-    final searchQuery = ref.watch(posSearchQueryProvider).toLowerCase();
-    final selectedCategory = ref.watch(posSelectedCategoryProvider);
-
-    // Kumpulkan category ID yang relevan (kategori terpilih + seluruh sub-kategori anaknya)
-    final Set<String> matchingCategoryIds = {};
-    if (selectedCategory != null) {
-      matchingCategoryIds.add(selectedCategory);
-      categoriesAsync.whenData((categories) {
-        final childIds = categories.where((c) => c.parentId == selectedCategory).map((c) => c.id);
-        matchingCategoryIds.addAll(childIds);
-      });
-    }
+    final filteredAsync = ref.watch(filteredPosItemsProvider);
 
     return Container(
       color: const Color(0xFFF8FAFC),
-      child: posItemsAsync.when(
+      child: filteredAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Error: $error')),
-        data: (items) {
-          final filteredItems = items.where((item) {
-            final matchesCategory = selectedCategory == null || 
-                (item.categoryId != null && matchingCategoryIds.contains(item.categoryId));
-            final matchesSearch = item.name.toLowerCase().contains(searchQuery) ||
-                   (item.product?.barcode?.toLowerCase().contains(searchQuery) ?? false) ||
-                   (item.inventory?.barcode?.toLowerCase().contains(searchQuery) ?? false);
-            
-            return matchesCategory && matchesSearch;
-          }).toList();
+        data: (filteredItems) {
 
           if (filteredItems.isEmpty) {
             return const Center(child: Text('Tidak ada item yang sesuai'));
@@ -149,6 +157,7 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
               return KeyEventResult.ignored;
             },
             child: GridView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(24),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,

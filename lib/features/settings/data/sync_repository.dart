@@ -98,7 +98,7 @@ class SyncRepository {
                   ProductsCompanion.insert(
                     id: productId,
                     name: item['name'],
-                    categoryId: Value(item['category_id']),
+                    categoryId: Value(item['product_category_id'] ?? item['category_id']),
                     sku: Value(item['sku']),
                     barcode: Value(item['barcode']),
                     price: priceMap[productId] ?? 0.0,

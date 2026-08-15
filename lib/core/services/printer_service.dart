@@ -9,6 +9,7 @@ import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/services/receipt_pdf_builder.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/data/transaction_repository.dart';
+import 'package:sollu_pos_client/features/shift/data/shift_repository.dart';
 
 class PrinterService {
   CapabilityProfile? _profile;
@@ -589,5 +590,287 @@ class PrinterService {
     } else {
       return (success: false, message: 'Gagal mencetak struk Bluetooth!');
     }
+  }
+
+  /// Menghasilkan byte untuk cetak laporan tutup shift
+  Future<List<int>> generateShiftReportBytes({
+    required ShiftSummary summary,
+    required PrinterConfig config,
+    String? cashierName,
+    String? outletName,
+    String? outletAddress,
+    String? outletPhone,
+  }) async {
+    final profile = await _getProfile();
+    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final generator = Generator(paperSize, profile);
+    List<int> bytes = [];
+
+    bytes += generator.reset();
+
+    // 1. Header Toko
+    final displayName = outletName ?? config.storeName ?? 'SOLLU POS';
+    bytes += generator.text(
+      displayName,
+      styles: const PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+    );
+
+    if (outletAddress != null && outletAddress.isNotEmpty) {
+      bytes += generator.text(
+        outletAddress,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+    if (outletPhone != null && outletPhone.isNotEmpty) {
+      bytes += generator.text(
+        'Telp: $outletPhone',
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
+    bytes += generator.hr();
+
+    bytes += generator.text(
+      'LAPORAN TUTUP SHIFT',
+      styles: const PosStyles(
+        align: PosAlign.center,
+        bold: true,
+      ),
+    );
+
+    bytes += generator.feed(1);
+
+    bytes += generator.row([
+      PosColumn(text: 'Waktu Cetak:', width: 5),
+      PosColumn(
+        text: DateFormat('dd/MM/yy HH:mm').format(DateTime.now()),
+        width: 7,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    if (cashierName != null && cashierName.isNotEmpty) {
+      bytes += generator.row([
+        PosColumn(text: 'Kasir:', width: 5),
+        PosColumn(
+          text: cashierName,
+          width: 7,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+      ]);
+    }
+
+    bytes += generator.hr();
+
+    // 2. Rincian Laporan
+    bytes += generator.row([
+      PosColumn(text: 'Modal Awal', width: 6),
+      PosColumn(
+        text: CurrencyFormatter.format(summary.openingCash.toInt()),
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    bytes += generator.feed(1);
+    bytes += generator.text('Pemasukan per Metode:', styles: const PosStyles(bold: true));
+    
+    for (final entry in summary.salesByPaymentMethod.entries) {
+      bytes += generator.row([
+        PosColumn(text: '- ${entry.key}', width: 6),
+        PosColumn(
+          text: CurrencyFormatter.format(entry.value.toInt()),
+          width: 6,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+      ]);
+    }
+
+    bytes += generator.feed(1);
+    bytes += generator.row([
+      PosColumn(text: 'Kas Masuk/Keluar', width: 6),
+      PosColumn(
+        text: CurrencyFormatter.format((summary.cashIn - summary.cashOut).toInt()),
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(text: 'Ekspektasi Kas Laci', width: 6, styles: const PosStyles(bold: true)),
+      PosColumn(
+        text: CurrencyFormatter.format(summary.expectedCash.toInt()),
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right, bold: true),
+      ),
+    ]);
+
+    bytes += generator.hr();
+
+    bytes += generator.text(
+      'Laporan ini dicetak secara otomatis\ndari sistem Sollu POS.',
+      styles: const PosStyles(align: PosAlign.center),
+    );
+
+    bytes += generator.feed(2);
+
+    if (config.autoCut) {
+      bytes += generator.cut();
+    }
+
+    return bytes;
+  }
+
+  /// Eksekusi Cetak Laporan Tutup Shift
+  Future<({bool success, String message})> printShiftReport({
+    required ShiftSummary summary,
+    required PrinterConfig config,
+    String? cashierName,
+    String? outletName,
+    String? outletAddress,
+    String? outletPhone,
+  }) async {
+    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (success: false, message: 'Printer belum dipilih di Pengaturan Printer!');
+    }
+
+    // A. Mode SYSTEM (Windows / macOS Print Spooler)
+    if (config.connectionType == PrinterConnectionType.system) {
+      try {
+        final pdfBytes = await ReceiptPdfBuilder.buildShiftReportPdf(
+          summary: summary,
+          config: config,
+          cashierName: cashierName,
+          outletName: outletName,
+          outletAddress: outletAddress,
+          outletPhone: outletPhone,
+        );
+        final printer = Printer(url: config.address, name: config.name);
+        final bool printSuccess = await Printing.directPrintPdf(
+          printer: printer,
+          onLayout: (format) async => pdfBytes,
+          name: 'Shift_Report_${DateTime.now().millisecondsSinceEpoch}',
+        );
+        if (printSuccess) {
+          return (success: true, message: 'Laporan shift berhasil dicetak!');
+        } else {
+          return (success: false, message: 'Gagal mencetak laporan ke printer OS!');
+        }
+      } catch (e) {
+        debugPrint('Error printing shift report on desktop OS: $e');
+        return (success: false, message: 'Error cetak laporan: $e');
+      }
+    }
+
+    // B. Mode NETWORK
+    if (config.connectionType == PrinterConnectionType.network) {
+      final ip = config.ipAddress ?? config.address;
+      final bytes = await generateShiftReportBytes(
+        summary: summary,
+        config: config,
+        cashierName: cashierName,
+        outletName: outletName,
+        outletAddress: outletAddress,
+        outletPhone: outletPhone,
+      );
+      final netResult = await sendToNetworkPrinter(
+        ipAddress: ip,
+        port: config.port,
+        bytes: bytes,
+      );
+      if (netResult.success) {
+        return (success: true, message: 'Laporan berhasil dicetak ke printer jaringan!');
+      } else {
+        return netResult;
+      }
+    }
+
+    // C. Mode BLUETOOTH
+    final isBluetoothOn = await isBluetoothEnabled();
+    if (!isBluetoothOn) {
+      return (success: false, message: 'Bluetooth perangkat belum dinyalakan!');
+    }
+
+    final connected = await connectBluetooth(config.address);
+    if (!connected) {
+      return (success: false, message: 'Gagal menghubungkan ke printer ${config.name}');
+    }
+
+    final bytes = await generateShiftReportBytes(
+      summary: summary,
+      config: config,
+      cashierName: cashierName,
+      outletName: outletName,
+      outletAddress: outletAddress,
+      outletPhone: outletPhone,
+    );
+
+    final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
+    if (printSuccess) {
+      return (success: true, message: 'Laporan shift berhasil dicetak!');
+    } else {
+      return (success: false, message: 'Gagal mencetak laporan Bluetooth!');
+    }
+  }
+
+  /// Eksekusi perintah pembukaan Cash Drawer (Laci Uang)
+  Future<({bool success, String message})> openCashDrawer(PrinterConfig config) async {
+    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (success: false, message: 'Printer belum dipilih di Pengaturan Printer!');
+    }
+
+    final profile = await _getProfile();
+    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final generator = Generator(paperSize, profile);
+    
+    // Command standar ESC/POS untuk membuka laci (drawer kick)
+    List<int> bytes = [];
+    bytes += generator.drawer();
+
+    // A. Mode NETWORK (LAN / WiFi Socket TCP Port 9100)
+    if (config.connectionType == PrinterConnectionType.network) {
+      final ip = config.ipAddress ?? config.address;
+      final netResult = await sendToNetworkPrinter(
+        ipAddress: ip,
+        port: config.port,
+        bytes: bytes,
+      );
+      if (netResult.success) {
+        return (success: true, message: 'Laci uang berhasil dibuka (Network)!');
+      } else {
+        return netResult;
+      }
+    }
+
+    // B. Mode BLUETOOTH (Mobile)
+    if (config.connectionType == PrinterConnectionType.bluetooth) {
+      final isBluetoothOn = await isBluetoothEnabled();
+      if (!isBluetoothOn) {
+        return (success: false, message: 'Bluetooth perangkat belum dinyalakan!');
+      }
+
+      final connected = await connectBluetooth(config.address);
+      if (!connected) {
+        return (success: false, message: 'Gagal menghubungkan ke printer Bluetooth ${config.name}');
+      }
+
+      final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
+      if (printSuccess) {
+        return (success: true, message: 'Laci uang berhasil dibuka (Bluetooth)!');
+      } else {
+        return (success: false, message: 'Gagal mengirim perintah ke printer Bluetooth!');
+      }
+    }
+
+    // C. Mode SYSTEM (Desktop Print Spooler)
+    // Sebagian besar spooler sistem operasi tidak mengizinkan pengiriman raw bytes secara langsung.
+    return (success: false, message: 'Printer mode sistem tidak mendukung fungsi drawer langsung. Harap gunakan koneksi Bluetooth/Network.');
   }
 }

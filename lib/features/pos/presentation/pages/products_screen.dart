@@ -4,6 +4,8 @@ import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
@@ -14,10 +16,61 @@ class ProductsScreen extends ConsumerStatefulWidget {
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   String _searchQuery = '';
+  bool _isSyncing = false;
+
+  Future<void> _syncData() async {
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      final syncRepository = ref.read(syncRepositoryProvider);
+      await syncRepository.syncMasterData();
+
+      ref.invalidate(posItemsProvider);
+
+      // Simpan timestamp sinkronisasi terakhir
+      ref.read(lastSyncProvider.notifier).updateTimestamp();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Sinkronisasi data produk berhasil!'),
+              ],
+            ),
+            backgroundColor: SolluColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal sinkronisasi data: $e'),
+            backgroundColor: SolluColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final posItemsAsync = ref.watch(posItemsProvider);
+    final categoriesAsync = ref.watch(posCategoriesProvider);
 
     return Scaffold(
       backgroundColor: SolluColors.background,
@@ -28,6 +81,53 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         ),
         backgroundColor: SolluColors.surface,
         elevation: 0,
+        actions: [
+          // Tampilkan info sync terakhir
+          Center(
+            child: Builder(
+              builder: (context) {
+                final lastSync = ref.watch(lastSyncProvider);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Text(
+                    'Sync: ${LastSyncNotifier.formatRelative(lastSync)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: _isSyncing ? null : _syncData,
+              icon: _isSyncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.sync, size: 18),
+              label: Text(_isSyncing ? 'Menyinkronkan...' : 'Sinkronisasi Data'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SolluColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -121,13 +221,61 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     }).toList();
 
                     if (filteredProducts.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Tidak ada produk ditemukan',
-                          style: TextStyle(
-                            color: SolluColors.textMuted,
-                            fontSize: 16,
-                          ),
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              items.isEmpty ? Icons.cloud_download_outlined : Icons.search_off,
+                              size: 48,
+                              color: SolluColors.textMuted.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              items.isEmpty
+                                  ? 'Belum ada data produk tersimpan'
+                                  : 'Tidak ada produk ditemukan',
+                              style: const TextStyle(
+                                color: SolluColors.textDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              items.isEmpty
+                                  ? 'Tarik data master produk terbaru dari server untuk mulai menggunakan kasir.'
+                                  : 'Coba gunakan kata kunci pencarian yang lain.',
+                              style: const TextStyle(
+                                color: SolluColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (items.isEmpty) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _isSyncing ? null : _syncData,
+                                icon: _isSyncing
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.sync, size: 16),
+                                label: const Text('Sinkronkan Data Sekarang'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SolluColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       );
                     }
@@ -211,7 +359,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                             ],
                           ),
                           subtitle: Text(
-                            'Kategori: ${item.categoryId ?? "-"}',
+                            'Kategori: ${item.categoryId != null ? categoriesAsync.value?.where((c) => c.id == item.categoryId).firstOrNull?.name ?? "-" : "-"}',
                             style: const TextStyle(
                               color: SolluColors.textMuted,
                               fontSize: 12,
@@ -251,6 +399,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                     value: isActive,
                                     activeTrackColor: SolluColors.success,
                                     onChanged: (bool value) async {
+                                      final messenger = ScaffoldMessenger.of(context);
                                       await ref
                                           .read(posRepositoryProvider)
                                           .toggleInventoryActiveStatus(
@@ -260,12 +409,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                           );
 
                                       if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).hideCurrentSnackBar();
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.hideCurrentSnackBar();
+                                        messenger.showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               value

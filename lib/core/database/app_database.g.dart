@@ -6357,6 +6357,28 @@ class $TransactionItemsTable extends TransactionItems
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _discountTypeMeta = const VerificationMeta(
+    'discountType',
+  );
+  @override
+  late final GeneratedColumn<String> discountType = GeneratedColumn<String>(
+    'discount_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _discountValueMeta = const VerificationMeta(
+    'discountValue',
+  );
+  @override
+  late final GeneratedColumn<double> discountValue = GeneratedColumn<double>(
+    'discount_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _discountAmountMeta = const VerificationMeta(
     'discountAmount',
   );
@@ -6422,6 +6444,8 @@ class $TransactionItemsTable extends TransactionItems
     productName,
     price,
     qty,
+    discountType,
+    discountValue,
     discountAmount,
     promoName,
     subtotal,
@@ -6507,6 +6531,24 @@ class $TransactionItemsTable extends TransactionItems
     } else if (isInserting) {
       context.missing(_qtyMeta);
     }
+    if (data.containsKey('discount_type')) {
+      context.handle(
+        _discountTypeMeta,
+        discountType.isAcceptableOrUnknown(
+          data['discount_type']!,
+          _discountTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('discount_value')) {
+      context.handle(
+        _discountValueMeta,
+        discountValue.isAcceptableOrUnknown(
+          data['discount_value']!,
+          _discountValueMeta,
+        ),
+      );
+    }
     if (data.containsKey('discount_amount')) {
       context.handle(
         _discountAmountMeta,
@@ -6583,6 +6625,14 @@ class $TransactionItemsTable extends TransactionItems
         DriftSqlType.double,
         data['${effectivePrefix}qty'],
       )!,
+      discountType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}discount_type'],
+      ),
+      discountValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}discount_value'],
+      ),
       discountAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}discount_amount'],
@@ -6621,6 +6671,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
   final String productName;
   final double price;
   final double qty;
+  final String? discountType;
+  final double? discountValue;
   final double discountAmount;
   final String? promoName;
   final double subtotal;
@@ -6635,6 +6687,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     required this.productName,
     required this.price,
     required this.qty,
+    this.discountType,
+    this.discountValue,
     required this.discountAmount,
     this.promoName,
     required this.subtotal,
@@ -6658,6 +6712,12 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     map['product_name'] = Variable<String>(productName);
     map['price'] = Variable<double>(price);
     map['qty'] = Variable<double>(qty);
+    if (!nullToAbsent || discountType != null) {
+      map['discount_type'] = Variable<String>(discountType);
+    }
+    if (!nullToAbsent || discountValue != null) {
+      map['discount_value'] = Variable<double>(discountValue);
+    }
     map['discount_amount'] = Variable<double>(discountAmount);
     if (!nullToAbsent || promoName != null) {
       map['promo_name'] = Variable<String>(promoName);
@@ -6686,6 +6746,12 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       productName: Value(productName),
       price: Value(price),
       qty: Value(qty),
+      discountType: discountType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discountType),
+      discountValue: discountValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discountValue),
       discountAmount: Value(discountAmount),
       promoName: promoName == null && nullToAbsent
           ? const Value.absent()
@@ -6714,6 +6780,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       productName: serializer.fromJson<String>(json['productName']),
       price: serializer.fromJson<double>(json['price']),
       qty: serializer.fromJson<double>(json['qty']),
+      discountType: serializer.fromJson<String?>(json['discountType']),
+      discountValue: serializer.fromJson<double?>(json['discountValue']),
       discountAmount: serializer.fromJson<double>(json['discountAmount']),
       promoName: serializer.fromJson<String?>(json['promoName']),
       subtotal: serializer.fromJson<double>(json['subtotal']),
@@ -6733,6 +6801,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       'productName': serializer.toJson<String>(productName),
       'price': serializer.toJson<double>(price),
       'qty': serializer.toJson<double>(qty),
+      'discountType': serializer.toJson<String?>(discountType),
+      'discountValue': serializer.toJson<double?>(discountValue),
       'discountAmount': serializer.toJson<double>(discountAmount),
       'promoName': serializer.toJson<String?>(promoName),
       'subtotal': serializer.toJson<double>(subtotal),
@@ -6750,6 +6820,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     String? productName,
     double? price,
     double? qty,
+    Value<String?> discountType = const Value.absent(),
+    Value<double?> discountValue = const Value.absent(),
     double? discountAmount,
     Value<String?> promoName = const Value.absent(),
     double? subtotal,
@@ -6768,6 +6840,10 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     productName: productName ?? this.productName,
     price: price ?? this.price,
     qty: qty ?? this.qty,
+    discountType: discountType.present ? discountType.value : this.discountType,
+    discountValue: discountValue.present
+        ? discountValue.value
+        : this.discountValue,
     discountAmount: discountAmount ?? this.discountAmount,
     promoName: promoName.present ? promoName.value : this.promoName,
     subtotal: subtotal ?? this.subtotal,
@@ -6792,6 +6868,12 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           : this.productName,
       price: data.price.present ? data.price.value : this.price,
       qty: data.qty.present ? data.qty.value : this.qty,
+      discountType: data.discountType.present
+          ? data.discountType.value
+          : this.discountType,
+      discountValue: data.discountValue.present
+          ? data.discountValue.value
+          : this.discountValue,
       discountAmount: data.discountAmount.present
           ? data.discountAmount.value
           : this.discountAmount,
@@ -6813,6 +6895,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           ..write('productName: $productName, ')
           ..write('price: $price, ')
           ..write('qty: $qty, ')
+          ..write('discountType: $discountType, ')
+          ..write('discountValue: $discountValue, ')
           ..write('discountAmount: $discountAmount, ')
           ..write('promoName: $promoName, ')
           ..write('subtotal: $subtotal, ')
@@ -6832,6 +6916,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     productName,
     price,
     qty,
+    discountType,
+    discountValue,
     discountAmount,
     promoName,
     subtotal,
@@ -6850,6 +6936,8 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           other.productName == this.productName &&
           other.price == this.price &&
           other.qty == this.qty &&
+          other.discountType == this.discountType &&
+          other.discountValue == this.discountValue &&
           other.discountAmount == this.discountAmount &&
           other.promoName == this.promoName &&
           other.subtotal == this.subtotal &&
@@ -6866,6 +6954,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
   final Value<String> productName;
   final Value<double> price;
   final Value<double> qty;
+  final Value<String?> discountType;
+  final Value<double?> discountValue;
   final Value<double> discountAmount;
   final Value<String?> promoName;
   final Value<double> subtotal;
@@ -6881,6 +6971,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     this.productName = const Value.absent(),
     this.price = const Value.absent(),
     this.qty = const Value.absent(),
+    this.discountType = const Value.absent(),
+    this.discountValue = const Value.absent(),
     this.discountAmount = const Value.absent(),
     this.promoName = const Value.absent(),
     this.subtotal = const Value.absent(),
@@ -6897,6 +6989,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     required String productName,
     required double price,
     required double qty,
+    this.discountType = const Value.absent(),
+    this.discountValue = const Value.absent(),
     this.discountAmount = const Value.absent(),
     this.promoName = const Value.absent(),
     required double subtotal,
@@ -6918,6 +7012,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     Expression<String>? productName,
     Expression<double>? price,
     Expression<double>? qty,
+    Expression<String>? discountType,
+    Expression<double>? discountValue,
     Expression<double>? discountAmount,
     Expression<String>? promoName,
     Expression<double>? subtotal,
@@ -6935,6 +7031,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
       if (productName != null) 'product_name': productName,
       if (price != null) 'price': price,
       if (qty != null) 'qty': qty,
+      if (discountType != null) 'discount_type': discountType,
+      if (discountValue != null) 'discount_value': discountValue,
       if (discountAmount != null) 'discount_amount': discountAmount,
       if (promoName != null) 'promo_name': promoName,
       if (subtotal != null) 'subtotal': subtotal,
@@ -6953,6 +7051,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     Value<String>? productName,
     Value<double>? price,
     Value<double>? qty,
+    Value<String?>? discountType,
+    Value<double?>? discountValue,
     Value<double>? discountAmount,
     Value<String?>? promoName,
     Value<double>? subtotal,
@@ -6969,6 +7069,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
       productName: productName ?? this.productName,
       price: price ?? this.price,
       qty: qty ?? this.qty,
+      discountType: discountType ?? this.discountType,
+      discountValue: discountValue ?? this.discountValue,
       discountAmount: discountAmount ?? this.discountAmount,
       promoName: promoName ?? this.promoName,
       subtotal: subtotal ?? this.subtotal,
@@ -7007,6 +7109,12 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     if (qty.present) {
       map['qty'] = Variable<double>(qty.value);
     }
+    if (discountType.present) {
+      map['discount_type'] = Variable<String>(discountType.value);
+    }
+    if (discountValue.present) {
+      map['discount_value'] = Variable<double>(discountValue.value);
+    }
     if (discountAmount.present) {
       map['discount_amount'] = Variable<double>(discountAmount.value);
     }
@@ -7039,6 +7147,8 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
           ..write('productName: $productName, ')
           ..write('price: $price, ')
           ..write('qty: $qty, ')
+          ..write('discountType: $discountType, ')
+          ..write('discountValue: $discountValue, ')
           ..write('discountAmount: $discountAmount, ')
           ..write('promoName: $promoName, ')
           ..write('subtotal: $subtotal, ')
@@ -16502,6 +16612,8 @@ typedef $$TransactionItemsTableCreateCompanionBuilder =
       required String productName,
       required double price,
       required double qty,
+      Value<String?> discountType,
+      Value<double?> discountValue,
       Value<double> discountAmount,
       Value<String?> promoName,
       required double subtotal,
@@ -16519,6 +16631,8 @@ typedef $$TransactionItemsTableUpdateCompanionBuilder =
       Value<String> productName,
       Value<double> price,
       Value<double> qty,
+      Value<String?> discountType,
+      Value<double?> discountValue,
       Value<double> discountAmount,
       Value<String?> promoName,
       Value<double> subtotal,
@@ -16626,6 +16740,16 @@ class $$TransactionItemsTableFilterComposer
 
   ColumnFilters<double> get qty => $composableBuilder(
     column: $table.qty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get discountType => $composableBuilder(
+    column: $table.discountType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get discountValue => $composableBuilder(
+    column: $table.discountValue,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16749,6 +16873,16 @@ class $$TransactionItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get discountType => $composableBuilder(
+    column: $table.discountType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get discountValue => $composableBuilder(
+    column: $table.discountValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get discountAmount => $composableBuilder(
     column: $table.discountAmount,
     builder: (column) => ColumnOrderings(column),
@@ -16833,6 +16967,16 @@ class $$TransactionItemsTableAnnotationComposer
 
   GeneratedColumn<double> get qty =>
       $composableBuilder(column: $table.qty, builder: (column) => column);
+
+  GeneratedColumn<String> get discountType => $composableBuilder(
+    column: $table.discountType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get discountValue => $composableBuilder(
+    column: $table.discountValue,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<double> get discountAmount => $composableBuilder(
     column: $table.discountAmount,
@@ -16943,6 +17087,8 @@ class $$TransactionItemsTableTableManager
                 Value<String> productName = const Value.absent(),
                 Value<double> price = const Value.absent(),
                 Value<double> qty = const Value.absent(),
+                Value<String?> discountType = const Value.absent(),
+                Value<double?> discountValue = const Value.absent(),
                 Value<double> discountAmount = const Value.absent(),
                 Value<String?> promoName = const Value.absent(),
                 Value<double> subtotal = const Value.absent(),
@@ -16958,6 +17104,8 @@ class $$TransactionItemsTableTableManager
                 productName: productName,
                 price: price,
                 qty: qty,
+                discountType: discountType,
+                discountValue: discountValue,
                 discountAmount: discountAmount,
                 promoName: promoName,
                 subtotal: subtotal,
@@ -16975,6 +17123,8 @@ class $$TransactionItemsTableTableManager
                 required String productName,
                 required double price,
                 required double qty,
+                Value<String?> discountType = const Value.absent(),
+                Value<double?> discountValue = const Value.absent(),
                 Value<double> discountAmount = const Value.absent(),
                 Value<String?> promoName = const Value.absent(),
                 required double subtotal,
@@ -16990,6 +17140,8 @@ class $$TransactionItemsTableTableManager
                 productName: productName,
                 price: price,
                 qty: qty,
+                discountType: discountType,
+                discountValue: discountValue,
                 discountAmount: discountAmount,
                 promoName: promoName,
                 subtotal: subtotal,

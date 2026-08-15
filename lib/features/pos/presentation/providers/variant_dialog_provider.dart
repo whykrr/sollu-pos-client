@@ -15,6 +15,10 @@ class VariantDialogState {
   final Map<String, String> selectedVariants; // variantGroupId -> optionId
   final Map<String, List<String>> selectedModifiers; // modifierGroupId -> list of optionId
   final double variantPrice; // specific price for selected variant combination
+  
+  final int qty;
+  final String? discountType;
+  final double? discountValue;
 
   VariantDialogState({
     this.isLoading = true,
@@ -25,6 +29,9 @@ class VariantDialogState {
     this.selectedVariants = const {},
     this.selectedModifiers = const {},
     this.variantPrice = 0.0,
+    this.qty = 1,
+    this.discountType,
+    this.discountValue,
   });
 
   VariantDialogState copyWith({
@@ -36,6 +43,9 @@ class VariantDialogState {
     Map<String, String>? selectedVariants,
     Map<String, List<String>>? selectedModifiers,
     double? variantPrice,
+    int? qty,
+    String? discountType,
+    double? discountValue,
   }) {
     return VariantDialogState(
       isLoading: isLoading ?? this.isLoading,
@@ -46,6 +56,9 @@ class VariantDialogState {
       selectedVariants: selectedVariants ?? this.selectedVariants,
       selectedModifiers: selectedModifiers ?? this.selectedModifiers,
       variantPrice: variantPrice ?? this.variantPrice,
+      qty: qty ?? this.qty,
+      discountType: discountType ?? this.discountType,
+      discountValue: discountValue ?? this.discountValue,
     );
   }
 }
@@ -178,6 +191,16 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
     final updated = Map<String, List<String>>.from(state.selectedModifiers);
     updated[groupId] = updatedList;
     state = state.copyWith(selectedModifiers: updated);
+  }
+
+  void setQty(int qty) {
+    if (qty > 0) {
+      state = state.copyWith(qty: qty);
+    }
+  }
+
+  void setDiscount(String? type, double? value) {
+    state = state.copyWith(discountType: type, discountValue: value);
   }
 
   double calculateTotalPrice() {

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/widgets/sync_progress_overlay.dart';
+import 'package:sollu_pos_client/core/providers/auto_sync_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -22,6 +25,9 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeEmployee = ref.watch(activeEmployeeProvider);
+    
+    // Initialize auto-sync watcher
+    ref.watch(autoSyncProvider);
 
     return Scaffold(
       backgroundColor: SolluColors.background,
@@ -205,9 +211,41 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+
+                // Info Sinkronisasi Terakhir
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: Builder(
+                    builder: (context) {
+                      final lastSync = ref.watch(lastSyncProvider);
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            lastSync != null ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                            size: 16,
+                            color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sinkronisasi terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: lastSync != null ? SolluColors.textDark : SolluColors.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
+          
+          // Floating Sync Overlay
+          const SyncProgressOverlay(),
         ],
       ),
     );

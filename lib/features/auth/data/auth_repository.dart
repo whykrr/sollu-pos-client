@@ -15,6 +15,8 @@ class AuthRepository {
     try {
       final deviceUuid = await _deviceInfoService.getOrCreateDeviceUuid();
       final hardwareSignature = await _deviceInfoService.getOrCreateHardwareSignature();
+      final appVersion = await _deviceInfoService.getAppVersion();
+      final platformType = _deviceInfoService.getPlatformType();
 
       final response = await _dioClient.dio.post(
         '/device/connect',
@@ -22,6 +24,8 @@ class AuthRepository {
           'otp': otp,
           'device_uuid': deviceUuid,
           'hardware_fingerprint': hardwareSignature,
+          'app_version': appVersion,
+          'platform_type': platformType,
         },
       );
 
@@ -44,7 +48,16 @@ class AuthRepository {
   /// Check if the device is still connected/valid
   Future<bool> checkDeviceStatus() async {
     try {
-      final response = await _dioClient.dio.get('/device/status');
+      final appVersion = await _deviceInfoService.getAppVersion();
+      final platformType = _deviceInfoService.getPlatformType();
+      
+      final response = await _dioClient.dio.get(
+        '/device/status',
+        queryParameters: {
+          'app_version': appVersion,
+          'platform_type': platformType,
+        },
+      );
       return response.statusCode == 200;
     } catch (e) {
       return false;

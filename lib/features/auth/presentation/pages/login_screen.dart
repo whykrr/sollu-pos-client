@@ -146,13 +146,27 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
   }
 
   void _onChanged(int index, String value) {
-    if (value.isNotEmpty) {
+    if (value.length > 1) {
+      // Handle paste scenario
+      final pasteText = value.replaceAll(RegExp(r'[^0-9]'), '');
+      for (int i = 0; i < pasteText.length && index + i < 8; i++) {
+        _controllers[index + i].text = pasteText[i];
+      }
+      
+      final nextFocus = index + pasteText.length;
+      if (nextFocus < 8) {
+        _focusNodes[nextFocus].requestFocus();
+      } else {
+        _focusNodes[7].unfocus();
+      }
+    } else if (value.isNotEmpty) {
       if (index < 7) {
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
       }
     }
+    
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length == 8) {
       widget.onCompleted(otp);
@@ -177,7 +191,6 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
           focusNode: _focusNodes[index],
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          maxLength: 1,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(

@@ -58,6 +58,7 @@ dependencies:
   pdf: ^3.11.1
   flutter_dotenv: ^5.2.1
   package_info_plus: ^10.2.1
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:
@@ -69,9 +70,13 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
 
 flutter_launcher_icons:
-  android: "ic_launcher"
+  android: true
   ios: true
   image_path: "img/icon-colored.png"
+  windows:
+    generate: true
+    image_path: "img/icon-colored.png"
+    icon_size: 48
   macos:
     generate: true
     image_path: "img/icon-colored.png"

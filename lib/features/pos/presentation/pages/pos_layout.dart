@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
@@ -13,6 +14,8 @@ import 'package:sollu_pos_client/features/shift/presentation/widgets/shift_dialo
 import 'package:sollu_pos_client/features/pos/presentation/widgets/category_sidebar.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
+import 'package:sollu_pos_client/core/providers/connectivity_provider.dart';
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/hold_orders_dialog.dart';
@@ -20,6 +23,8 @@ import 'package:sollu_pos_client/features/pos/presentation/widgets/transaction_h
 
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/bootstrap_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/widgets/sync_progress_overlay.dart';
+import 'package:sollu_pos_client/core/providers/auto_sync_provider.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -29,6 +34,7 @@ class PosLayout extends ConsumerStatefulWidget {
 }
 
 class _PosLayoutState extends ConsumerState<PosLayout> {
+  final FocusNode _keyboardFocusNode = FocusNode();
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _productGridFocusNode = FocusNode();
   final FocusNode _cartFocusNode = FocusNode();
@@ -56,6 +62,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
 
   @override
   void dispose() {
+    _keyboardFocusNode.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _productGridFocusNode.dispose();
@@ -179,6 +186,9 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
   @override
   Widget build(BuildContext context) {
     final activeShiftAsync = ref.watch(activeShiftProvider);
+    
+    // Initialize auto-sync watcher
+    ref.watch(autoSyncProvider);
 
     // Optimasi Riverpod: ref.listen tidak memicu rebuild UI, cukup merespons event shortcut
     ref.listen<String?>(shortcutProvider, (previous, next) {
@@ -187,9 +197,55 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: SolluColors.background,
-      appBar: AppBar(
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final logicalKey = event.logicalKey;
+          if (logicalKey == LogicalKeyboardKey.f1) {
+            ref.read(shortcutProvider.notifier).trigger('F1');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f2) {
+            ref.read(shortcutProvider.notifier).trigger('F2');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f3) {
+            ref.read(shortcutProvider.notifier).trigger('F3');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f4) {
+            ref.read(shortcutProvider.notifier).trigger('F4');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f5) {
+            ref.read(shortcutProvider.notifier).trigger('F5');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f6) {
+            ref.read(shortcutProvider.notifier).trigger('F6');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f7) {
+            ref.read(shortcutProvider.notifier).trigger('F7');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f8) {
+            ref.read(shortcutProvider.notifier).trigger('F8');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f9) {
+            ref.read(shortcutProvider.notifier).trigger('F9');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f10) {
+            ref.read(shortcutProvider.notifier).trigger('F10');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f12) {
+            ref.read(shortcutProvider.notifier).trigger('F12');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.escape) {
+            ref.read(shortcutProvider.notifier).trigger('Esc');
+            // Allow escape to also close dialogs natively if needed, but we handle it
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        backgroundColor: SolluColors.background,
+        appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
         titleSpacing: 16,
@@ -288,11 +344,58 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           ),
           const SizedBox(width: 8),
           Center(
+            child: Consumer(
+              builder: (context, ref, child) {
+                final isOnline = ref.watch(connectivityProvider);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isOnline 
+                        ? SolluColors.success.withValues(alpha: 0.1)
+                        : SolluColors.danger.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isOnline ? SolluColors.success : SolluColors.danger,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOnline ? Icons.wifi : Icons.wifi_off,
+                        size: 14,
+                        color: isOnline ? SolluColors.success : SolluColors.danger,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isOnline ? 'Online' : 'Offline',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isOnline ? SolluColors.success : SolluColors.danger,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Center(
             child: activeShiftAsync.when(
               data: (shift) {
                 final isShiftOpen = shift != null;
+                final cashierName = isShiftOpen
+                    ? ref.watch(cashierNameProvider(shift.userId)).when(
+                        data: (name) => name,
+                        loading: () => '...',
+                        error: (_, __) => 'Kasir',
+                      )
+                    : '';
                 final shiftText = isShiftOpen
-                    ? 'Shift #${shift.shiftNumber}  •  Kasir: ${shift.userId}'
+                    ? 'Shift #${shift.shiftNumber}  •  Kasir: $cashierName'
                     : 'Shift: Belum Dibuka';
 
                 return InkWell(
@@ -375,6 +478,9 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                   ref.invalidate(posItemsProvider);
                   ref.invalidate(posCategoriesProvider);
                   
+                  // Simpan timestamp sinkronisasi terakhir
+                  ref.read(lastSyncProvider.notifier).updateTimestamp();
+                  
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -422,8 +528,10 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           const SizedBox(width: 16),
         ],
       ),
-      body: Row(
+      body: Stack(
         children: [
+          Row(
+            children: [
           // Left Pane: Category Sidebar (2/10 of screen)
           const Expanded(
             flex: 2,
@@ -453,7 +561,13 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
               focusNode: _cartFocusNode,
             ),
           ),
+            ],
+          ),
+          
+          // Floating Sync Overlay
+          const SyncProgressOverlay(),
         ],
+      ),
       ),
     );
   }

@@ -209,7 +209,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Sinkronisasi Data',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: const Text('Tarik data master terbaru dari server'),
+                subtitle: Builder(
+                  builder: (context) {
+                    final lastSync = ref.watch(lastSyncProvider);
+                    return Text(
+                      'Terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
+                      style: TextStyle(
+                        color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                        fontWeight: lastSync != null ? FontWeight.w500 : FontWeight.normal,
+                      ),
+                    );
+                  },
+                ),
                 trailing: _isSyncing 
                   ? const SizedBox(
                       width: 20,
@@ -273,6 +284,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       
       // Refresh state yang diperlukan
       ref.invalidate(employeeListProvider);
+      
+      // Simpan timestamp sinkronisasi terakhir
+      ref.read(lastSyncProvider.notifier).updateTimestamp();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

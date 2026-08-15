@@ -8,6 +8,9 @@ import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_client/features/shift/data/shift_repository.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 
 class OpenShiftDialog extends ConsumerStatefulWidget {
   const OpenShiftDialog({super.key});
@@ -36,8 +39,7 @@ class _OpenShiftDialogState extends ConsumerState<OpenShiftDialog> {
   }
 
   Future<void> _submit() async {
-    final cashText = _cashController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    final openingCash = double.tryParse(cashText) ?? 0.0;
+    final openingCash = CurrencyInputFormatter.parse(_cashController.text);
 
     setState(() {
       _isLoading = true;
@@ -185,6 +187,7 @@ class _OpenShiftDialogState extends ConsumerState<OpenShiftDialog> {
             TextField(
               controller: _cashController,
               keyboardType: TextInputType.number,
+              inputFormatters: [CurrencyInputFormatter()],
               autofocus: true,
               style: const TextStyle(
                 fontSize: 20,
@@ -275,9 +278,8 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
   void initState() {
     super.initState();
     _actualCashController.addListener(() {
-      final text = _actualCashController.text.replaceAll(RegExp(r'[^0-9]'), '');
       setState(() {
-        _actualCash = double.tryParse(text) ?? 0.0;
+        _actualCash = CurrencyInputFormatter.parse(_actualCashController.text);
       });
     });
   }
@@ -294,6 +296,36 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
     });
 
     try {
+      final txRepo = ref.read(transactionRepositoryProvider);
+      
+      // Paksa sinkronisasi sebelum menutup shift
+      await txRepo.syncPendingTransactions(force: true);
+      
+      // Pastikan semua transaksi sudah tersinkronisasi
+      final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
+      if (unsyncedCount > 0) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Koneksi Internet Diperlukan', style: TextStyle(color: SolluColors.danger)),
+              content: Text('Terdapat $unsyncedCount transaksi offline yang belum tersinkronisasi.\n\nHarap hubungkan perangkat ke internet agar data dapat dikirim ke server sebelum shift ditutup.'),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(backgroundColor: SolluColors.primary),
+                  child: const Text('Mengerti', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+        }
+        return; // Batalkan proses tutup shift
+      }
+
       final repository = ref.read(shiftRepositoryProvider);
       await repository.closeShift(
         shiftId: shift.id,
@@ -393,15 +425,22 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                         CurrencyFormatter.format(summary.openingCash.toInt()),
                       ),
                       const SizedBox(height: 8),
-                      _SummaryRow(
-                        'Total Penjualan Tunai',
-                        CurrencyFormatter.format(summary.cashSales.toInt()),
+                      const Text(
+                        'Pendapatan per Metode:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: SolluColors.textDark,
+                          fontSize: 13,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      _SummaryRow(
-                        'Total Penjualan Non-Tunai',
-                        CurrencyFormatter.format(summary.nonCashSales.toInt()),
-                      ),
+                      const SizedBox(height: 4),
+                      ...summary.salesByPaymentMethod.entries.map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: _SummaryRow(
+                              '- ${e.key}',
+                              CurrencyFormatter.format(e.value.toInt()),
+                            ),
+                          )),
                       const SizedBox(height: 8),
                       _SummaryRow(
                         'Kas Masuk/Keluar',
@@ -427,6 +466,7 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                       TextField(
                         controller: _actualCashController,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [CurrencyInputFormatter()],
                         autofocus: true,
                         style: const TextStyle(
                           fontSize: 20,
@@ -484,6 +524,44 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
             ),
           ),
           actions: [
+            summaryAsync.maybeWhen(
+              data: (summary) => TextButton.icon(
+                onPressed: () async {
+                  final printerConfig = ref.read(selectedPrinterProvider);
+                  if (printerConfig == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Printer belum diatur di Pengaturan!'),
+                        backgroundColor: SolluColors.warning,
+                      ),
+                    );
+                    return;
+                  }
+                  
+                  final printerService = ref.read(printerServiceProvider);
+                  final result = await printerService.printShiftReport(
+                    summary: summary,
+                    config: printerConfig,
+                    cashierName: shift.userId,
+                  );
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result.message),
+                        backgroundColor: result.success ? SolluColors.success : SolluColors.danger,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.print, size: 18),
+                label: const Text('Cetak Laporan'),
+                style: TextButton.styleFrom(
+                  foregroundColor: SolluColors.primary,
+                ),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(

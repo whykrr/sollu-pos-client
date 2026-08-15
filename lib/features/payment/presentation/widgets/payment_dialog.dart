@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/database/app_database.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
@@ -8,6 +9,7 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provi
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 
 class PaymentDialog extends ConsumerStatefulWidget {
   final int totalAmount;
@@ -32,18 +34,20 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
   final TextEditingController _referenceController = TextEditingController();
   double _cashReceived = 0.0;
   bool _isProcessing = false;
+  final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _cashReceived = widget.totalAmount.toDouble();
-    _cashReceivedController.text = widget.totalAmount.toString();
+    _cashReceivedController.text = CurrencyInputFormatter.format(widget.totalAmount);
   }
 
   @override
   void dispose() {
     _cashReceivedController.dispose();
     _referenceController.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -141,6 +145,15 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
       if (mounted) {
         Navigator.of(context).pop(); // Tutup dialog bayar
         _showSuccessDialog(tx, method, changeAmount);
+
+        // Buka laci kasir otomatis jika tipe pembayaran tunai (Cash)
+        if (isCash) {
+          openCashDrawerAction(ref: ref).then((result) {
+            if (!result.success && mounted) {
+              debugPrint('Gagal membuka laci: ${result.message}');
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -281,8 +294,28 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
   Widget build(BuildContext context) {
     final paymentMethodsAsync = ref.watch(activePaymentMethodsProvider);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final logicalKey = event.logicalKey;
+          if (logicalKey == LogicalKeyboardKey.enter || logicalKey == LogicalKeyboardKey.numpadEnter) {
+            if (!_isProcessing && _selectedMethod != null) {
+              _handlePaymentSubmit(_selectedMethod!);
+            }
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.escape) {
+            if (!_isProcessing) {
+              Navigator.of(context).pop();
+            }
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 860,
         height: 640,
@@ -338,7 +371,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                               setState(() {
                                 _selectedMethod = m;
                                 if (m.type == 'cash' || m.name.toLowerCase().contains('tunai')) {
-                                  _cashReceivedController.text = widget.totalAmount.toString();
+                                  _cashReceivedController.text = CurrencyInputFormatter.format(widget.totalAmount);
                                   _cashReceived = widget.totalAmount.toDouble();
                                 }
                               });
@@ -391,9 +424,10 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           keyboardType: TextInputType.number,
+                          inputFormatters: [CurrencyInputFormatter()],
                           onChanged: (val) {
                             setState(() {
-                              _cashReceived = double.tryParse(val.trim().replaceAll(',', '.')) ?? 0.0;
+                              _cashReceived = CurrencyInputFormatter.parse(val);
                             });
                           },
                         ),
@@ -409,7 +443,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                               onPressed: () {
                                 setState(() {
                                   _cashReceived = amt;
-                                  _cashReceivedController.text = amt.toInt().toString();
+                                  _cashReceivedController.text = CurrencyInputFormatter.format(amt.toInt());
                                 });
                               },
                               style: OutlinedButton.styleFrom(
@@ -541,6 +575,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Gagal memuat metode pembayaran: $err')),
         ),
+      ),
       ),
     );
   }

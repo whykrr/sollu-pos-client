@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/providers/employee_provider.dart';
 import '../../../shift/presentation/providers/shift_provider.dart';
-import '../providers/sync_provider.dart';
 
 class BootstrapResult {
   final bool isOnline;
@@ -19,14 +18,7 @@ final bootstrapProvider = FutureProvider<BootstrapResult>((ref) async {
   bool isOnline = true;
   String? errorMessage;
 
-  // 1. Coba Sinkronisasi Master Data
-  try {
-    final syncRepository = ref.read(syncRepositoryProvider);
-    await syncRepository.syncMasterData();
-  } catch (e) {
-    isOnline = false;
-    errorMessage = e.toString();
-  }
+  // Sinkronisasi otomatis sudah dipindah ke autoSyncProvider (rule 6 jam)
 
   // 2. Coba Sinkronisasi Karyawan
   try {

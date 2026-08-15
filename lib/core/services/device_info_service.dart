@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 import 'secure_storage_service.dart';
 
@@ -66,5 +67,25 @@ class DeviceInfoService {
     final digest = sha256.convert(bytes);
     
     return digest.toString();
+  }
+
+  /// Get App Version
+  Future<String> getAppVersion() async {
+    try {
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      return packageInfo.version;
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  /// Get Platform Type
+  String getPlatformType() {
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    if (Platform.isWindows) return 'windows';
+    if (Platform.isMacOS) return 'macos';
+    if (Platform.isLinux) return 'linux';
+    return 'unknown';
   }
 }

@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/data/transaction_repository.dart';
+import 'package:sollu_pos_client/features/shift/data/shift_repository.dart';
 
 class ReceiptPdfBuilder {
   static PdfPageFormat _getPageFormat(PrinterPaperSize size) {
@@ -283,6 +284,123 @@ class ReceiptPdfBuilder {
               ),
               pw.Text(
                 'Simpan struk ini sebagai bukti pembayaran yang sah',
+                textAlign: pw.TextAlign.center,
+                style: const pw.TextStyle(fontSize: 7.5),
+              ),
+              pw.SizedBox(height: 10),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  static Future<Uint8List> buildShiftReportPdf({
+    required ShiftSummary summary,
+    required PrinterConfig config,
+    String? cashierName,
+    String? outletName,
+    String? outletAddress,
+    String? outletPhone,
+  }) async {
+    final pdf = pw.Document();
+    final format = _getPageFormat(config.paperSize);
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: format,
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              pw.Text(
+                outletName ?? config.storeName ?? 'SOLLU POS',
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
+              ),
+              if (outletAddress != null && outletAddress.isNotEmpty)
+                pw.Text(
+                  outletAddress,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              if (outletPhone != null && outletPhone.isNotEmpty)
+                pw.Text(
+                  'Telp: $outletPhone',
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
+              pw.Text(
+                'LAPORAN TUTUP SHIFT',
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Waktu Cetak:', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text(
+                    DateFormat('dd/MM/yy HH:mm').format(DateTime.now()),
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+              if (cashierName != null && cashierName.isNotEmpty)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Kasir:', style: const pw.TextStyle(fontSize: 8)),
+                    pw.Text(cashierName, style: const pw.TextStyle(fontSize: 8)),
+                  ],
+                ),
+              pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
+
+              // Rincian Modal & Pendapatan
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Modal Awal', style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text(CurrencyFormatter.format(summary.openingCash.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text('Pemasukan per Metode:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+              ...summary.salesByPaymentMethod.entries.map((entry) {
+                return pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('- ${entry.key}', style: const pw.TextStyle(fontSize: 8.5)),
+                    pw.Text(CurrencyFormatter.format(entry.value.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                  ],
+                );
+              }),
+              pw.SizedBox(height: 4),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Kas Masuk/Keluar', style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text(CurrencyFormatter.format((summary.cashIn - summary.cashOut).toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                ],
+              ),
+              pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
+              
+              // Total
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Ekspektasi Kas di Laci', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                  pw.Text(CurrencyFormatter.format(summary.expectedCash.toInt()), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                ],
+              ),
+              
+              pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
+              pw.Text(
+                'Laporan ini dicetak secara otomatis\ndari sistem Sollu POS.',
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(fontSize: 7.5),
               ),

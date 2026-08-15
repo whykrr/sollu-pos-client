@@ -37,7 +37,7 @@ class VariantDialog extends ConsumerWidget {
 
     return AlertDialog(
       title: Text(
-        'Opsi: ${posItem.name}',
+        'Pesan: ${posItem.name}',
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       content: SizedBox(
@@ -145,21 +145,7 @@ class VariantDialog extends ConsumerWidget {
                 const Divider(),
               ],
 
-              const Text('Catatan Tambahan', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              // We should ideally use a TextEditingController for notes.
-              // For simplicity, we just leave it for now or implement a quick local state if needed.
-              // In this case, I will just leave the UI and we will add to cart with no notes for now.
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Misal: Jangan pakai bawang...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                maxLines: 2,
-                onChanged: (val) {
-                  // If we need to capture notes, we can add it to the provider
-                },
-              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -168,9 +154,15 @@ class VariantDialog extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              CurrencyFormatter.format(totalPrice.toInt()),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: SolluColors.primary),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Subtotal:', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                Text(
+                  CurrencyFormatter.format(totalPrice.toInt() * state.qty),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.primary),
+                ),
+              ],
             ),
             Row(
               children: [
@@ -181,8 +173,6 @@ class VariantDialog extends ConsumerWidget {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Validasi Modifier Required
-                    
                     final selectedVariantOptionId = state.selectedVariants.values.firstOrNull;
 
                     final cartItem = CartItem(
@@ -192,7 +182,9 @@ class VariantDialog extends ConsumerWidget {
                       variantGroupOptionId: selectedVariantOptionId,
                       name: posItem.name,
                       price: totalPrice,
-                      qty: 1,
+                      qty: state.qty,
+                      discountType: state.discountType,
+                      discountValue: state.discountValue,
                       selectedVariants: state.selectedVariants,
                       selectedModifiers: state.selectedModifiers,
                     );

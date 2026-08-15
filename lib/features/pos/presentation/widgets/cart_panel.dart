@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dialogs.dart';
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
 
 class CartPanel extends ConsumerStatefulWidget {
   final FocusNode? focusNode;
@@ -21,15 +22,44 @@ class CartPanel extends ConsumerStatefulWidget {
 
 class _CartPanelState extends ConsumerState<CartPanel> {
   int _selectedCartIndex = 0;
+  final ScrollController _scrollController = ScrollController();
 
-  void _openChangeQtyDialog(CartItem item) {
-    ChangeQtyDialog.show(
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToIndex(int index) {
+    if (!_scrollController.hasClients) return;
+    
+    // Each cart item is roughly 80px height including separator
+    const double estimatedItemHeight = 75.0; 
+    final targetTop = (index * estimatedItemHeight) - 30; // Buffer for top padding
+    final targetBottom = targetTop + estimatedItemHeight + 60; // Buffer for bottom
+    
+    final currentOffset = _scrollController.offset;
+    final viewportHeight = _scrollController.position.viewportDimension;
+    
+    if (targetTop < currentOffset) {
+       _scrollController.animateTo((targetTop < 0 ? 0 : targetTop), duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+    } else if (targetBottom > currentOffset + viewportHeight) {
+       _scrollController.animateTo(targetBottom - viewportHeight, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+    }
+  }
+
+  void _openEditItemDialog(CartItem item) {
+    EditCartItemDialog.show(
       context: context,
-      itemName: item.name,
-      initialQty: item.qty,
-      onQuantityChanged: (newQty) {
-        final delta = newQty - item.qty;
-        ref.read(cartProvider.notifier).updateQty(item.id, delta);
+      item: item,
+      onSaved: (qty, discountType, discountValue, notes) {
+        ref.read(cartProvider.notifier).updateItemDetails(
+          item.id,
+          qty: qty,
+          discountType: discountType,
+          discountValue: discountValue,
+          notes: notes,
+        );
       },
     );
   }
@@ -39,7 +69,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
     final cart = ref.watch(cartProvider);
     final appliedDiscount = ref.watch(appliedDiscountProvider);
 
-    final double subtotal = cart.fold(0, (sum, item) => sum + (item.price * item.qty));
+    final double subtotal = cart.fold(0, (sum, item) => sum + item.calculatedSubtotal);
     final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
     final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
     final double tax = taxableAmount * 0.1; // 10% tax
@@ -132,15 +162,17 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           setState(() {
                             _selectedCartIndex = (_selectedCartIndex + 1).clamp(0, cart.length - 1);
                           });
+                          _scrollToIndex(_selectedCartIndex);
                           return KeyEventResult.handled;
                         } else if (key == LogicalKeyboardKey.arrowUp) {
                           setState(() {
                             _selectedCartIndex = (_selectedCartIndex - 1).clamp(0, cart.length - 1);
                           });
+                          _scrollToIndex(_selectedCartIndex);
                           return KeyEventResult.handled;
                         } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
                           if (_selectedCartIndex >= 0 && _selectedCartIndex < cart.length) {
-                            _openChangeQtyDialog(cart[_selectedCartIndex]);
+                            _openEditItemDialog(cart[_selectedCartIndex]);
                             return KeyEventResult.handled;
                           }
                         } else if (key == LogicalKeyboardKey.equal || key == LogicalKeyboardKey.add) {
@@ -163,6 +195,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                       return KeyEventResult.ignored;
                     },
                     child: ListView.separated(
+                      controller: _scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       itemCount: cart.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -185,7 +218,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                               setState(() {
                                 _selectedCartIndex = index;
                               });
-                              _openChangeQtyDialog(item);
+                              _openEditItemDialog(item);
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Row(
@@ -200,9 +233,44 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                                         style: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark, fontSize: 13),
                                       ),
                                       const SizedBox(height: 3),
+                                      if (item.calculatedDiscountAmount > 0) ...[
+                                        Row(
+                                          children: [
+                                            Text(
+                                              CurrencyFormatter.format(item.price.toInt()),
+                                              style: TextStyle(
+                                                color: SolluColors.textMuted.withValues(alpha: 0.6),
+                                                fontSize: 12,
+                                                decoration: TextDecoration.lineThrough,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: SolluColors.danger.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                item.discountType == 'percentage'
+                                                    ? 'Disc ${item.discountValue?.toInt()}%'
+                                                    : 'Disc ${CurrencyFormatter.format(item.calculatedDiscountAmount.toInt())}',
+                                                style: const TextStyle(color: SolluColors.danger, fontSize: 10, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ] else ...[
+                                        Text(
+                                          CurrencyFormatter.format(item.price.toInt()),
+                                          style: const TextStyle(color: SolluColors.textMuted, fontSize: 12),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 4),
                                       Text(
-                                        CurrencyFormatter.format(item.price.toInt()),
-                                        style: const TextStyle(color: SolluColors.textMuted, fontSize: 12),
+                                        'Subtotal: ${CurrencyFormatter.format(item.calculatedSubtotal.toInt())}',
+                                        style: const TextStyle(color: SolluColors.primary, fontSize: 13, fontWeight: FontWeight.bold),
                                       ),
                                       if (item.notes != null && item.notes!.isNotEmpty) ...[
                                         const SizedBox(height: 3),
@@ -237,7 +305,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                                       }
                                     }),
                                     InkWell(
-                                      onTap: () => _openChangeQtyDialog(item),
+                                      onTap: () => _openEditItemDialog(item),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
@@ -327,17 +395,26 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                 // Action Buttons Row
                 Row(
                   children: [
-                    _buildActionButton(Icons.save_outlined, 'Save', onTap: () {}),
+                    _buildActionButton(Icons.pause_circle_outline, 'Hold', onTap: () {
+                      if (cart.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Keranjang masih kosong')));
+                        return;
+                      }
+                      ref.read(holdCartProvider.notifier).holdCurrentCart(cart);
+                      ref.read(cartProvider.notifier).clearCart();
+                      ref.read(appliedDiscountProvider.notifier).clearDiscount();
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan berhasil di-hold')));
+                    }),
                     const SizedBox(width: 8),
                     _buildActionButton(
                       Icons.percent_outlined,
-                      appliedDiscount != null ? 'Promo Aktif' : 'Discount',
+                      appliedDiscount != null ? 'Promo Aktif' : 'Diskon',
                       isActive: appliedDiscount != null,
                       onTap: () => DiscountDialog.show(context),
                     ),
                     const SizedBox(width: 8),
-                    _buildActionButton(Icons.receipt_long_outlined, 'Split Bill', onTap: () {}),
-                    const SizedBox(width: 16),
+                    _buildActionButton(Icons.receipt_long_outlined, 'Split Bill', isDisabled: true),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
@@ -351,10 +428,10 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           backgroundColor: SolluColors.primary,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
                         ),
-                        child: const Text('BAYAR', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                        child: const Text('BAYAR', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                       ),
                     ),
                   ],
@@ -381,29 +458,39 @@ class _CartPanelState extends ConsumerState<CartPanel> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap, bool isActive = false}) {
+  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap, bool isActive = false, bool isDisabled = false}) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      onTap: isDisabled ? null : onTap,
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        width: 48,
-        height: 48,
+        width: 64,
+        height: 64,
         decoration: BoxDecoration(
-          color: isActive ? SolluColors.primary.withValues(alpha: 0.12) : const Color(0xFFE2E8F0).withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(8),
+          color: isDisabled 
+            ? SolluColors.neutral.withValues(alpha: 0.3)
+            : isActive ? SolluColors.primary.withValues(alpha: 0.12) : const Color(0xFFE2E8F0).withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
           border: isActive ? Border.all(color: SolluColors.primary, width: 1.5) : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: isActive ? SolluColors.primary : SolluColors.textMuted.withValues(alpha: 0.6)),
-            const SizedBox(height: 2),
+            Icon(
+              icon, 
+              size: 24, 
+              color: isDisabled 
+                ? SolluColors.textMuted.withValues(alpha: 0.4) 
+                : isActive ? SolluColors.primary : SolluColors.textDark.withValues(alpha: 0.8)
+            ),
+            const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 8,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? SolluColors.primary : SolluColors.textMuted.withValues(alpha: 0.6),
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                color: isDisabled 
+                  ? SolluColors.textMuted.withValues(alpha: 0.4) 
+                  : isActive ? SolluColors.primary : SolluColors.textDark.withValues(alpha: 0.8),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

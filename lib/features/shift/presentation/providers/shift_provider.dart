@@ -21,3 +21,12 @@ final shiftSummaryProvider = FutureProvider.family<ShiftSummary, String>((ref, s
   final repository = ref.watch(shiftRepositoryProvider);
   return await repository.calculateShiftSummary(shiftId);
 });
+
+/// Provider untuk resolve nama kasir dari userId (UUID) ke nama karyawan
+final cashierNameProvider = FutureProvider.family<String, String>((ref, userId) async {
+  final database = ref.watch(databaseProvider);
+  final employee = await (database.select(database.employees)
+        ..where((e) => e.id.equals(userId)))
+      .getSingleOrNull();
+  return employee?.name ?? 'Kasir';
+});

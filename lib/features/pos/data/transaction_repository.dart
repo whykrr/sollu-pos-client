@@ -153,6 +153,19 @@ class TransactionRepository {
           }
         }
         
+        // Hitung nilai diskon
+        double itemDiscountAmount = 0.0;
+        String? itemDiscountType = cartItem.discountType;
+        double? itemDiscountValue = cartItem.discountValue;
+
+        if (itemDiscountType == 'percentage') {
+          itemDiscountAmount = (cartItem.price * (itemDiscountValue ?? 0) / 100) * cartItem.qty;
+        } else if (itemDiscountType == 'fixed') {
+          itemDiscountAmount = (itemDiscountValue ?? 0) * cartItem.qty;
+        }
+
+        final itemSubtotal = (cartItem.price * cartItem.qty) - itemDiscountAmount;
+
         await _database.into(_database.transactionItems).insert(
           TransactionItemsCompanion.insert(
             id: itemId,
@@ -163,8 +176,10 @@ class TransactionRepository {
             productName: cartItem.name,
             price: cartItem.price,
             qty: cartItem.qty.toDouble(),
-            discountAmount: const Value(0.0),
-            subtotal: cartItem.price * cartItem.qty,
+            discountType: Value(itemDiscountType),
+            discountValue: Value(itemDiscountValue),
+            discountAmount: Value(itemDiscountAmount),
+            subtotal: itemSubtotal,
             notes: Value(cartItem.notes),
             createdAt: Value(now),
           ),
@@ -225,8 +240,10 @@ class TransactionRepository {
           'product_name': cartItem.name,
           'price': cartItem.price,
           'qty': cartItem.qty,
-          'discount_amount': 0.0,
-          'subtotal': cartItem.price * cartItem.qty,
+          'discount_type': itemDiscountType,
+          'discount_value': itemDiscountValue,
+          'discount_amount': itemDiscountAmount,
+          'subtotal': itemSubtotal,
           'modifiers': modPayload,
         });
       }
@@ -295,7 +312,7 @@ class TransactionRepository {
   }
 
   /// Sinkronisasi transaksi ke API backend Laravel
-  Future<void> _syncTransactionOnline({
+  Future<bool> _syncTransactionOnline({
     required String txId,
     required String txNumber,
     String? shiftId,
@@ -356,10 +373,100 @@ class TransactionRepository {
         // Tandai transaksi lokal sebagai tersinkronisasi
         await (_database.update(_database.transactions)..where((t) => t.id.equals(txId)))
             .write(const TransactionsCompanion(isOffline: Value(false)));
+        return true;
       }
+      return false;
     } catch (_) {
       // Jika offline, data transaksi tetap aman tersimpan di SQLite lokal
+      return false;
     }
+  }
+
+  /// Mendapatkan jumlah transaksi yang belum tersinkron
+  Future<int> getUnsyncedTransactionsCount() async {
+    final countRows = await (_database.select(_database.transactions)
+          ..where((t) => t.isOffline.equals(true)))
+        .get();
+    return countRows.length;
+  }
+
+  /// Mendapatkan daftar transaksi yang belum tersinkron
+  Future<List<Transaction>> getUnsyncedTransactions() async {
+    return await (_database.select(_database.transactions)
+          ..where((t) => t.isOffline.equals(true)))
+        .get();
+  }
+
+  /// Mencoba menyinkronkan seluruh transaksi yang pending
+  Future<int> syncPendingTransactions({bool force = false}) async {
+    final unsynced = await getUnsyncedTransactions();
+    if (unsynced.isEmpty) return 0;
+    
+    // Syarat sinkronisasi: jika lebih dari 10 atau dipaksa
+    if (!force && unsynced.length <= 10) return 0;
+
+    int successCount = 0;
+    for (final tx in unsynced) {
+      final details = await getTransactionDetails(tx.id);
+      if (details == null) continue;
+
+      final itemsPayload = <Map<String, dynamic>>[];
+      for (final item in details.items) {
+        final mods = details.modifiersByItemId[item.id] ?? [];
+        final modPayload = mods.map((m) => {
+          'modifier_option_id': null, 
+          'modifier_name': m.modifierName,
+          'price': m.price,
+          'qty': m.qty,
+        }).toList();
+
+        itemsPayload.add({
+          'product_id': item.productId,
+          'inventory_item_id': item.inventoryItemId,
+          'variant_group_option_id': item.variantGroupOptionId,
+          'product_name': item.productName,
+          'price': item.price,
+          'qty': item.qty,
+          'discount_type': item.discountType,
+          'discount_value': item.discountValue,
+          'discount_amount': item.discountAmount,
+          'subtotal': item.subtotal,
+          'modifiers': modPayload,
+        });
+      }
+
+      final payment = details.payments.isNotEmpty ? details.payments.first : null;
+      if (payment == null) continue;
+
+      final success = await _syncTransactionOnline(
+        txId: tx.id,
+        txNumber: tx.transactionNumber,
+        shiftId: tx.shiftId,
+        customerId: tx.customerId,
+        subtotal: tx.subtotal,
+        discountAmount: tx.discountAmount ?? 0.0,
+        discountType: tx.discountType,
+        discountValue: tx.discountValue,
+        promoName: tx.promoName,
+        promoId: details.promo?.promoId,
+        taxAmount: tx.taxAmount ?? 0.0,
+        serviceChargeAmount: tx.serviceChargeAmount ?? 0.0,
+        total: tx.total,
+        itemsPayload: itemsPayload,
+        paymentMethodId: payment.paymentMethodId ?? 'cash',
+        paymentAmount: payment.amount,
+        changeAmount: payment.changeAmount ?? 0.0,
+        notes: tx.notes,
+      );
+
+      if (success) {
+        successCount++;
+      } else {
+        // Jika satu gagal, asumsi sedang offline, hentikan antrean
+        break;
+      }
+    }
+    return successCount;
   }
 
   /// Memantau transaksi pada shift yang sedang aktif
