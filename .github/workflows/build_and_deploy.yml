@@ -28,8 +28,19 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Create .env File
+        run: |
+          if [ -n "${{ secrets.APP_ENV_FILE }}" ]; then
+            echo "${{ secrets.APP_ENV_FILE }}" > .env
+          else
+            cp .env.example .env
+          fi
+
+      - name: Build APK with Semantic Versioning
+        run: |
+          VERSION_NAME=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+          echo "Building Android APK version: $VERSION_NAME (build: ${{ github.run_number }})"
+          flutter build apk --release --build-name="$VERSION_NAME" --build-number=${{ github.run_number }}
 
       - name: Configure AWS Credentials for Cloudflare R2
         uses: aws-actions/configure-aws-credentials@v4
@@ -61,8 +72,21 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Windows
-        run: flutter build windows --release
+      - name: Create .env File
+        shell: pwsh
+        run: |
+          if ("${{ secrets.APP_ENV_FILE }}") {
+            Set-Content -Path .env -Value "${{ secrets.APP_ENV_FILE }}"
+          } else {
+            Copy-Item -Path .env.example -Destination .env
+          }
+
+      - name: Build Windows with Semantic Versioning
+        shell: pwsh
+        run: |
+          $VersionName = "${{ github.ref_name }}" -replace "^v", ""
+          Write-Host "Building Windows version: $VersionName (build: ${{ github.run_number }})"
+          flutter build windows --release --build-name="$VersionName" --build-number=${{ github.run_number }}
 
       - name: Compress Build Folder
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath sollu-pos-windows-${{ github.ref_name }}.zip

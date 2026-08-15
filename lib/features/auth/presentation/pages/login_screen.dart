@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sollu_pos_client/core/config/app_config.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/auth/providers/auth_provider.dart';
 
@@ -92,13 +93,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: (_otpCode.length == 8 && !isLoading) ? () => _verifyOtp(_otpCode) : null,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: SolluColors.primary,
                           foregroundColor: Colors.white,
                         ),
                         child: isLoading
                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Text('Hubungkan Perangkat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '${AppConfig.appName} ${AppConfig.fullVersionString}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: SolluColors.textMuted,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

@@ -56,6 +56,8 @@ dependencies:
   collection: ^1.19.0
   printing: ^5.13.2
   pdf: ^3.11.1
+  flutter_dotenv: ^5.2.1
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
@@ -92,6 +94,7 @@ flutter:
     - img/icon.png
     - img/logo-colored.png
     - img/logo-white.png
+    - .env
 
 
   #   - images/a_dot_ham.jpeg

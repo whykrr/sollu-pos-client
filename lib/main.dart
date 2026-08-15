@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:sollu_pos_client/core/config/app_config.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/routing/app_router.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
@@ -11,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.initialize();
   final sharedPreferences = await SharedPreferences.getInstance();
   
   runApp(
@@ -32,7 +34,7 @@ class SolluPosApp extends ConsumerWidget {
 
     return _GlobalShortcutWrapper(
       child: MaterialApp.router(
-        title: 'Sollu POS Client',
+        title: AppConfig.appName,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: SolluColors.primary,

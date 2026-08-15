@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sollu_pos_client/core/config/app_config.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/services/secure_storage_service.dart';
 
@@ -192,6 +193,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     )
                   : const Icon(Icons.chevron_right),
                 onTap: _isSyncing ? null : _syncData,
+              ),
+              const Divider(height: 24),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.verified, color: Colors.blueGrey),
+                ),
+                title: const Text(
+                  'Versi Aplikasi',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text('${AppConfig.appName} • ${AppConfig.fullVersionString} (${AppConfig.appEnv})'),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: SolluColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'v${AppConfig.appVersion}',
+                    style: const TextStyle(
+                      color: SolluColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

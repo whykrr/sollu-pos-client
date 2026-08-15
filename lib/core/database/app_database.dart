@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sollu_pos_client/core/database/tables/master_data_tables.dart';
 import 'package:sollu_pos_client/core/database/tables/transaction_tables.dart';
 
+import 'package:flutter/foundation.dart';
+
 part 'app_database.g.dart';
 
 @DriftDatabase(tables: [
@@ -47,7 +49,7 @@ LazyDatabase _openConnection() {
     final file = File(p.join(dbFolder.path, 'sollu_pos.sqlite'));
     
     // Cetak path database
-    print("LOKASI DATABASE: ${file.path}");
+    debugPrint("LOKASI DATABASE: ${file.path}");
     
     // Gunakan logStatements: true jika perlu debug query di terminal
     return NativeDatabase.createInBackground(file, logStatements: true);
