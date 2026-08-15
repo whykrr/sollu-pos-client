@@ -87,6 +87,28 @@ jobs:
           Write-Host "Building Windows version: $VersionName (build: ${{ github.run_number }})"
           flutter build windows --release --build-name="$VersionName" --build-number=${{ github.run_number }}
 
+      - name: Bundle Visual C++ Runtime DLLs
+        shell: pwsh
+        run: |
+          Write-Host "Searching for Visual C++ Redistributable CRT DLLs..."
+          $crtDirs = Get-ChildItem -Path "C:\Program Files\Microsoft Visual Studio" -Recurse -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "x64" }
+          if ($crtDirs) {
+            $sourceDir = $crtDirs[0].FullName
+            Write-Host "Copying CRT DLLs from $sourceDir to build output..."
+            Copy-Item -Path "$sourceDir\*.dll" -Destination "build\windows\x64\runner\Release\" -Force
+          } else {
+            Write-Host "VC CRT directory not found via search. Copying from System32..."
+            $dlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "vcomp140.dll")
+            foreach ($dll in $dlls) {
+              $src = "C:\Windows\System32\$dll"
+              if (Test-Path $src) {
+                Copy-Item -Path $src -Destination "build\windows\x64\runner\Release\" -Force
+              }
+            }
+          }
+          Write-Host "Bundled DLLs:"
+          Get-ChildItem -Path "build\windows\x64\runner\Release\*.dll" | Select-Object Name
+
       - name: Compress Build Folder
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath sollu-pos-windows-${{ github.ref_name }}.zip
 
