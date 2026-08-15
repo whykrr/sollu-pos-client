@@ -29,9 +29,11 @@ jobs:
         run: flutter pub get
 
       - name: Create .env File
+        env:
+          APP_ENV_CONTENT: ${{ secrets.APP_ENV_FILE }}
         run: |
-          if [ -n "${{ secrets.APP_ENV_FILE }}" ]; then
-            echo "${{ secrets.APP_ENV_FILE }}" > .env
+          if [ -n "$APP_ENV_CONTENT" ]; then
+            printf "%s\n" "$APP_ENV_CONTENT" > .env
           else
             cp .env.example .env
           fi
@@ -73,10 +75,12 @@ jobs:
         run: flutter pub get
 
       - name: Create .env File
+        env:
+          APP_ENV_CONTENT: ${{ secrets.APP_ENV_FILE }}
         shell: pwsh
         run: |
-          if ("${{ secrets.APP_ENV_FILE }}") {
-            Set-Content -Path .env -Value "${{ secrets.APP_ENV_FILE }}"
+          if ($env:APP_ENV_CONTENT) {
+            [System.IO.File]::WriteAllText(".env", $env:APP_ENV_CONTENT)
           } else {
             Copy-Item -Path .env.example -Destination .env
           }

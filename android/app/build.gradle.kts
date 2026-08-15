@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.sollu_pos_client"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
