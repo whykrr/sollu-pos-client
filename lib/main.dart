@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui';
 import 'package:sollu_pos_client/core/providers/error_logging_provider.dart';
 
+import 'package:sollu_pos_client/core/services/window_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.initialize();
@@ -23,6 +25,10 @@ void main() async {
       sharedPreferencesProvider.overrideWithValue(sharedPreferences),
     ],
   );
+
+  // Inisialisasi Window Manager pada Desktop (Windows/macOS/Linux)
+  final isKiosk = container.read(fullscreenKioskProvider);
+  await WindowService.initialize(isKiosk: isKiosk);
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -168,6 +174,13 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
           } else if (logicalKey == LogicalKeyboardKey.f10) {
             ref.read(shortcutProvider.notifier).trigger('F10');
             return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f11) {
+            if (WindowService.isDesktop) {
+              WindowService.toggleFullScreen().then((isFullScreen) {
+                ref.read(fullscreenKioskProvider.notifier).toggleKiosk(isFullScreen);
+              });
+              return KeyEventResult.handled;
+            }
           } else if (logicalKey == LogicalKeyboardKey.f12) {
             ref.read(shortcutProvider.notifier).trigger('F12');
             return KeyEventResult.handled;

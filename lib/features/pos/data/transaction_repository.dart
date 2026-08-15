@@ -12,6 +12,7 @@ class TransactionDetailData {
   final List<TransactionPayment> payments;
   final TransactionPromo? promo;
   final PaymentMethod? paymentMethod;
+  final Customer? customer;
 
   TransactionDetailData({
     required this.transaction,
@@ -20,6 +21,7 @@ class TransactionDetailData {
     required this.payments,
     this.promo,
     this.paymentMethod,
+    this.customer,
   });
 }
 
@@ -568,6 +570,13 @@ class TransactionRepository {
           ..where((p) => p.transactionId.equals(transactionId)))
         .getSingleOrNull();
 
+    Customer? customer;
+    if (tx.customerId != null) {
+      customer = await (_database.select(_database.customers)
+            ..where((c) => c.id.equals(tx.customerId!)))
+          .getSingleOrNull();
+    }
+
     return TransactionDetailData(
       transaction: tx,
       items: items,
@@ -575,15 +584,39 @@ class TransactionRepository {
       payments: payments,
       promo: promo,
       paymentMethod: paymentMethod,
+      customer: customer,
     );
   }
 
-  /// Memantau metode pembayaran aktif dari master data
+  /// Memantau metode pembayaran aktif dari master data (prioritas localSortOrder lalu sortOrder pusat)
   Stream<List<PaymentMethod>> watchActivePaymentMethods() {
     return (_database.select(_database.paymentMethods)
           ..where((m) => m.isActive.equals(true))
-          ..orderBy([(m) => OrderingTerm(expression: m.name)]))
+          ..orderBy([
+            (m) => OrderingTerm(
+                  expression: coalesce([m.localSortOrder, m.sortOrder]),
+                  mode: OrderingMode.asc,
+                ),
+            (m) => OrderingTerm(expression: m.name, mode: OrderingMode.asc),
+          ]))
         .watch();
+  }
+
+  /// Memperbarui urutan lokal metode pembayaran di database SQLite
+  Future<void> updatePaymentMethodsLocalOrder(List<String> orderedIds) async {
+    await _database.transaction(() async {
+      for (int i = 0; i < orderedIds.length; i++) {
+        await (_database.update(_database.paymentMethods)
+              ..where((m) => m.id.equals(orderedIds[i])))
+            .write(PaymentMethodsCompanion(localSortOrder: Value(i)));
+      }
+    });
+  }
+
+  /// Mereset urutan lokal metode pembayaran kembali ke aturan pusat
+  Future<void> resetPaymentMethodsLocalOrder() async {
+    await (_database.update(_database.paymentMethods))
+        .write(const PaymentMethodsCompanion(localSortOrder: Value(null)));
   }
 
   /// Memantau promo aktif dari master data

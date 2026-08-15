@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/database/app_database.dart';
 
@@ -27,6 +28,7 @@ class ShiftSummary {
 class ShiftRepository {
   final DioClient _dioClient;
   final AppDatabase _database;
+  final Uuid _uuid = const Uuid();
 
   ShiftRepository(this._dioClient, this._database);
 
@@ -55,7 +57,7 @@ class ShiftRepository {
     String outletId = 'default-outlet',
     int shiftNumber = 1,
   }) async {
-    final shiftId = 'SHIFT-${DateTime.now().millisecondsSinceEpoch}';
+    final shiftId = _uuid.v4();
     final now = DateTime.now();
 
     final companion = ShiftsCompanion.insert(
@@ -66,18 +68,24 @@ class ShiftRepository {
       openingCash: openingCash,
       status: 'open',
       openedAt: Value(now),
+      isOffline: const Value(true),
     );
 
     await _database.into(_database.shifts).insert(companion);
 
     // Kirim event buka shift ke backend di background jika online
     try {
-      await _dioClient.dio.post('/shifts/open', data: {
+      final response = await _dioClient.dio.post('/shifts/open', data: {
         'shift_id': shiftId,
         'user_id': userId,
         'opening_cash': openingCash,
         'opened_at': now.toIso8601String(),
       });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
+          const ShiftsCompanion(isOffline: Value(false)),
+        );
+      }
     } catch (_) {
       // Abaikan error jaringan agar shift offline tetap berjalan mulus
     }
@@ -176,18 +184,24 @@ class ShiftRepository {
         expectedCash: Value(expectedCash),
         totalSales: Value(totalSales),
         closedAt: Value(now),
+        isOffline: const Value(true),
       ),
     );
 
     // Kirim penutupan shift ke backend jika online
     try {
-      await _dioClient.dio.post('/shifts/close', data: {
+      final response = await _dioClient.dio.post('/shifts/close', data: {
         'shift_id': shiftId,
         'closing_cash': closingCash,
         'expected_cash': expectedCash,
         'total_sales': totalSales,
         'closed_at': now.toIso8601String(),
       });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
+          const ShiftsCompanion(isOffline: Value(false)),
+        );
+      }
     } catch (_) {
       // Offline fallback
     }
@@ -200,7 +214,7 @@ class ShiftRepository {
     required double amount,
     String? note,
   }) async {
-    final logId = 'LOG-${DateTime.now().millisecondsSinceEpoch}';
+    final logId = _uuid.v4();
     final now = DateTime.now();
 
     await _database.into(_database.shiftCashLogs).insert(
@@ -211,11 +225,12 @@ class ShiftRepository {
         amount: amount,
         note: Value(note),
         createdAt: Value(now),
+        isOffline: const Value(true),
       ),
     );
 
     try {
-      await _dioClient.dio.post('/shifts/cash-log', data: {
+      final response = await _dioClient.dio.post('/shifts/cash-log', data: {
         'id': logId,
         'shift_id': shiftId,
         'type': type,
@@ -223,8 +238,92 @@ class ShiftRepository {
         'note': note,
         'created_at': now.toIso8601String(),
       });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await (_database.update(_database.shiftCashLogs)..where((t) => t.id.equals(logId))).write(
+          const ShiftCashLogsCompanion(isOffline: Value(false)),
+        );
+      }
     } catch (_) {
       // Offline fallback
     }
+  }
+
+  /// Sinkronisasi shift dan cash log yang pending secara massal (bulk)
+  Future<void> syncPendingShifts() async {
+    final unsyncedShifts = await (_database.select(_database.shifts)..where((t) => t.isOffline.equals(true))).get();
+    final unsyncedLogs = await (_database.select(_database.shiftCashLogs)..where((t) => t.isOffline.equals(true))).get();
+
+    if (unsyncedShifts.isEmpty && unsyncedLogs.isEmpty) return;
+
+    // Kumpulkan semua shift ID yang relevan (baik dari shift offline maupun dari cash log offline)
+    final Set<String> relevantShiftIds = {};
+    for (final s in unsyncedShifts) {
+      relevantShiftIds.add(s.id);
+    }
+    for (final l in unsyncedLogs) {
+      relevantShiftIds.add(l.shiftId);
+    }
+
+    final List<Map<String, dynamic>> payloadShifts = [];
+
+    for (final shiftId in relevantShiftIds) {
+      final shift = await (_database.select(_database.shifts)..where((t) => t.id.equals(shiftId))).getSingleOrNull();
+      if (shift == null) continue;
+
+      // Ambil semua cash log untuk shift ini yang belum sinkron
+      final logs = await (_database.select(_database.shiftCashLogs)
+            ..where((t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true)))
+          .get();
+
+      final logsPayload = logs.map((l) => {
+        'id': l.id,
+        'type': l.type,
+        'amount': l.amount,
+        'note': l.note,
+        'created_at': l.createdAt.toIso8601String(),
+      }).toList();
+
+      payloadShifts.add({
+        'id': shift.id,
+        'user_id': shift.userId,
+        'shift_number': shift.shiftNumber.toString(),
+        'opening_cash': shift.openingCash,
+        'closing_cash': shift.closingCash ?? 0,
+        'expected_cash': shift.expectedCash ?? 0,
+        'total_sales': shift.totalSales ?? 0,
+        'status': shift.status,
+        'opened_at': shift.openedAt.toIso8601String(),
+        'closed_at': shift.closedAt?.toIso8601String(),
+        'cash_logs': logsPayload,
+      });
+    }
+
+    if (payloadShifts.isEmpty) return;
+
+    try {
+      final response = await _dioClient.dio.post('/shifts/sync', data: {
+        'shifts': payloadShifts,
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Update semua shift yang tersinkronisasi
+        for (final shiftId in relevantShiftIds) {
+          await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
+            const ShiftsCompanion(isOffline: Value(false)),
+          );
+          
+          await (_database.update(_database.shiftCashLogs)..where((t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true))).write(
+            const ShiftCashLogsCompanion(isOffline: Value(false)),
+          );
+        }
+      }
+    } catch (_) {
+      // Biarkan gagal, akan dicoba lagi nanti
+    }
+  }
+
+  /// (Deprecated) Fungsi ini dipertahankan agar tidak error di AutoSyncNotifier, namun tugasnya sudah diambil alih oleh syncPendingShifts.
+  Future<void> syncPendingCashLogs() async {
+    // Kosongkan karena sudah ditangani secara bulk di syncPendingShifts
   }
 }

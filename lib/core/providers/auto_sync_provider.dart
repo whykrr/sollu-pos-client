@@ -4,6 +4,7 @@ import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 
 enum AutoSyncStatus { idle, syncing, success, error }
 
@@ -69,8 +70,12 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
     if (shouldSync) {
       await forceSync();
     } else {
-      // Rule 3: Unsynced transactions > 10
+      // Rule 3: Unsynced transactions > 10, or unsynced shifts
       try {
+        final shiftRepo = ref.read(shiftRepositoryProvider);
+        await shiftRepo.syncPendingShifts();
+        await shiftRepo.syncPendingCashLogs();
+        
         final txRepo = ref.read(transactionRepositoryProvider);
         final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
         if (unsyncedCount > 10) {

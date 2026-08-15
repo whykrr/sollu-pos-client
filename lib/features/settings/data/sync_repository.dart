@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/database/app_database.dart';
 
@@ -66,6 +69,16 @@ class SyncRepository {
               (double.tryParse(bal['current_stock'].toString()) ?? 0.0);
         }
 
+        // Simpan state lokal sebelum dihapus (agar tidak tertimpa saat sinkronisasi)
+        final existingPaymentMethods = await _database.select(_database.paymentMethods).get();
+        final Map<String, int?> localSortOrderMap = {
+          for (var pm in existingPaymentMethods)
+            if (pm.localSortOrder != null) pm.id: pm.localSortOrder,
+        };
+
+        final existingOutletSetting = await (_database.select(_database.outletSettings)..limit(1)).getSingleOrNull();
+        final String? existingLocalLogoPath = existingOutletSetting?.localLogoPath;
+
         await _database.transaction(() async {
           // Clear old data (order matters due to foreign keys)
           await _database.delete(_database.inventoryItemVariantGroupOptions).go();
@@ -109,13 +122,16 @@ class SyncRepository {
 
           // Insert Payment Methods
           for (final item in paymentMethods) {
+            final methodId = item['id'];
             await _database
                 .into(_database.paymentMethods)
                 .insert(
                   PaymentMethodsCompanion.insert(
-                    id: item['id'],
+                    id: methodId,
                     name: item['name'],
                     type: item['type'],
+                    sortOrder: Value(int.tryParse(item['sort_order']?.toString() ?? '0') ?? 0),
+                    localSortOrder: Value(localSortOrderMap[methodId]),
                     isActive: Value(
                       item['is_active'] == 1 || item['is_active'] == true || item['is_active'] == 'true' || item['is_active'] == null,
                     ),
@@ -124,26 +140,116 @@ class SyncRepository {
           }
 
           // Insert Outlet Settings
-          for (final item in outletSettings) {
-            await _database
-                .into(_database.outletSettings)
-                .insert(
-                  OutletSettingsCompanion.insert(
-                    id: item['id'],
-                    taxPercentage: Value(
-                      double.tryParse(item['tax_rate']?.toString() ?? '0') ??
-                          0.0,
-                    ),
-                    serviceChargePercentage: Value(
-                      double.tryParse(
-                            item['service_charge']?.toString() ?? '0',
-                          ) ??
-                          0.0,
-                    ),
-                    printerMacAddress: Value(item['printer_mac_address']),
-                  ),
-                );
+          final dynamic rawSettings = data['settings'];
+          final Map<String, dynamic> structuredSettings = rawSettings is Map<String, dynamic> ? rawSettings : {};
+          final dynamic rawReceipt = structuredSettings['receipt'];
+          final Map<String, dynamic> receiptObj = rawReceipt is Map<String, dynamic> ? rawReceipt : {};
+
+          // Fallback parsing from key-value outletSettings if structuredSettings is empty
+          double parsedTax = double.tryParse(structuredSettings['tax_percentage']?.toString() ?? '') ?? 0.0;
+          double parsedService = double.tryParse(structuredSettings['service_charge_percentage']?.toString() ?? '') ?? 0.0;
+          bool parsedTaxIncluded = structuredSettings['tax_included_in_price'] == true || structuredSettings['tax_included_in_price'] == 1;
+          bool parsedRoundingEnabled = structuredSettings['rounding_enabled'] == true || structuredSettings['rounding_enabled'] == 1;
+          String parsedRoundingMode = structuredSettings['rounding_mode']?.toString() ?? 'nearest';
+
+          Map<String, dynamic> parsedReceipt = Map<String, dynamic>.from(receiptObj);
+          if (parsedReceipt.isEmpty && outletSettings.isNotEmpty) {
+            for (final row in outletSettings) {
+              if (row['key'] == 'tax') {
+                parsedTax = double.tryParse(row['value']?.toString() ?? '0') ?? 0.0;
+              } else if (row['key'] == 'service_fee') {
+                parsedService = double.tryParse(row['value']?.toString() ?? '0') ?? 0.0;
+              } else if (row['key'] == 'tax_included_in_price') {
+                parsedTaxIncluded = row['value'] == true || row['value'] == 1;
+              } else if (row['key'] == 'rounding_enabled') {
+                parsedRoundingEnabled = row['value'] == true || row['value'] == 1;
+              } else if (row['key'] == 'rounding_mode') {
+                parsedRoundingMode = row['value']?.toString() ?? 'nearest';
+              } else if (row['category'] == 'receipt' && row['key'] == 'layout_config' && row['value'] is Map) {
+                parsedReceipt = Map<String, dynamic>.from(row['value']);
+              }
+            }
           }
+
+          final paperSize = parsedReceipt['paper_size']?.toString() ?? '58mm';
+          final autoPrint = parsedReceipt['auto_print'] == true || parsedReceipt['auto_print'] == 1 || parsedReceipt['auto_print'] == null;
+          final printKitchenCopy = parsedReceipt['print_kitchen_copy'] == true || parsedReceipt['print_kitchen_copy'] == 1;
+          final printCheckerCopy = parsedReceipt['print_checker_copy'] == true || parsedReceipt['print_checker_copy'] == 1;
+          final showLogo = parsedReceipt['show_logo'] == true || parsedReceipt['show_logo'] == 1 || parsedReceipt['show_logo'] == null;
+          final customHeaderTitle = parsedReceipt['custom_header_title']?.toString();
+          final headerNotes = parsedReceipt['header_notes']?.toString() ?? 'Terima kasih atas kunjungan Anda!';
+          final showAddress = parsedReceipt['show_address'] == true || parsedReceipt['show_address'] == 1 || parsedReceipt['show_address'] == null;
+          final showPhone = parsedReceipt['show_phone'] == true || parsedReceipt['show_phone'] == 1 || parsedReceipt['show_phone'] == null;
+          final showEmail = parsedReceipt['show_email'] == true || parsedReceipt['show_email'] == 1;
+          final showCashierName = parsedReceipt['show_cashier_name'] == true || parsedReceipt['show_cashier_name'] == 1 || parsedReceipt['show_cashier_name'] == null;
+          final showCustomerName = parsedReceipt['show_customer_name'] == true || parsedReceipt['show_customer_name'] == 1 || parsedReceipt['show_customer_name'] == null;
+          final showOrderType = parsedReceipt['show_order_type'] == true || parsedReceipt['show_order_type'] == 1 || parsedReceipt['show_order_type'] == null;
+          final showModifiers = parsedReceipt['show_modifiers'] == true || parsedReceipt['show_modifiers'] == 1 || parsedReceipt['show_modifiers'] == null;
+          final showItemNotes = parsedReceipt['show_item_notes'] == true || parsedReceipt['show_item_notes'] == 1 || parsedReceipt['show_item_notes'] == null;
+          final showTaxDetail = parsedReceipt['show_tax_detail'] == true || parsedReceipt['show_tax_detail'] == 1 || parsedReceipt['show_tax_detail'] == null;
+          final showServiceCharge = parsedReceipt['show_service_charge'] == true || parsedReceipt['show_service_charge'] == 1;
+          final footerNotes = parsedReceipt['footer_notes']?.toString() ?? 'Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.';
+          final socialMediaInfo = parsedReceipt['social_media_info']?.toString();
+          final wifiInfo = parsedReceipt['wifi_info']?.toString();
+          final showQrCode = parsedReceipt['show_qr_code'] == true || parsedReceipt['show_qr_code'] == 1;
+          final qrType = parsedReceipt['qr_type']?.toString() ?? 'invoice';
+
+          final String? logoUrl = parsedReceipt['logo_url']?.toString() ??
+              (data['outlet'] != null ? data['outlet']['logo_url']?.toString() : null);
+          String? localLogoPath;
+
+          if (logoUrl != null && logoUrl.isNotEmpty) {
+            try {
+              final appDir = await getApplicationDocumentsDirectory();
+              final logoFile = File(p.join(appDir.path, 'outlet_logo.png'));
+              
+              final imgRes = await _dioClient.dio.get<List<int>>(
+                logoUrl,
+                options: Options(responseType: ResponseType.bytes),
+              );
+              if (imgRes.statusCode == 200 && imgRes.data != null) {
+                await logoFile.writeAsBytes(imgRes.data!);
+                localLogoPath = logoFile.path;
+              }
+            } catch (_) {
+              localLogoPath = existingLocalLogoPath;
+            }
+          }
+
+          await _database.into(_database.outletSettings).insert(
+            OutletSettingsCompanion.insert(
+              id: 'current_outlet_setting',
+              taxPercentage: Value(parsedTax),
+              serviceChargePercentage: Value(parsedService),
+              taxIncludedInPrice: Value(parsedTaxIncluded),
+              roundingEnabled: Value(parsedRoundingEnabled),
+              roundingMode: Value(parsedRoundingMode),
+              paperSize: Value(paperSize),
+              autoPrint: Value(autoPrint),
+              printKitchenCopy: Value(printKitchenCopy),
+              printCheckerCopy: Value(printCheckerCopy),
+              showLogo: Value(showLogo),
+              customHeaderTitle: Value(customHeaderTitle),
+              headerNotes: Value(headerNotes),
+              showAddress: Value(showAddress),
+              showPhone: Value(showPhone),
+              showEmail: Value(showEmail),
+              showCashierName: Value(showCashierName),
+              showCustomerName: Value(showCustomerName),
+              showOrderType: Value(showOrderType),
+              showModifiers: Value(showModifiers),
+              showItemNotes: Value(showItemNotes),
+              showTaxDetail: Value(showTaxDetail),
+              showServiceCharge: Value(showServiceCharge),
+              footerNotes: Value(footerNotes),
+              socialMediaInfo: Value(socialMediaInfo),
+              wifiInfo: Value(wifiInfo),
+              showQrCode: Value(showQrCode),
+              qrType: Value(qrType),
+              logoUrl: Value(logoUrl),
+              localLogoPath: Value(localLogoPath),
+            ),
+          );
 
           // Insert Inventories
           for (final item in inventoryItems) {

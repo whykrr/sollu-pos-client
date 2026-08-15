@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:printing/printing.dart';
+import 'package:sollu_pos_client/core/database/app_database.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/services/receipt_pdf_builder.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
@@ -232,6 +234,8 @@ class PrinterService {
   Future<List<int>> generateTransactionReceiptBytes({
     required TransactionDetailData detail,
     required PrinterConfig config,
+    OutletSetting? outletSetting,
+    Uint8List? logoBytes,
     String? cashierName,
     String? outletName,
     String? outletAddress,
@@ -244,8 +248,25 @@ class PrinterService {
 
     bytes += generator.reset();
 
+    // 0. Logo Toko
+    if ((outletSetting?.showLogo ?? true) && logoBytes != null) {
+      try {
+        final decoded = img.decodeImage(logoBytes);
+        if (decoded != null) {
+          final targetWidth = config.paperSize == PrinterPaperSize.mm58 ? 160 : 220;
+          final resized = img.copyResize(decoded, width: targetWidth);
+          bytes += generator.imageRaster(resized, align: PosAlign.center);
+          bytes += generator.emptyLines(1);
+        }
+      } catch (e) {
+        debugPrint('Error rasterizing logo for ESC/POS: $e');
+      }
+    }
+
     // 1. Header Toko
-    final displayName = outletName ?? config.storeName ?? 'SOLLU POS';
+    final displayName = (outletSetting?.customHeaderTitle != null && outletSetting!.customHeaderTitle!.isNotEmpty)
+        ? outletSetting.customHeaderTitle!
+        : (outletName ?? config.storeName ?? 'SOLLU POS');
     bytes += generator.text(
       displayName,
       styles: const PosStyles(
@@ -256,22 +277,30 @@ class PrinterService {
       ),
     );
 
-    if (outletAddress != null && outletAddress.isNotEmpty) {
+    if ((outletSetting?.showAddress ?? true) && outletAddress != null && outletAddress.isNotEmpty) {
       bytes += generator.text(
         outletAddress,
         styles: const PosStyles(align: PosAlign.center),
       );
     }
-    if (outletPhone != null && outletPhone.isNotEmpty) {
+    if ((outletSetting?.showPhone ?? true) && outletPhone != null && outletPhone.isNotEmpty) {
       bytes += generator.text(
         'Telp: $outletPhone',
         styles: const PosStyles(align: PosAlign.center),
       );
     }
 
-    if (config.headerNote != null && config.headerNote!.isNotEmpty) {
+    final headerNote = outletSetting?.headerNotes ?? config.headerNote;
+    if (headerNote != null && headerNote.isNotEmpty) {
       bytes += generator.text(
-        config.headerNote!,
+        headerNote,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
+    if (outletSetting?.wifiInfo != null && outletSetting!.wifiInfo!.isNotEmpty) {
+      bytes += generator.text(
+        'WiFi: ${outletSetting.wifiInfo}',
         styles: const PosStyles(align: PosAlign.center),
       );
     }
@@ -289,8 +318,12 @@ class PrinterService {
       ),
     ]);
 
-    if (cashierName != null && cashierName.isNotEmpty) {
+    if ((outletSetting?.showCashierName ?? true) && cashierName != null && cashierName.isNotEmpty) {
       bytes += generator.text('Kasir: $cashierName');
+    }
+
+    if ((outletSetting?.showCustomerName ?? true) && detail.customer != null) {
+      bytes += generator.text('Pelanggan: ${detail.customer!.name}');
     }
 
     bytes += generator.hr();
@@ -316,10 +349,17 @@ class PrinterService {
       ]);
 
       // Modifiers / Extra
-      final modifiers = detail.modifiersByItemId[item.id] ?? [];
-      for (final mod in modifiers) {
-        final modPrice = mod.price > 0 ? ' (+${CurrencyFormatter.format(mod.price.toInt())})' : '';
-        bytes += generator.text('  + ${mod.modifierName}$modPrice');
+      if (outletSetting?.showModifiers ?? true) {
+        final modifiers = detail.modifiersByItemId[item.id] ?? [];
+        for (final mod in modifiers) {
+          final modPrice = mod.price > 0 ? ' (+${CurrencyFormatter.format(mod.price.toInt())})' : '';
+          bytes += generator.text('  + ${mod.modifierName}$modPrice');
+        }
+      }
+
+      // Catatan Item
+      if ((outletSetting?.showItemNotes ?? true) && item.notes != null && item.notes!.isNotEmpty) {
+        bytes += generator.text('  * ${item.notes}');
       }
 
       // Diskon per item jika ada
@@ -359,7 +399,7 @@ class PrinterService {
       ]);
     }
 
-    if (tx.taxAmount > 0) {
+    if ((outletSetting?.showTaxDetail ?? true) && tx.taxAmount > 0) {
       bytes += generator.row([
         PosColumn(text: 'Pajak (PB1/PPN)', width: 6),
         PosColumn(
@@ -370,7 +410,7 @@ class PrinterService {
       ]);
     }
 
-    if (tx.serviceChargeAmount > 0) {
+    if ((outletSetting?.showServiceCharge ?? true) && tx.serviceChargeAmount > 0) {
       bytes += generator.row([
         PosColumn(text: 'Service Charge', width: 6),
         PosColumn(
@@ -422,15 +462,27 @@ class PrinterService {
     bytes += generator.hr();
 
     // 6. Footer
-    final footer = config.footerNote ?? 'Terima Kasih Telah Berbelanja!';
+    final footer = outletSetting?.footerNotes ?? config.footerNote ?? 'Terima Kasih Telah Berbelanja!';
     bytes += generator.text(
       footer,
       styles: const PosStyles(align: PosAlign.center, bold: true),
     );
+
+    if (outletSetting?.socialMediaInfo != null && outletSetting!.socialMediaInfo!.isNotEmpty) {
+      bytes += generator.text(
+        outletSetting.socialMediaInfo!,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
     bytes += generator.text(
       'Simpan struk ini sebagai bukti pembayaran yang sah',
       styles: const PosStyles(align: PosAlign.center),
     );
+
+    if (outletSetting?.showQrCode ?? false) {
+      bytes += generator.qrcode(tx.transactionNumber, size: QRSize.size4);
+    }
 
     bytes += generator.feed(2);
 
@@ -504,6 +556,8 @@ class PrinterService {
   Future<({bool success, String message})> printTransactionReceipt({
     required TransactionDetailData detail,
     required PrinterConfig config,
+    OutletSetting? outletSetting,
+    Uint8List? logoBytes,
     String? cashierName,
     String? outletName,
     String? outletAddress,
@@ -519,6 +573,8 @@ class PrinterService {
         final pdfBytes = await ReceiptPdfBuilder.buildTransactionReceiptPdf(
           detail: detail,
           config: config,
+          outletSetting: outletSetting,
+          logoBytes: logoBytes,
           cashierName: cashierName,
           outletName: outletName,
           outletAddress: outletAddress,
@@ -547,6 +603,8 @@ class PrinterService {
       final bytes = await generateTransactionReceiptBytes(
         detail: detail,
         config: config,
+        outletSetting: outletSetting,
+        logoBytes: logoBytes,
         cashierName: cashierName,
         outletName: outletName,
         outletAddress: outletAddress,
@@ -578,6 +636,8 @@ class PrinterService {
     final bytes = await generateTransactionReceiptBytes(
       detail: detail,
       config: config,
+      outletSetting: outletSetting,
+      logoBytes: logoBytes,
       cashierName: cashierName,
       outletName: outletName,
       outletAddress: outletAddress,

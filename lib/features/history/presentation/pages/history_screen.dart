@@ -125,7 +125,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             '- ${CurrencyFormatter.format(tx.discountAmount.toInt())}',
                             isGreen: true,
                           ),
-                        _buildDetailRow('Pajak (10%)', CurrencyFormatter.format(tx.taxAmount.toInt())),
+                        if (tx.serviceChargeAmount > 0)
+                          _buildDetailRow('Service Charge', CurrencyFormatter.format(tx.serviceChargeAmount.toInt())),
+                        if (tx.taxAmount > 0)
+                          _buildDetailRow('Pajak', CurrencyFormatter.format(tx.taxAmount.toInt())),
                         const SizedBox(height: 8),
                         const Divider(color: SolluColors.neutral),
                         const SizedBox(height: 8),

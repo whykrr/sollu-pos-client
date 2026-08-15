@@ -56,9 +56,11 @@ dependencies:
   collection: ^1.19.0
   printing: ^5.13.2
   pdf: ^3.11.1
+  image: ^4.5.3
   flutter_dotenv: ^5.2.1
   package_info_plus: ^10.2.1
   connectivity_plus: ^7.3.1
+  window_manager: ^0.4.3
 
 dev_dependencies:
   flutter_test:

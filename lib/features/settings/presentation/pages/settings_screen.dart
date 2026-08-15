@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sollu_pos_client/core/config/app_config.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/services/secure_storage_service.dart';
@@ -11,8 +14,8 @@ import 'package:sollu_pos_client/features/auth/presentation/widgets/change_pin_d
 import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
-import 'package:sollu_pos_client/features/settings/presentation/widgets/receipt_settings_dialog.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
+import 'package:sollu_pos_client/core/services/window_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -23,19 +26,83 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isSyncing = false;
+  final FocusNode _focusNode = FocusNode();
+  int _spacePressCount = 0;
+  DateTime? _lastSpacePressTime;
+  bool _showHiddenDeviceInfo = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onSpacePressed() {
+    final now = DateTime.now();
+    if (_lastSpacePressTime == null ||
+        now.difference(_lastSpacePressTime!) > const Duration(seconds: 3)) {
+      _spacePressCount = 1;
+    } else {
+      _spacePressCount++;
+    }
+    _lastSpacePressTime = now;
+
+    if (_spacePressCount >= 5) {
+      setState(() {
+        _showHiddenDeviceInfo = !_showHiddenDeviceInfo;
+        _spacePressCount = 0;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  _showHiddenDeviceInfo ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Text(_showHiddenDeviceInfo
+                    ? 'Mode Pengembang: Info Perangkat & Token ditampilkan!'
+                    : 'Info Perangkat & Token disembunyikan.'),
+              ],
+            ),
+            backgroundColor:
+                _showHiddenDeviceInfo ? SolluColors.success : SolluColors.info,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: SolluColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Pengaturan Aplikasi',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    final bool isDevMode = kDebugMode || AppConfig.appEnv == 'development';
+    final bool showDeviceInfo = isDevMode || _showHiddenDeviceInfo;
+
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.space) {
+          _onSpacePressed();
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        backgroundColor: SolluColors.background,
+        appBar: AppBar(
+          title: const Text(
+            'Pengaturan Aplikasi',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: SolluColors.surface,
+          elevation: 0,
         ),
-        backgroundColor: SolluColors.surface,
-        elevation: 0,
-      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Container(
@@ -55,7 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             padding: const EdgeInsets.all(24),
             children: [
               const Text(
-                'Pengaturan Umumu & Perangkat',
+                'Pengaturan Umum & Perangkat',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -63,6 +130,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.sync, color: Colors.green),
+                ),
+                title: const Text(
+                  'Sinkronisasi Data',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Builder(
+                  builder: (context) {
+                    final lastSync = ref.watch(lastSyncProvider);
+                    return Text(
+                      'Terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
+                      style: TextStyle(
+                        color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                        fontWeight: lastSync != null ? FontWeight.w500 : FontWeight.normal,
+                      ),
+                    );
+                  },
+                ),
+                trailing: _isSyncing 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.chevron_right),
+                onTap: _isSyncing ? null : _syncData,
+              ),
+              const Divider(height: 24),
               Builder(
                 builder: (context) {
                   final printerConfig = ref.watch(selectedPrinterProvider);
@@ -98,18 +200,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: SolluColors.secondary.withValues(alpha: 0.15),
+                    color: Colors.teal.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.receipt_long, color: SolluColors.secondaryDark),
+                  child: const Icon(Icons.payments_outlined, color: Colors.teal),
                 ),
                 title: const Text(
-                  'Pengaturan Struk',
+                  'Metode Pembayaran',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: const Text('Kustomisasi teks header, footer, dan catatan struk'),
+                subtitle: const Text('Atur urutan tombol pembayaran kasir di perangkat ini'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => ReceiptSettingsDialog.show(context),
+                onTap: () => context.push('/settings/payment-methods'),
               ),
               const Divider(height: 24),
               Builder(
@@ -177,59 +279,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
               ),
-              const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.info_outline, color: Colors.blue),
-                ),
-                title: const Text(
-                  'Info Perangkat & Token',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('Lihat token Sanctum, Device UUID, & Hardware Signature'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showDeviceInfoDialog(context),
-              ),
-              const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.sync, color: Colors.green),
-                ),
-                title: const Text(
-                  'Sinkronisasi Data',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Builder(
-                  builder: (context) {
-                    final lastSync = ref.watch(lastSyncProvider);
-                    return Text(
-                      'Terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
-                      style: TextStyle(
-                        color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
-                        fontWeight: lastSync != null ? FontWeight.w500 : FontWeight.normal,
+              if (!kIsWeb && Platform.isWindows) ...[
+                const Divider(height: 24),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final isKiosk = ref.watch(fullscreenKioskProvider);
+                    return ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: SolluColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.fullscreen, color: SolluColors.primary),
+                      ),
+                      title: const Text(
+                        'Mode Layar Penuh Kiosk (Windows)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                        'Kunci aplikasi kasir dalam layar penuh tanpa jendela OS (Shortcut: F11)',
+                      ),
+                      trailing: Switch.adaptive(
+                        value: isKiosk,
+                        activeTrackColor: SolluColors.primary,
+                        activeThumbColor: Colors.white,
+                        onChanged: (val) async {
+                          await ref.read(fullscreenKioskProvider.notifier).toggleKiosk(val);
+                          await WindowService.setKioskMode(val);
+                        },
                       ),
                     );
                   },
                 ),
-                trailing: _isSyncing 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right),
-                onTap: _isSyncing ? null : _syncData,
-              ),
+              ],
+              if (showDeviceInfo) ...[
+                const Divider(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.info_outline, color: Colors.blue),
+                  ),
+                  title: const Text(
+                    'Info Perangkat & Token',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Lihat token Sanctum, Device UUID, & Hardware Signature'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showDeviceInfoDialog(context),
+                ),
+              ],
               const Divider(height: 24),
               ListTile(
                 leading: Container(
@@ -264,6 +367,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

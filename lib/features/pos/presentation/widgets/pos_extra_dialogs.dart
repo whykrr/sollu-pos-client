@@ -767,6 +767,7 @@ class ShortcutHelpDialog extends StatelessWidget {
       {'key': 'F8', 'desc': 'Checkout & Pembayaran'},
       {'key': 'F9', 'desc': 'Daftar Riwayat Transaksi Shift'},
       {'key': 'F10', 'desc': 'Cetak Ulang Struk (Reprint)'},
+      {'key': 'F11', 'desc': 'Toggle Layar Penuh Kiosk (Desktop)'},
       {'key': 'F12', 'desc': 'Tutup Shift Kasir'},
       {'key': 'Esc', 'desc': 'Tutup Popup / Batal'},
     ];

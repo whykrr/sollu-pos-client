@@ -69,3 +69,21 @@ class LastSyncNotifier extends Notifier<DateTime?> {
     }
   }
 }
+
+final fullscreenKioskProvider = NotifierProvider<FullscreenKioskNotifier, bool>(FullscreenKioskNotifier.new);
+
+class FullscreenKioskNotifier extends Notifier<bool> {
+  static const _key = 'is_fullscreen_kiosk';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? false;
+  }
+
+  Future<void> toggleKiosk(bool enable) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_key, enable);
+    state = enable;
+  }
+}

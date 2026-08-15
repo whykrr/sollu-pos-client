@@ -116,6 +116,8 @@ class PaymentMethods extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get name => text()();
   TextColumn get type => text()(); // cash, qris, edc, transfer
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get localSortOrder => integer().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   
   @override
@@ -127,7 +129,36 @@ class OutletSettings extends Table {
   TextColumn get id => text()();
   RealColumn get taxPercentage => real().withDefault(const Constant(0.0))();
   RealColumn get serviceChargePercentage => real().withDefault(const Constant(0.0))();
+  BoolColumn get taxIncludedInPrice => boolean().withDefault(const Constant(false))();
+  BoolColumn get roundingEnabled => boolean().withDefault(const Constant(false))();
+  TextColumn get roundingMode => text().withDefault(const Constant('nearest'))();
   TextColumn get printerMacAddress => text().nullable()();
+
+  // Receipt Layout Settings
+  TextColumn get paperSize => text().withDefault(const Constant('58mm'))();
+  BoolColumn get autoPrint => boolean().withDefault(const Constant(true))();
+  BoolColumn get printKitchenCopy => boolean().withDefault(const Constant(false))();
+  BoolColumn get printCheckerCopy => boolean().withDefault(const Constant(false))();
+  BoolColumn get showLogo => boolean().withDefault(const Constant(true))();
+  TextColumn get customHeaderTitle => text().nullable()();
+  TextColumn get headerNotes => text().nullable()();
+  BoolColumn get showAddress => boolean().withDefault(const Constant(true))();
+  BoolColumn get showPhone => boolean().withDefault(const Constant(true))();
+  BoolColumn get showEmail => boolean().withDefault(const Constant(false))();
+  BoolColumn get showCashierName => boolean().withDefault(const Constant(true))();
+  BoolColumn get showCustomerName => boolean().withDefault(const Constant(true))();
+  BoolColumn get showOrderType => boolean().withDefault(const Constant(true))();
+  BoolColumn get showModifiers => boolean().withDefault(const Constant(true))();
+  BoolColumn get showItemNotes => boolean().withDefault(const Constant(true))();
+  BoolColumn get showTaxDetail => boolean().withDefault(const Constant(true))();
+  BoolColumn get showServiceCharge => boolean().withDefault(const Constant(false))();
+  TextColumn get footerNotes => text().nullable()();
+  TextColumn get socialMediaInfo => text().nullable()();
+  TextColumn get wifiInfo => text().nullable()();
+  BoolColumn get showQrCode => boolean().withDefault(const Constant(false))();
+  TextColumn get qrType => text().withDefault(const Constant('invoice'))();
+  TextColumn get logoUrl => text().nullable()();
+  TextColumn get localLogoPath => text().nullable()();
   
   @override
   Set<Column> get primaryKey => {id};

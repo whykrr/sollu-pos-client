@@ -290,42 +290,8 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
     super.dispose();
   }
 
-  Future<void> _submitCloseShift(Shift shift, ShiftSummary summary) async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _processCloseShift(Shift shift, ShiftSummary summary) async {
     try {
-      final txRepo = ref.read(transactionRepositoryProvider);
-      
-      // Paksa sinkronisasi sebelum menutup shift
-      await txRepo.syncPendingTransactions(force: true);
-      
-      // Pastikan semua transaksi sudah tersinkronisasi
-      final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
-      if (unsyncedCount > 0) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Koneksi Internet Diperlukan', style: TextStyle(color: SolluColors.danger)),
-              content: Text('Terdapat $unsyncedCount transaksi offline yang belum tersinkronisasi.\n\nHarap hubungkan perangkat ke internet agar data dapat dikirim ke server sebelum shift ditutup.'),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: ElevatedButton.styleFrom(backgroundColor: SolluColors.primary),
-                  child: const Text('Mengerti', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-          );
-        }
-        return; // Batalkan proses tutup shift
-      }
-
       final repository = ref.read(shiftRepositoryProvider);
       await repository.closeShift(
         shiftId: shift.id,
@@ -382,6 +348,68 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _submitCloseShift(Shift shift, ShiftSummary summary) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final txRepo = ref.read(transactionRepositoryProvider);
+      
+      // Paksa sinkronisasi sebelum menutup shift
+      await txRepo.syncPendingTransactions(force: true);
+      
+      // Pastikan semua transaksi sudah tersinkronisasi
+      final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
+      if (unsyncedCount > 0) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Koneksi Internet Diperlukan', style: TextStyle(color: SolluColors.danger)),
+              content: Text('Terdapat $unsyncedCount transaksi offline yang belum tersinkronisasi.\n\nHarap hubungkan perangkat ke internet agar data dapat dikirim ke server sebelum shift ditutup.\n\nAtau abaikan jika ini adalah kesalahan sistem/jaringan dan Anda harus mengakhiri shift.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Batal', style: TextStyle(color: SolluColors.textMuted)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    setState(() {
+                      _isLoading = true;
+                    });
+                    _processCloseShift(shift, summary);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: SolluColors.danger),
+                  child: const Text('Tutup Paksa Shift', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+        }
+        return; // Batalkan proses tutup shift normal
+      }
+
+      await _processCloseShift(shift, summary);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: $e'),
+            backgroundColor: SolluColors.danger,
+          ),
+        );
       }
     }
   }

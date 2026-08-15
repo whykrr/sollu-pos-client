@@ -3294,6 +3294,29 @@ class $PaymentMethodsTable extends PaymentMethods
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _localSortOrderMeta = const VerificationMeta(
+    'localSortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> localSortOrder = GeneratedColumn<int>(
+    'local_sort_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -3310,7 +3333,14 @@ class $PaymentMethodsTable extends PaymentMethods
     defaultValue: const Constant(true),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, type, isActive];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    sortOrder,
+    localSortOrder,
+    isActive,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3344,6 +3374,21 @@ class $PaymentMethodsTable extends PaymentMethods
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('local_sort_order')) {
+      context.handle(
+        _localSortOrderMeta,
+        localSortOrder.isAcceptableOrUnknown(
+          data['local_sort_order']!,
+          _localSortOrderMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_active')) {
       context.handle(
         _isActiveMeta,
@@ -3371,6 +3416,14 @@ class $PaymentMethodsTable extends PaymentMethods
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      localSortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}local_sort_order'],
+      ),
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -3388,11 +3441,15 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
   final String id;
   final String name;
   final String type;
+  final int sortOrder;
+  final int? localSortOrder;
   final bool isActive;
   const PaymentMethod({
     required this.id,
     required this.name,
     required this.type,
+    required this.sortOrder,
+    this.localSortOrder,
     required this.isActive,
   });
   @override
@@ -3401,6 +3458,10 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['type'] = Variable<String>(type);
+    map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || localSortOrder != null) {
+      map['local_sort_order'] = Variable<int>(localSortOrder);
+    }
     map['is_active'] = Variable<bool>(isActive);
     return map;
   }
@@ -3410,6 +3471,10 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: Value(id),
       name: Value(name),
       type: Value(type),
+      sortOrder: Value(sortOrder),
+      localSortOrder: localSortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localSortOrder),
       isActive: Value(isActive),
     );
   }
@@ -3423,6 +3488,8 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       type: serializer.fromJson<String>(json['type']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      localSortOrder: serializer.fromJson<int?>(json['localSortOrder']),
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
@@ -3433,6 +3500,8 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'type': serializer.toJson<String>(type),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'localSortOrder': serializer.toJson<int?>(localSortOrder),
       'isActive': serializer.toJson<bool>(isActive),
     };
   }
@@ -3441,11 +3510,17 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
     String? id,
     String? name,
     String? type,
+    int? sortOrder,
+    Value<int?> localSortOrder = const Value.absent(),
     bool? isActive,
   }) => PaymentMethod(
     id: id ?? this.id,
     name: name ?? this.name,
     type: type ?? this.type,
+    sortOrder: sortOrder ?? this.sortOrder,
+    localSortOrder: localSortOrder.present
+        ? localSortOrder.value
+        : this.localSortOrder,
     isActive: isActive ?? this.isActive,
   );
   PaymentMethod copyWithCompanion(PaymentMethodsCompanion data) {
@@ -3453,6 +3528,10 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       type: data.type.present ? data.type.value : this.type,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      localSortOrder: data.localSortOrder.present
+          ? data.localSortOrder.value
+          : this.localSortOrder,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
@@ -3463,13 +3542,16 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('localSortOrder: $localSortOrder, ')
           ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, isActive);
+  int get hashCode =>
+      Object.hash(id, name, type, sortOrder, localSortOrder, isActive);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3477,6 +3559,8 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
           other.id == this.id &&
           other.name == this.name &&
           other.type == this.type &&
+          other.sortOrder == this.sortOrder &&
+          other.localSortOrder == this.localSortOrder &&
           other.isActive == this.isActive);
 }
 
@@ -3484,12 +3568,16 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> type;
+  final Value<int> sortOrder;
+  final Value<int?> localSortOrder;
   final Value<bool> isActive;
   final Value<int> rowid;
   const PaymentMethodsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.localSortOrder = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3497,6 +3585,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     required String id,
     required String name,
     required String type,
+    this.sortOrder = const Value.absent(),
+    this.localSortOrder = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3506,6 +3596,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? type,
+    Expression<int>? sortOrder,
+    Expression<int>? localSortOrder,
     Expression<bool>? isActive,
     Expression<int>? rowid,
   }) {
@@ -3513,6 +3605,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (type != null) 'type': type,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (localSortOrder != null) 'local_sort_order': localSortOrder,
       if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3522,6 +3616,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? type,
+    Value<int>? sortOrder,
+    Value<int?>? localSortOrder,
     Value<bool>? isActive,
     Value<int>? rowid,
   }) {
@@ -3529,6 +3625,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
+      sortOrder: sortOrder ?? this.sortOrder,
+      localSortOrder: localSortOrder ?? this.localSortOrder,
       isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
     );
@@ -3546,6 +3644,12 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (localSortOrder.present) {
+      map['local_sort_order'] = Variable<int>(localSortOrder.value);
+    }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
@@ -3561,6 +3665,8 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('localSortOrder: $localSortOrder, ')
           ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3607,6 +3713,47 @@ class $OutletSettingsTable extends OutletSettings
         requiredDuringInsert: false,
         defaultValue: const Constant(0.0),
       );
+  static const VerificationMeta _taxIncludedInPriceMeta =
+      const VerificationMeta('taxIncludedInPrice');
+  @override
+  late final GeneratedColumn<bool> taxIncludedInPrice = GeneratedColumn<bool>(
+    'tax_included_in_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("tax_included_in_price" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _roundingEnabledMeta = const VerificationMeta(
+    'roundingEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> roundingEnabled = GeneratedColumn<bool>(
+    'rounding_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("rounding_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _roundingModeMeta = const VerificationMeta(
+    'roundingMode',
+  );
+  @override
+  late final GeneratedColumn<String> roundingMode = GeneratedColumn<String>(
+    'rounding_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('nearest'),
+  );
   static const VerificationMeta _printerMacAddressMeta = const VerificationMeta(
     'printerMacAddress',
   );
@@ -3619,12 +3766,364 @@ class $OutletSettingsTable extends OutletSettings
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _paperSizeMeta = const VerificationMeta(
+    'paperSize',
+  );
+  @override
+  late final GeneratedColumn<String> paperSize = GeneratedColumn<String>(
+    'paper_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('58mm'),
+  );
+  static const VerificationMeta _autoPrintMeta = const VerificationMeta(
+    'autoPrint',
+  );
+  @override
+  late final GeneratedColumn<bool> autoPrint = GeneratedColumn<bool>(
+    'auto_print',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_print" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _printKitchenCopyMeta = const VerificationMeta(
+    'printKitchenCopy',
+  );
+  @override
+  late final GeneratedColumn<bool> printKitchenCopy = GeneratedColumn<bool>(
+    'print_kitchen_copy',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("print_kitchen_copy" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _printCheckerCopyMeta = const VerificationMeta(
+    'printCheckerCopy',
+  );
+  @override
+  late final GeneratedColumn<bool> printCheckerCopy = GeneratedColumn<bool>(
+    'print_checker_copy',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("print_checker_copy" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _showLogoMeta = const VerificationMeta(
+    'showLogo',
+  );
+  @override
+  late final GeneratedColumn<bool> showLogo = GeneratedColumn<bool>(
+    'show_logo',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_logo" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _customHeaderTitleMeta = const VerificationMeta(
+    'customHeaderTitle',
+  );
+  @override
+  late final GeneratedColumn<String> customHeaderTitle =
+      GeneratedColumn<String>(
+        'custom_header_title',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _headerNotesMeta = const VerificationMeta(
+    'headerNotes',
+  );
+  @override
+  late final GeneratedColumn<String> headerNotes = GeneratedColumn<String>(
+    'header_notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _showAddressMeta = const VerificationMeta(
+    'showAddress',
+  );
+  @override
+  late final GeneratedColumn<bool> showAddress = GeneratedColumn<bool>(
+    'show_address',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_address" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showPhoneMeta = const VerificationMeta(
+    'showPhone',
+  );
+  @override
+  late final GeneratedColumn<bool> showPhone = GeneratedColumn<bool>(
+    'show_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_phone" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showEmailMeta = const VerificationMeta(
+    'showEmail',
+  );
+  @override
+  late final GeneratedColumn<bool> showEmail = GeneratedColumn<bool>(
+    'show_email',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_email" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _showCashierNameMeta = const VerificationMeta(
+    'showCashierName',
+  );
+  @override
+  late final GeneratedColumn<bool> showCashierName = GeneratedColumn<bool>(
+    'show_cashier_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_cashier_name" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showCustomerNameMeta = const VerificationMeta(
+    'showCustomerName',
+  );
+  @override
+  late final GeneratedColumn<bool> showCustomerName = GeneratedColumn<bool>(
+    'show_customer_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_customer_name" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showOrderTypeMeta = const VerificationMeta(
+    'showOrderType',
+  );
+  @override
+  late final GeneratedColumn<bool> showOrderType = GeneratedColumn<bool>(
+    'show_order_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_order_type" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showModifiersMeta = const VerificationMeta(
+    'showModifiers',
+  );
+  @override
+  late final GeneratedColumn<bool> showModifiers = GeneratedColumn<bool>(
+    'show_modifiers',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_modifiers" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showItemNotesMeta = const VerificationMeta(
+    'showItemNotes',
+  );
+  @override
+  late final GeneratedColumn<bool> showItemNotes = GeneratedColumn<bool>(
+    'show_item_notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_item_notes" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showTaxDetailMeta = const VerificationMeta(
+    'showTaxDetail',
+  );
+  @override
+  late final GeneratedColumn<bool> showTaxDetail = GeneratedColumn<bool>(
+    'show_tax_detail',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_tax_detail" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showServiceChargeMeta = const VerificationMeta(
+    'showServiceCharge',
+  );
+  @override
+  late final GeneratedColumn<bool> showServiceCharge = GeneratedColumn<bool>(
+    'show_service_charge',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_service_charge" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _footerNotesMeta = const VerificationMeta(
+    'footerNotes',
+  );
+  @override
+  late final GeneratedColumn<String> footerNotes = GeneratedColumn<String>(
+    'footer_notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _socialMediaInfoMeta = const VerificationMeta(
+    'socialMediaInfo',
+  );
+  @override
+  late final GeneratedColumn<String> socialMediaInfo = GeneratedColumn<String>(
+    'social_media_info',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _wifiInfoMeta = const VerificationMeta(
+    'wifiInfo',
+  );
+  @override
+  late final GeneratedColumn<String> wifiInfo = GeneratedColumn<String>(
+    'wifi_info',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _showQrCodeMeta = const VerificationMeta(
+    'showQrCode',
+  );
+  @override
+  late final GeneratedColumn<bool> showQrCode = GeneratedColumn<bool>(
+    'show_qr_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_qr_code" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _qrTypeMeta = const VerificationMeta('qrType');
+  @override
+  late final GeneratedColumn<String> qrType = GeneratedColumn<String>(
+    'qr_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('invoice'),
+  );
+  static const VerificationMeta _logoUrlMeta = const VerificationMeta(
+    'logoUrl',
+  );
+  @override
+  late final GeneratedColumn<String> logoUrl = GeneratedColumn<String>(
+    'logo_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _localLogoPathMeta = const VerificationMeta(
+    'localLogoPath',
+  );
+  @override
+  late final GeneratedColumn<String> localLogoPath = GeneratedColumn<String>(
+    'local_logo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     taxPercentage,
     serviceChargePercentage,
+    taxIncludedInPrice,
+    roundingEnabled,
+    roundingMode,
     printerMacAddress,
+    paperSize,
+    autoPrint,
+    printKitchenCopy,
+    printCheckerCopy,
+    showLogo,
+    customHeaderTitle,
+    headerNotes,
+    showAddress,
+    showPhone,
+    showEmail,
+    showCashierName,
+    showCustomerName,
+    showOrderType,
+    showModifiers,
+    showItemNotes,
+    showTaxDetail,
+    showServiceCharge,
+    footerNotes,
+    socialMediaInfo,
+    wifiInfo,
+    showQrCode,
+    qrType,
+    logoUrl,
+    localLogoPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3661,12 +4160,231 @@ class $OutletSettingsTable extends OutletSettings
         ),
       );
     }
+    if (data.containsKey('tax_included_in_price')) {
+      context.handle(
+        _taxIncludedInPriceMeta,
+        taxIncludedInPrice.isAcceptableOrUnknown(
+          data['tax_included_in_price']!,
+          _taxIncludedInPriceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rounding_enabled')) {
+      context.handle(
+        _roundingEnabledMeta,
+        roundingEnabled.isAcceptableOrUnknown(
+          data['rounding_enabled']!,
+          _roundingEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rounding_mode')) {
+      context.handle(
+        _roundingModeMeta,
+        roundingMode.isAcceptableOrUnknown(
+          data['rounding_mode']!,
+          _roundingModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('printer_mac_address')) {
       context.handle(
         _printerMacAddressMeta,
         printerMacAddress.isAcceptableOrUnknown(
           data['printer_mac_address']!,
           _printerMacAddressMeta,
+        ),
+      );
+    }
+    if (data.containsKey('paper_size')) {
+      context.handle(
+        _paperSizeMeta,
+        paperSize.isAcceptableOrUnknown(data['paper_size']!, _paperSizeMeta),
+      );
+    }
+    if (data.containsKey('auto_print')) {
+      context.handle(
+        _autoPrintMeta,
+        autoPrint.isAcceptableOrUnknown(data['auto_print']!, _autoPrintMeta),
+      );
+    }
+    if (data.containsKey('print_kitchen_copy')) {
+      context.handle(
+        _printKitchenCopyMeta,
+        printKitchenCopy.isAcceptableOrUnknown(
+          data['print_kitchen_copy']!,
+          _printKitchenCopyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('print_checker_copy')) {
+      context.handle(
+        _printCheckerCopyMeta,
+        printCheckerCopy.isAcceptableOrUnknown(
+          data['print_checker_copy']!,
+          _printCheckerCopyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_logo')) {
+      context.handle(
+        _showLogoMeta,
+        showLogo.isAcceptableOrUnknown(data['show_logo']!, _showLogoMeta),
+      );
+    }
+    if (data.containsKey('custom_header_title')) {
+      context.handle(
+        _customHeaderTitleMeta,
+        customHeaderTitle.isAcceptableOrUnknown(
+          data['custom_header_title']!,
+          _customHeaderTitleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('header_notes')) {
+      context.handle(
+        _headerNotesMeta,
+        headerNotes.isAcceptableOrUnknown(
+          data['header_notes']!,
+          _headerNotesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_address')) {
+      context.handle(
+        _showAddressMeta,
+        showAddress.isAcceptableOrUnknown(
+          data['show_address']!,
+          _showAddressMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_phone')) {
+      context.handle(
+        _showPhoneMeta,
+        showPhone.isAcceptableOrUnknown(data['show_phone']!, _showPhoneMeta),
+      );
+    }
+    if (data.containsKey('show_email')) {
+      context.handle(
+        _showEmailMeta,
+        showEmail.isAcceptableOrUnknown(data['show_email']!, _showEmailMeta),
+      );
+    }
+    if (data.containsKey('show_cashier_name')) {
+      context.handle(
+        _showCashierNameMeta,
+        showCashierName.isAcceptableOrUnknown(
+          data['show_cashier_name']!,
+          _showCashierNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_customer_name')) {
+      context.handle(
+        _showCustomerNameMeta,
+        showCustomerName.isAcceptableOrUnknown(
+          data['show_customer_name']!,
+          _showCustomerNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_order_type')) {
+      context.handle(
+        _showOrderTypeMeta,
+        showOrderType.isAcceptableOrUnknown(
+          data['show_order_type']!,
+          _showOrderTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_modifiers')) {
+      context.handle(
+        _showModifiersMeta,
+        showModifiers.isAcceptableOrUnknown(
+          data['show_modifiers']!,
+          _showModifiersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_item_notes')) {
+      context.handle(
+        _showItemNotesMeta,
+        showItemNotes.isAcceptableOrUnknown(
+          data['show_item_notes']!,
+          _showItemNotesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_tax_detail')) {
+      context.handle(
+        _showTaxDetailMeta,
+        showTaxDetail.isAcceptableOrUnknown(
+          data['show_tax_detail']!,
+          _showTaxDetailMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_service_charge')) {
+      context.handle(
+        _showServiceChargeMeta,
+        showServiceCharge.isAcceptableOrUnknown(
+          data['show_service_charge']!,
+          _showServiceChargeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('footer_notes')) {
+      context.handle(
+        _footerNotesMeta,
+        footerNotes.isAcceptableOrUnknown(
+          data['footer_notes']!,
+          _footerNotesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('social_media_info')) {
+      context.handle(
+        _socialMediaInfoMeta,
+        socialMediaInfo.isAcceptableOrUnknown(
+          data['social_media_info']!,
+          _socialMediaInfoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wifi_info')) {
+      context.handle(
+        _wifiInfoMeta,
+        wifiInfo.isAcceptableOrUnknown(data['wifi_info']!, _wifiInfoMeta),
+      );
+    }
+    if (data.containsKey('show_qr_code')) {
+      context.handle(
+        _showQrCodeMeta,
+        showQrCode.isAcceptableOrUnknown(
+          data['show_qr_code']!,
+          _showQrCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('qr_type')) {
+      context.handle(
+        _qrTypeMeta,
+        qrType.isAcceptableOrUnknown(data['qr_type']!, _qrTypeMeta),
+      );
+    }
+    if (data.containsKey('logo_url')) {
+      context.handle(
+        _logoUrlMeta,
+        logoUrl.isAcceptableOrUnknown(data['logo_url']!, _logoUrlMeta),
+      );
+    }
+    if (data.containsKey('local_logo_path')) {
+      context.handle(
+        _localLogoPathMeta,
+        localLogoPath.isAcceptableOrUnknown(
+          data['local_logo_path']!,
+          _localLogoPathMeta,
         ),
       );
     }
@@ -3691,9 +4409,117 @@ class $OutletSettingsTable extends OutletSettings
         DriftSqlType.double,
         data['${effectivePrefix}service_charge_percentage'],
       )!,
+      taxIncludedInPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}tax_included_in_price'],
+      )!,
+      roundingEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}rounding_enabled'],
+      )!,
+      roundingMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rounding_mode'],
+      )!,
       printerMacAddress: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}printer_mac_address'],
+      ),
+      paperSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}paper_size'],
+      )!,
+      autoPrint: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_print'],
+      )!,
+      printKitchenCopy: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}print_kitchen_copy'],
+      )!,
+      printCheckerCopy: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}print_checker_copy'],
+      )!,
+      showLogo: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_logo'],
+      )!,
+      customHeaderTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_header_title'],
+      ),
+      headerNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}header_notes'],
+      ),
+      showAddress: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_address'],
+      )!,
+      showPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_phone'],
+      )!,
+      showEmail: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_email'],
+      )!,
+      showCashierName: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_cashier_name'],
+      )!,
+      showCustomerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_customer_name'],
+      )!,
+      showOrderType: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_order_type'],
+      )!,
+      showModifiers: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_modifiers'],
+      )!,
+      showItemNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_item_notes'],
+      )!,
+      showTaxDetail: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_tax_detail'],
+      )!,
+      showServiceCharge: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_service_charge'],
+      )!,
+      footerNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}footer_notes'],
+      ),
+      socialMediaInfo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}social_media_info'],
+      ),
+      wifiInfo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wifi_info'],
+      ),
+      showQrCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_qr_code'],
+      )!,
+      qrType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}qr_type'],
+      )!,
+      logoUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}logo_url'],
+      ),
+      localLogoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_logo_path'],
       ),
     );
   }
@@ -3708,12 +4534,66 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
   final String id;
   final double taxPercentage;
   final double serviceChargePercentage;
+  final bool taxIncludedInPrice;
+  final bool roundingEnabled;
+  final String roundingMode;
   final String? printerMacAddress;
+  final String paperSize;
+  final bool autoPrint;
+  final bool printKitchenCopy;
+  final bool printCheckerCopy;
+  final bool showLogo;
+  final String? customHeaderTitle;
+  final String? headerNotes;
+  final bool showAddress;
+  final bool showPhone;
+  final bool showEmail;
+  final bool showCashierName;
+  final bool showCustomerName;
+  final bool showOrderType;
+  final bool showModifiers;
+  final bool showItemNotes;
+  final bool showTaxDetail;
+  final bool showServiceCharge;
+  final String? footerNotes;
+  final String? socialMediaInfo;
+  final String? wifiInfo;
+  final bool showQrCode;
+  final String qrType;
+  final String? logoUrl;
+  final String? localLogoPath;
   const OutletSetting({
     required this.id,
     required this.taxPercentage,
     required this.serviceChargePercentage,
+    required this.taxIncludedInPrice,
+    required this.roundingEnabled,
+    required this.roundingMode,
     this.printerMacAddress,
+    required this.paperSize,
+    required this.autoPrint,
+    required this.printKitchenCopy,
+    required this.printCheckerCopy,
+    required this.showLogo,
+    this.customHeaderTitle,
+    this.headerNotes,
+    required this.showAddress,
+    required this.showPhone,
+    required this.showEmail,
+    required this.showCashierName,
+    required this.showCustomerName,
+    required this.showOrderType,
+    required this.showModifiers,
+    required this.showItemNotes,
+    required this.showTaxDetail,
+    required this.showServiceCharge,
+    this.footerNotes,
+    this.socialMediaInfo,
+    this.wifiInfo,
+    required this.showQrCode,
+    required this.qrType,
+    this.logoUrl,
+    this.localLogoPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3723,8 +4603,49 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
     map['service_charge_percentage'] = Variable<double>(
       serviceChargePercentage,
     );
+    map['tax_included_in_price'] = Variable<bool>(taxIncludedInPrice);
+    map['rounding_enabled'] = Variable<bool>(roundingEnabled);
+    map['rounding_mode'] = Variable<String>(roundingMode);
     if (!nullToAbsent || printerMacAddress != null) {
       map['printer_mac_address'] = Variable<String>(printerMacAddress);
+    }
+    map['paper_size'] = Variable<String>(paperSize);
+    map['auto_print'] = Variable<bool>(autoPrint);
+    map['print_kitchen_copy'] = Variable<bool>(printKitchenCopy);
+    map['print_checker_copy'] = Variable<bool>(printCheckerCopy);
+    map['show_logo'] = Variable<bool>(showLogo);
+    if (!nullToAbsent || customHeaderTitle != null) {
+      map['custom_header_title'] = Variable<String>(customHeaderTitle);
+    }
+    if (!nullToAbsent || headerNotes != null) {
+      map['header_notes'] = Variable<String>(headerNotes);
+    }
+    map['show_address'] = Variable<bool>(showAddress);
+    map['show_phone'] = Variable<bool>(showPhone);
+    map['show_email'] = Variable<bool>(showEmail);
+    map['show_cashier_name'] = Variable<bool>(showCashierName);
+    map['show_customer_name'] = Variable<bool>(showCustomerName);
+    map['show_order_type'] = Variable<bool>(showOrderType);
+    map['show_modifiers'] = Variable<bool>(showModifiers);
+    map['show_item_notes'] = Variable<bool>(showItemNotes);
+    map['show_tax_detail'] = Variable<bool>(showTaxDetail);
+    map['show_service_charge'] = Variable<bool>(showServiceCharge);
+    if (!nullToAbsent || footerNotes != null) {
+      map['footer_notes'] = Variable<String>(footerNotes);
+    }
+    if (!nullToAbsent || socialMediaInfo != null) {
+      map['social_media_info'] = Variable<String>(socialMediaInfo);
+    }
+    if (!nullToAbsent || wifiInfo != null) {
+      map['wifi_info'] = Variable<String>(wifiInfo);
+    }
+    map['show_qr_code'] = Variable<bool>(showQrCode);
+    map['qr_type'] = Variable<String>(qrType);
+    if (!nullToAbsent || logoUrl != null) {
+      map['logo_url'] = Variable<String>(logoUrl);
+    }
+    if (!nullToAbsent || localLogoPath != null) {
+      map['local_logo_path'] = Variable<String>(localLogoPath);
     }
     return map;
   }
@@ -3734,9 +4655,50 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
       id: Value(id),
       taxPercentage: Value(taxPercentage),
       serviceChargePercentage: Value(serviceChargePercentage),
+      taxIncludedInPrice: Value(taxIncludedInPrice),
+      roundingEnabled: Value(roundingEnabled),
+      roundingMode: Value(roundingMode),
       printerMacAddress: printerMacAddress == null && nullToAbsent
           ? const Value.absent()
           : Value(printerMacAddress),
+      paperSize: Value(paperSize),
+      autoPrint: Value(autoPrint),
+      printKitchenCopy: Value(printKitchenCopy),
+      printCheckerCopy: Value(printCheckerCopy),
+      showLogo: Value(showLogo),
+      customHeaderTitle: customHeaderTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customHeaderTitle),
+      headerNotes: headerNotes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(headerNotes),
+      showAddress: Value(showAddress),
+      showPhone: Value(showPhone),
+      showEmail: Value(showEmail),
+      showCashierName: Value(showCashierName),
+      showCustomerName: Value(showCustomerName),
+      showOrderType: Value(showOrderType),
+      showModifiers: Value(showModifiers),
+      showItemNotes: Value(showItemNotes),
+      showTaxDetail: Value(showTaxDetail),
+      showServiceCharge: Value(showServiceCharge),
+      footerNotes: footerNotes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(footerNotes),
+      socialMediaInfo: socialMediaInfo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(socialMediaInfo),
+      wifiInfo: wifiInfo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wifiInfo),
+      showQrCode: Value(showQrCode),
+      qrType: Value(qrType),
+      logoUrl: logoUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(logoUrl),
+      localLogoPath: localLogoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localLogoPath),
     );
   }
 
@@ -3751,9 +4713,38 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
       serviceChargePercentage: serializer.fromJson<double>(
         json['serviceChargePercentage'],
       ),
+      taxIncludedInPrice: serializer.fromJson<bool>(json['taxIncludedInPrice']),
+      roundingEnabled: serializer.fromJson<bool>(json['roundingEnabled']),
+      roundingMode: serializer.fromJson<String>(json['roundingMode']),
       printerMacAddress: serializer.fromJson<String?>(
         json['printerMacAddress'],
       ),
+      paperSize: serializer.fromJson<String>(json['paperSize']),
+      autoPrint: serializer.fromJson<bool>(json['autoPrint']),
+      printKitchenCopy: serializer.fromJson<bool>(json['printKitchenCopy']),
+      printCheckerCopy: serializer.fromJson<bool>(json['printCheckerCopy']),
+      showLogo: serializer.fromJson<bool>(json['showLogo']),
+      customHeaderTitle: serializer.fromJson<String?>(
+        json['customHeaderTitle'],
+      ),
+      headerNotes: serializer.fromJson<String?>(json['headerNotes']),
+      showAddress: serializer.fromJson<bool>(json['showAddress']),
+      showPhone: serializer.fromJson<bool>(json['showPhone']),
+      showEmail: serializer.fromJson<bool>(json['showEmail']),
+      showCashierName: serializer.fromJson<bool>(json['showCashierName']),
+      showCustomerName: serializer.fromJson<bool>(json['showCustomerName']),
+      showOrderType: serializer.fromJson<bool>(json['showOrderType']),
+      showModifiers: serializer.fromJson<bool>(json['showModifiers']),
+      showItemNotes: serializer.fromJson<bool>(json['showItemNotes']),
+      showTaxDetail: serializer.fromJson<bool>(json['showTaxDetail']),
+      showServiceCharge: serializer.fromJson<bool>(json['showServiceCharge']),
+      footerNotes: serializer.fromJson<String?>(json['footerNotes']),
+      socialMediaInfo: serializer.fromJson<String?>(json['socialMediaInfo']),
+      wifiInfo: serializer.fromJson<String?>(json['wifiInfo']),
+      showQrCode: serializer.fromJson<bool>(json['showQrCode']),
+      qrType: serializer.fromJson<String>(json['qrType']),
+      logoUrl: serializer.fromJson<String?>(json['logoUrl']),
+      localLogoPath: serializer.fromJson<String?>(json['localLogoPath']),
     );
   }
   @override
@@ -3765,7 +4756,34 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
       'serviceChargePercentage': serializer.toJson<double>(
         serviceChargePercentage,
       ),
+      'taxIncludedInPrice': serializer.toJson<bool>(taxIncludedInPrice),
+      'roundingEnabled': serializer.toJson<bool>(roundingEnabled),
+      'roundingMode': serializer.toJson<String>(roundingMode),
       'printerMacAddress': serializer.toJson<String?>(printerMacAddress),
+      'paperSize': serializer.toJson<String>(paperSize),
+      'autoPrint': serializer.toJson<bool>(autoPrint),
+      'printKitchenCopy': serializer.toJson<bool>(printKitchenCopy),
+      'printCheckerCopy': serializer.toJson<bool>(printCheckerCopy),
+      'showLogo': serializer.toJson<bool>(showLogo),
+      'customHeaderTitle': serializer.toJson<String?>(customHeaderTitle),
+      'headerNotes': serializer.toJson<String?>(headerNotes),
+      'showAddress': serializer.toJson<bool>(showAddress),
+      'showPhone': serializer.toJson<bool>(showPhone),
+      'showEmail': serializer.toJson<bool>(showEmail),
+      'showCashierName': serializer.toJson<bool>(showCashierName),
+      'showCustomerName': serializer.toJson<bool>(showCustomerName),
+      'showOrderType': serializer.toJson<bool>(showOrderType),
+      'showModifiers': serializer.toJson<bool>(showModifiers),
+      'showItemNotes': serializer.toJson<bool>(showItemNotes),
+      'showTaxDetail': serializer.toJson<bool>(showTaxDetail),
+      'showServiceCharge': serializer.toJson<bool>(showServiceCharge),
+      'footerNotes': serializer.toJson<String?>(footerNotes),
+      'socialMediaInfo': serializer.toJson<String?>(socialMediaInfo),
+      'wifiInfo': serializer.toJson<String?>(wifiInfo),
+      'showQrCode': serializer.toJson<bool>(showQrCode),
+      'qrType': serializer.toJson<String>(qrType),
+      'logoUrl': serializer.toJson<String?>(logoUrl),
+      'localLogoPath': serializer.toJson<String?>(localLogoPath),
     };
   }
 
@@ -3773,15 +4791,75 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
     String? id,
     double? taxPercentage,
     double? serviceChargePercentage,
+    bool? taxIncludedInPrice,
+    bool? roundingEnabled,
+    String? roundingMode,
     Value<String?> printerMacAddress = const Value.absent(),
+    String? paperSize,
+    bool? autoPrint,
+    bool? printKitchenCopy,
+    bool? printCheckerCopy,
+    bool? showLogo,
+    Value<String?> customHeaderTitle = const Value.absent(),
+    Value<String?> headerNotes = const Value.absent(),
+    bool? showAddress,
+    bool? showPhone,
+    bool? showEmail,
+    bool? showCashierName,
+    bool? showCustomerName,
+    bool? showOrderType,
+    bool? showModifiers,
+    bool? showItemNotes,
+    bool? showTaxDetail,
+    bool? showServiceCharge,
+    Value<String?> footerNotes = const Value.absent(),
+    Value<String?> socialMediaInfo = const Value.absent(),
+    Value<String?> wifiInfo = const Value.absent(),
+    bool? showQrCode,
+    String? qrType,
+    Value<String?> logoUrl = const Value.absent(),
+    Value<String?> localLogoPath = const Value.absent(),
   }) => OutletSetting(
     id: id ?? this.id,
     taxPercentage: taxPercentage ?? this.taxPercentage,
     serviceChargePercentage:
         serviceChargePercentage ?? this.serviceChargePercentage,
+    taxIncludedInPrice: taxIncludedInPrice ?? this.taxIncludedInPrice,
+    roundingEnabled: roundingEnabled ?? this.roundingEnabled,
+    roundingMode: roundingMode ?? this.roundingMode,
     printerMacAddress: printerMacAddress.present
         ? printerMacAddress.value
         : this.printerMacAddress,
+    paperSize: paperSize ?? this.paperSize,
+    autoPrint: autoPrint ?? this.autoPrint,
+    printKitchenCopy: printKitchenCopy ?? this.printKitchenCopy,
+    printCheckerCopy: printCheckerCopy ?? this.printCheckerCopy,
+    showLogo: showLogo ?? this.showLogo,
+    customHeaderTitle: customHeaderTitle.present
+        ? customHeaderTitle.value
+        : this.customHeaderTitle,
+    headerNotes: headerNotes.present ? headerNotes.value : this.headerNotes,
+    showAddress: showAddress ?? this.showAddress,
+    showPhone: showPhone ?? this.showPhone,
+    showEmail: showEmail ?? this.showEmail,
+    showCashierName: showCashierName ?? this.showCashierName,
+    showCustomerName: showCustomerName ?? this.showCustomerName,
+    showOrderType: showOrderType ?? this.showOrderType,
+    showModifiers: showModifiers ?? this.showModifiers,
+    showItemNotes: showItemNotes ?? this.showItemNotes,
+    showTaxDetail: showTaxDetail ?? this.showTaxDetail,
+    showServiceCharge: showServiceCharge ?? this.showServiceCharge,
+    footerNotes: footerNotes.present ? footerNotes.value : this.footerNotes,
+    socialMediaInfo: socialMediaInfo.present
+        ? socialMediaInfo.value
+        : this.socialMediaInfo,
+    wifiInfo: wifiInfo.present ? wifiInfo.value : this.wifiInfo,
+    showQrCode: showQrCode ?? this.showQrCode,
+    qrType: qrType ?? this.qrType,
+    logoUrl: logoUrl.present ? logoUrl.value : this.logoUrl,
+    localLogoPath: localLogoPath.present
+        ? localLogoPath.value
+        : this.localLogoPath,
   );
   OutletSetting copyWithCompanion(OutletSettingsCompanion data) {
     return OutletSetting(
@@ -3792,9 +4870,74 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
       serviceChargePercentage: data.serviceChargePercentage.present
           ? data.serviceChargePercentage.value
           : this.serviceChargePercentage,
+      taxIncludedInPrice: data.taxIncludedInPrice.present
+          ? data.taxIncludedInPrice.value
+          : this.taxIncludedInPrice,
+      roundingEnabled: data.roundingEnabled.present
+          ? data.roundingEnabled.value
+          : this.roundingEnabled,
+      roundingMode: data.roundingMode.present
+          ? data.roundingMode.value
+          : this.roundingMode,
       printerMacAddress: data.printerMacAddress.present
           ? data.printerMacAddress.value
           : this.printerMacAddress,
+      paperSize: data.paperSize.present ? data.paperSize.value : this.paperSize,
+      autoPrint: data.autoPrint.present ? data.autoPrint.value : this.autoPrint,
+      printKitchenCopy: data.printKitchenCopy.present
+          ? data.printKitchenCopy.value
+          : this.printKitchenCopy,
+      printCheckerCopy: data.printCheckerCopy.present
+          ? data.printCheckerCopy.value
+          : this.printCheckerCopy,
+      showLogo: data.showLogo.present ? data.showLogo.value : this.showLogo,
+      customHeaderTitle: data.customHeaderTitle.present
+          ? data.customHeaderTitle.value
+          : this.customHeaderTitle,
+      headerNotes: data.headerNotes.present
+          ? data.headerNotes.value
+          : this.headerNotes,
+      showAddress: data.showAddress.present
+          ? data.showAddress.value
+          : this.showAddress,
+      showPhone: data.showPhone.present ? data.showPhone.value : this.showPhone,
+      showEmail: data.showEmail.present ? data.showEmail.value : this.showEmail,
+      showCashierName: data.showCashierName.present
+          ? data.showCashierName.value
+          : this.showCashierName,
+      showCustomerName: data.showCustomerName.present
+          ? data.showCustomerName.value
+          : this.showCustomerName,
+      showOrderType: data.showOrderType.present
+          ? data.showOrderType.value
+          : this.showOrderType,
+      showModifiers: data.showModifiers.present
+          ? data.showModifiers.value
+          : this.showModifiers,
+      showItemNotes: data.showItemNotes.present
+          ? data.showItemNotes.value
+          : this.showItemNotes,
+      showTaxDetail: data.showTaxDetail.present
+          ? data.showTaxDetail.value
+          : this.showTaxDetail,
+      showServiceCharge: data.showServiceCharge.present
+          ? data.showServiceCharge.value
+          : this.showServiceCharge,
+      footerNotes: data.footerNotes.present
+          ? data.footerNotes.value
+          : this.footerNotes,
+      socialMediaInfo: data.socialMediaInfo.present
+          ? data.socialMediaInfo.value
+          : this.socialMediaInfo,
+      wifiInfo: data.wifiInfo.present ? data.wifiInfo.value : this.wifiInfo,
+      showQrCode: data.showQrCode.present
+          ? data.showQrCode.value
+          : this.showQrCode,
+      qrType: data.qrType.present ? data.qrType.value : this.qrType,
+      logoUrl: data.logoUrl.present ? data.logoUrl.value : this.logoUrl,
+      localLogoPath: data.localLogoPath.present
+          ? data.localLogoPath.value
+          : this.localLogoPath,
     );
   }
 
@@ -3804,18 +4947,72 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
           ..write('id: $id, ')
           ..write('taxPercentage: $taxPercentage, ')
           ..write('serviceChargePercentage: $serviceChargePercentage, ')
-          ..write('printerMacAddress: $printerMacAddress')
+          ..write('taxIncludedInPrice: $taxIncludedInPrice, ')
+          ..write('roundingEnabled: $roundingEnabled, ')
+          ..write('roundingMode: $roundingMode, ')
+          ..write('printerMacAddress: $printerMacAddress, ')
+          ..write('paperSize: $paperSize, ')
+          ..write('autoPrint: $autoPrint, ')
+          ..write('printKitchenCopy: $printKitchenCopy, ')
+          ..write('printCheckerCopy: $printCheckerCopy, ')
+          ..write('showLogo: $showLogo, ')
+          ..write('customHeaderTitle: $customHeaderTitle, ')
+          ..write('headerNotes: $headerNotes, ')
+          ..write('showAddress: $showAddress, ')
+          ..write('showPhone: $showPhone, ')
+          ..write('showEmail: $showEmail, ')
+          ..write('showCashierName: $showCashierName, ')
+          ..write('showCustomerName: $showCustomerName, ')
+          ..write('showOrderType: $showOrderType, ')
+          ..write('showModifiers: $showModifiers, ')
+          ..write('showItemNotes: $showItemNotes, ')
+          ..write('showTaxDetail: $showTaxDetail, ')
+          ..write('showServiceCharge: $showServiceCharge, ')
+          ..write('footerNotes: $footerNotes, ')
+          ..write('socialMediaInfo: $socialMediaInfo, ')
+          ..write('wifiInfo: $wifiInfo, ')
+          ..write('showQrCode: $showQrCode, ')
+          ..write('qrType: $qrType, ')
+          ..write('logoUrl: $logoUrl, ')
+          ..write('localLogoPath: $localLogoPath')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     taxPercentage,
     serviceChargePercentage,
+    taxIncludedInPrice,
+    roundingEnabled,
+    roundingMode,
     printerMacAddress,
-  );
+    paperSize,
+    autoPrint,
+    printKitchenCopy,
+    printCheckerCopy,
+    showLogo,
+    customHeaderTitle,
+    headerNotes,
+    showAddress,
+    showPhone,
+    showEmail,
+    showCashierName,
+    showCustomerName,
+    showOrderType,
+    showModifiers,
+    showItemNotes,
+    showTaxDetail,
+    showServiceCharge,
+    footerNotes,
+    socialMediaInfo,
+    wifiInfo,
+    showQrCode,
+    qrType,
+    logoUrl,
+    localLogoPath,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3823,34 +5020,169 @@ class OutletSetting extends DataClass implements Insertable<OutletSetting> {
           other.id == this.id &&
           other.taxPercentage == this.taxPercentage &&
           other.serviceChargePercentage == this.serviceChargePercentage &&
-          other.printerMacAddress == this.printerMacAddress);
+          other.taxIncludedInPrice == this.taxIncludedInPrice &&
+          other.roundingEnabled == this.roundingEnabled &&
+          other.roundingMode == this.roundingMode &&
+          other.printerMacAddress == this.printerMacAddress &&
+          other.paperSize == this.paperSize &&
+          other.autoPrint == this.autoPrint &&
+          other.printKitchenCopy == this.printKitchenCopy &&
+          other.printCheckerCopy == this.printCheckerCopy &&
+          other.showLogo == this.showLogo &&
+          other.customHeaderTitle == this.customHeaderTitle &&
+          other.headerNotes == this.headerNotes &&
+          other.showAddress == this.showAddress &&
+          other.showPhone == this.showPhone &&
+          other.showEmail == this.showEmail &&
+          other.showCashierName == this.showCashierName &&
+          other.showCustomerName == this.showCustomerName &&
+          other.showOrderType == this.showOrderType &&
+          other.showModifiers == this.showModifiers &&
+          other.showItemNotes == this.showItemNotes &&
+          other.showTaxDetail == this.showTaxDetail &&
+          other.showServiceCharge == this.showServiceCharge &&
+          other.footerNotes == this.footerNotes &&
+          other.socialMediaInfo == this.socialMediaInfo &&
+          other.wifiInfo == this.wifiInfo &&
+          other.showQrCode == this.showQrCode &&
+          other.qrType == this.qrType &&
+          other.logoUrl == this.logoUrl &&
+          other.localLogoPath == this.localLogoPath);
 }
 
 class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
   final Value<String> id;
   final Value<double> taxPercentage;
   final Value<double> serviceChargePercentage;
+  final Value<bool> taxIncludedInPrice;
+  final Value<bool> roundingEnabled;
+  final Value<String> roundingMode;
   final Value<String?> printerMacAddress;
+  final Value<String> paperSize;
+  final Value<bool> autoPrint;
+  final Value<bool> printKitchenCopy;
+  final Value<bool> printCheckerCopy;
+  final Value<bool> showLogo;
+  final Value<String?> customHeaderTitle;
+  final Value<String?> headerNotes;
+  final Value<bool> showAddress;
+  final Value<bool> showPhone;
+  final Value<bool> showEmail;
+  final Value<bool> showCashierName;
+  final Value<bool> showCustomerName;
+  final Value<bool> showOrderType;
+  final Value<bool> showModifiers;
+  final Value<bool> showItemNotes;
+  final Value<bool> showTaxDetail;
+  final Value<bool> showServiceCharge;
+  final Value<String?> footerNotes;
+  final Value<String?> socialMediaInfo;
+  final Value<String?> wifiInfo;
+  final Value<bool> showQrCode;
+  final Value<String> qrType;
+  final Value<String?> logoUrl;
+  final Value<String?> localLogoPath;
   final Value<int> rowid;
   const OutletSettingsCompanion({
     this.id = const Value.absent(),
     this.taxPercentage = const Value.absent(),
     this.serviceChargePercentage = const Value.absent(),
+    this.taxIncludedInPrice = const Value.absent(),
+    this.roundingEnabled = const Value.absent(),
+    this.roundingMode = const Value.absent(),
     this.printerMacAddress = const Value.absent(),
+    this.paperSize = const Value.absent(),
+    this.autoPrint = const Value.absent(),
+    this.printKitchenCopy = const Value.absent(),
+    this.printCheckerCopy = const Value.absent(),
+    this.showLogo = const Value.absent(),
+    this.customHeaderTitle = const Value.absent(),
+    this.headerNotes = const Value.absent(),
+    this.showAddress = const Value.absent(),
+    this.showPhone = const Value.absent(),
+    this.showEmail = const Value.absent(),
+    this.showCashierName = const Value.absent(),
+    this.showCustomerName = const Value.absent(),
+    this.showOrderType = const Value.absent(),
+    this.showModifiers = const Value.absent(),
+    this.showItemNotes = const Value.absent(),
+    this.showTaxDetail = const Value.absent(),
+    this.showServiceCharge = const Value.absent(),
+    this.footerNotes = const Value.absent(),
+    this.socialMediaInfo = const Value.absent(),
+    this.wifiInfo = const Value.absent(),
+    this.showQrCode = const Value.absent(),
+    this.qrType = const Value.absent(),
+    this.logoUrl = const Value.absent(),
+    this.localLogoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutletSettingsCompanion.insert({
     required String id,
     this.taxPercentage = const Value.absent(),
     this.serviceChargePercentage = const Value.absent(),
+    this.taxIncludedInPrice = const Value.absent(),
+    this.roundingEnabled = const Value.absent(),
+    this.roundingMode = const Value.absent(),
     this.printerMacAddress = const Value.absent(),
+    this.paperSize = const Value.absent(),
+    this.autoPrint = const Value.absent(),
+    this.printKitchenCopy = const Value.absent(),
+    this.printCheckerCopy = const Value.absent(),
+    this.showLogo = const Value.absent(),
+    this.customHeaderTitle = const Value.absent(),
+    this.headerNotes = const Value.absent(),
+    this.showAddress = const Value.absent(),
+    this.showPhone = const Value.absent(),
+    this.showEmail = const Value.absent(),
+    this.showCashierName = const Value.absent(),
+    this.showCustomerName = const Value.absent(),
+    this.showOrderType = const Value.absent(),
+    this.showModifiers = const Value.absent(),
+    this.showItemNotes = const Value.absent(),
+    this.showTaxDetail = const Value.absent(),
+    this.showServiceCharge = const Value.absent(),
+    this.footerNotes = const Value.absent(),
+    this.socialMediaInfo = const Value.absent(),
+    this.wifiInfo = const Value.absent(),
+    this.showQrCode = const Value.absent(),
+    this.qrType = const Value.absent(),
+    this.logoUrl = const Value.absent(),
+    this.localLogoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<OutletSetting> custom({
     Expression<String>? id,
     Expression<double>? taxPercentage,
     Expression<double>? serviceChargePercentage,
+    Expression<bool>? taxIncludedInPrice,
+    Expression<bool>? roundingEnabled,
+    Expression<String>? roundingMode,
     Expression<String>? printerMacAddress,
+    Expression<String>? paperSize,
+    Expression<bool>? autoPrint,
+    Expression<bool>? printKitchenCopy,
+    Expression<bool>? printCheckerCopy,
+    Expression<bool>? showLogo,
+    Expression<String>? customHeaderTitle,
+    Expression<String>? headerNotes,
+    Expression<bool>? showAddress,
+    Expression<bool>? showPhone,
+    Expression<bool>? showEmail,
+    Expression<bool>? showCashierName,
+    Expression<bool>? showCustomerName,
+    Expression<bool>? showOrderType,
+    Expression<bool>? showModifiers,
+    Expression<bool>? showItemNotes,
+    Expression<bool>? showTaxDetail,
+    Expression<bool>? showServiceCharge,
+    Expression<String>? footerNotes,
+    Expression<String>? socialMediaInfo,
+    Expression<String>? wifiInfo,
+    Expression<bool>? showQrCode,
+    Expression<String>? qrType,
+    Expression<String>? logoUrl,
+    Expression<String>? localLogoPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3858,7 +5190,35 @@ class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
       if (taxPercentage != null) 'tax_percentage': taxPercentage,
       if (serviceChargePercentage != null)
         'service_charge_percentage': serviceChargePercentage,
+      if (taxIncludedInPrice != null)
+        'tax_included_in_price': taxIncludedInPrice,
+      if (roundingEnabled != null) 'rounding_enabled': roundingEnabled,
+      if (roundingMode != null) 'rounding_mode': roundingMode,
       if (printerMacAddress != null) 'printer_mac_address': printerMacAddress,
+      if (paperSize != null) 'paper_size': paperSize,
+      if (autoPrint != null) 'auto_print': autoPrint,
+      if (printKitchenCopy != null) 'print_kitchen_copy': printKitchenCopy,
+      if (printCheckerCopy != null) 'print_checker_copy': printCheckerCopy,
+      if (showLogo != null) 'show_logo': showLogo,
+      if (customHeaderTitle != null) 'custom_header_title': customHeaderTitle,
+      if (headerNotes != null) 'header_notes': headerNotes,
+      if (showAddress != null) 'show_address': showAddress,
+      if (showPhone != null) 'show_phone': showPhone,
+      if (showEmail != null) 'show_email': showEmail,
+      if (showCashierName != null) 'show_cashier_name': showCashierName,
+      if (showCustomerName != null) 'show_customer_name': showCustomerName,
+      if (showOrderType != null) 'show_order_type': showOrderType,
+      if (showModifiers != null) 'show_modifiers': showModifiers,
+      if (showItemNotes != null) 'show_item_notes': showItemNotes,
+      if (showTaxDetail != null) 'show_tax_detail': showTaxDetail,
+      if (showServiceCharge != null) 'show_service_charge': showServiceCharge,
+      if (footerNotes != null) 'footer_notes': footerNotes,
+      if (socialMediaInfo != null) 'social_media_info': socialMediaInfo,
+      if (wifiInfo != null) 'wifi_info': wifiInfo,
+      if (showQrCode != null) 'show_qr_code': showQrCode,
+      if (qrType != null) 'qr_type': qrType,
+      if (logoUrl != null) 'logo_url': logoUrl,
+      if (localLogoPath != null) 'local_logo_path': localLogoPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3867,7 +5227,34 @@ class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
     Value<String>? id,
     Value<double>? taxPercentage,
     Value<double>? serviceChargePercentage,
+    Value<bool>? taxIncludedInPrice,
+    Value<bool>? roundingEnabled,
+    Value<String>? roundingMode,
     Value<String?>? printerMacAddress,
+    Value<String>? paperSize,
+    Value<bool>? autoPrint,
+    Value<bool>? printKitchenCopy,
+    Value<bool>? printCheckerCopy,
+    Value<bool>? showLogo,
+    Value<String?>? customHeaderTitle,
+    Value<String?>? headerNotes,
+    Value<bool>? showAddress,
+    Value<bool>? showPhone,
+    Value<bool>? showEmail,
+    Value<bool>? showCashierName,
+    Value<bool>? showCustomerName,
+    Value<bool>? showOrderType,
+    Value<bool>? showModifiers,
+    Value<bool>? showItemNotes,
+    Value<bool>? showTaxDetail,
+    Value<bool>? showServiceCharge,
+    Value<String?>? footerNotes,
+    Value<String?>? socialMediaInfo,
+    Value<String?>? wifiInfo,
+    Value<bool>? showQrCode,
+    Value<String>? qrType,
+    Value<String?>? logoUrl,
+    Value<String?>? localLogoPath,
     Value<int>? rowid,
   }) {
     return OutletSettingsCompanion(
@@ -3875,7 +5262,34 @@ class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
       taxPercentage: taxPercentage ?? this.taxPercentage,
       serviceChargePercentage:
           serviceChargePercentage ?? this.serviceChargePercentage,
+      taxIncludedInPrice: taxIncludedInPrice ?? this.taxIncludedInPrice,
+      roundingEnabled: roundingEnabled ?? this.roundingEnabled,
+      roundingMode: roundingMode ?? this.roundingMode,
       printerMacAddress: printerMacAddress ?? this.printerMacAddress,
+      paperSize: paperSize ?? this.paperSize,
+      autoPrint: autoPrint ?? this.autoPrint,
+      printKitchenCopy: printKitchenCopy ?? this.printKitchenCopy,
+      printCheckerCopy: printCheckerCopy ?? this.printCheckerCopy,
+      showLogo: showLogo ?? this.showLogo,
+      customHeaderTitle: customHeaderTitle ?? this.customHeaderTitle,
+      headerNotes: headerNotes ?? this.headerNotes,
+      showAddress: showAddress ?? this.showAddress,
+      showPhone: showPhone ?? this.showPhone,
+      showEmail: showEmail ?? this.showEmail,
+      showCashierName: showCashierName ?? this.showCashierName,
+      showCustomerName: showCustomerName ?? this.showCustomerName,
+      showOrderType: showOrderType ?? this.showOrderType,
+      showModifiers: showModifiers ?? this.showModifiers,
+      showItemNotes: showItemNotes ?? this.showItemNotes,
+      showTaxDetail: showTaxDetail ?? this.showTaxDetail,
+      showServiceCharge: showServiceCharge ?? this.showServiceCharge,
+      footerNotes: footerNotes ?? this.footerNotes,
+      socialMediaInfo: socialMediaInfo ?? this.socialMediaInfo,
+      wifiInfo: wifiInfo ?? this.wifiInfo,
+      showQrCode: showQrCode ?? this.showQrCode,
+      qrType: qrType ?? this.qrType,
+      logoUrl: logoUrl ?? this.logoUrl,
+      localLogoPath: localLogoPath ?? this.localLogoPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3894,8 +5308,89 @@ class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
         serviceChargePercentage.value,
       );
     }
+    if (taxIncludedInPrice.present) {
+      map['tax_included_in_price'] = Variable<bool>(taxIncludedInPrice.value);
+    }
+    if (roundingEnabled.present) {
+      map['rounding_enabled'] = Variable<bool>(roundingEnabled.value);
+    }
+    if (roundingMode.present) {
+      map['rounding_mode'] = Variable<String>(roundingMode.value);
+    }
     if (printerMacAddress.present) {
       map['printer_mac_address'] = Variable<String>(printerMacAddress.value);
+    }
+    if (paperSize.present) {
+      map['paper_size'] = Variable<String>(paperSize.value);
+    }
+    if (autoPrint.present) {
+      map['auto_print'] = Variable<bool>(autoPrint.value);
+    }
+    if (printKitchenCopy.present) {
+      map['print_kitchen_copy'] = Variable<bool>(printKitchenCopy.value);
+    }
+    if (printCheckerCopy.present) {
+      map['print_checker_copy'] = Variable<bool>(printCheckerCopy.value);
+    }
+    if (showLogo.present) {
+      map['show_logo'] = Variable<bool>(showLogo.value);
+    }
+    if (customHeaderTitle.present) {
+      map['custom_header_title'] = Variable<String>(customHeaderTitle.value);
+    }
+    if (headerNotes.present) {
+      map['header_notes'] = Variable<String>(headerNotes.value);
+    }
+    if (showAddress.present) {
+      map['show_address'] = Variable<bool>(showAddress.value);
+    }
+    if (showPhone.present) {
+      map['show_phone'] = Variable<bool>(showPhone.value);
+    }
+    if (showEmail.present) {
+      map['show_email'] = Variable<bool>(showEmail.value);
+    }
+    if (showCashierName.present) {
+      map['show_cashier_name'] = Variable<bool>(showCashierName.value);
+    }
+    if (showCustomerName.present) {
+      map['show_customer_name'] = Variable<bool>(showCustomerName.value);
+    }
+    if (showOrderType.present) {
+      map['show_order_type'] = Variable<bool>(showOrderType.value);
+    }
+    if (showModifiers.present) {
+      map['show_modifiers'] = Variable<bool>(showModifiers.value);
+    }
+    if (showItemNotes.present) {
+      map['show_item_notes'] = Variable<bool>(showItemNotes.value);
+    }
+    if (showTaxDetail.present) {
+      map['show_tax_detail'] = Variable<bool>(showTaxDetail.value);
+    }
+    if (showServiceCharge.present) {
+      map['show_service_charge'] = Variable<bool>(showServiceCharge.value);
+    }
+    if (footerNotes.present) {
+      map['footer_notes'] = Variable<String>(footerNotes.value);
+    }
+    if (socialMediaInfo.present) {
+      map['social_media_info'] = Variable<String>(socialMediaInfo.value);
+    }
+    if (wifiInfo.present) {
+      map['wifi_info'] = Variable<String>(wifiInfo.value);
+    }
+    if (showQrCode.present) {
+      map['show_qr_code'] = Variable<bool>(showQrCode.value);
+    }
+    if (qrType.present) {
+      map['qr_type'] = Variable<String>(qrType.value);
+    }
+    if (logoUrl.present) {
+      map['logo_url'] = Variable<String>(logoUrl.value);
+    }
+    if (localLogoPath.present) {
+      map['local_logo_path'] = Variable<String>(localLogoPath.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -3909,7 +5404,34 @@ class OutletSettingsCompanion extends UpdateCompanion<OutletSetting> {
           ..write('id: $id, ')
           ..write('taxPercentage: $taxPercentage, ')
           ..write('serviceChargePercentage: $serviceChargePercentage, ')
+          ..write('taxIncludedInPrice: $taxIncludedInPrice, ')
+          ..write('roundingEnabled: $roundingEnabled, ')
+          ..write('roundingMode: $roundingMode, ')
           ..write('printerMacAddress: $printerMacAddress, ')
+          ..write('paperSize: $paperSize, ')
+          ..write('autoPrint: $autoPrint, ')
+          ..write('printKitchenCopy: $printKitchenCopy, ')
+          ..write('printCheckerCopy: $printCheckerCopy, ')
+          ..write('showLogo: $showLogo, ')
+          ..write('customHeaderTitle: $customHeaderTitle, ')
+          ..write('headerNotes: $headerNotes, ')
+          ..write('showAddress: $showAddress, ')
+          ..write('showPhone: $showPhone, ')
+          ..write('showEmail: $showEmail, ')
+          ..write('showCashierName: $showCashierName, ')
+          ..write('showCustomerName: $showCustomerName, ')
+          ..write('showOrderType: $showOrderType, ')
+          ..write('showModifiers: $showModifiers, ')
+          ..write('showItemNotes: $showItemNotes, ')
+          ..write('showTaxDetail: $showTaxDetail, ')
+          ..write('showServiceCharge: $showServiceCharge, ')
+          ..write('footerNotes: $footerNotes, ')
+          ..write('socialMediaInfo: $socialMediaInfo, ')
+          ..write('wifiInfo: $wifiInfo, ')
+          ..write('showQrCode: $showQrCode, ')
+          ..write('qrType: $qrType, ')
+          ..write('logoUrl: $logoUrl, ')
+          ..write('localLogoPath: $localLogoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4037,6 +5559,21 @@ class $ShiftsTable extends Shifts with TableInfo<$ShiftsTable, Shift> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isOfflineMeta = const VerificationMeta(
+    'isOffline',
+  );
+  @override
+  late final GeneratedColumn<bool> isOffline = GeneratedColumn<bool>(
+    'is_offline',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_offline" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4050,6 +5587,7 @@ class $ShiftsTable extends Shifts with TableInfo<$ShiftsTable, Shift> {
     status,
     openedAt,
     closedAt,
+    isOffline,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4150,6 +5688,12 @@ class $ShiftsTable extends Shifts with TableInfo<$ShiftsTable, Shift> {
         closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
       );
     }
+    if (data.containsKey('is_offline')) {
+      context.handle(
+        _isOfflineMeta,
+        isOffline.isAcceptableOrUnknown(data['is_offline']!, _isOfflineMeta),
+      );
+    }
     return context;
   }
 
@@ -4203,6 +5747,10 @@ class $ShiftsTable extends Shifts with TableInfo<$ShiftsTable, Shift> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}closed_at'],
       ),
+      isOffline: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_offline'],
+      )!,
     );
   }
 
@@ -4224,6 +5772,7 @@ class Shift extends DataClass implements Insertable<Shift> {
   final String status;
   final DateTime openedAt;
   final DateTime? closedAt;
+  final bool isOffline;
   const Shift({
     required this.id,
     required this.outletId,
@@ -4236,6 +5785,7 @@ class Shift extends DataClass implements Insertable<Shift> {
     required this.status,
     required this.openedAt,
     this.closedAt,
+    required this.isOffline,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4259,6 +5809,7 @@ class Shift extends DataClass implements Insertable<Shift> {
     if (!nullToAbsent || closedAt != null) {
       map['closed_at'] = Variable<DateTime>(closedAt);
     }
+    map['is_offline'] = Variable<bool>(isOffline);
     return map;
   }
 
@@ -4283,6 +5834,7 @@ class Shift extends DataClass implements Insertable<Shift> {
       closedAt: closedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(closedAt),
+      isOffline: Value(isOffline),
     );
   }
 
@@ -4303,6 +5855,7 @@ class Shift extends DataClass implements Insertable<Shift> {
       status: serializer.fromJson<String>(json['status']),
       openedAt: serializer.fromJson<DateTime>(json['openedAt']),
       closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
+      isOffline: serializer.fromJson<bool>(json['isOffline']),
     );
   }
   @override
@@ -4320,6 +5873,7 @@ class Shift extends DataClass implements Insertable<Shift> {
       'status': serializer.toJson<String>(status),
       'openedAt': serializer.toJson<DateTime>(openedAt),
       'closedAt': serializer.toJson<DateTime?>(closedAt),
+      'isOffline': serializer.toJson<bool>(isOffline),
     };
   }
 
@@ -4335,6 +5889,7 @@ class Shift extends DataClass implements Insertable<Shift> {
     String? status,
     DateTime? openedAt,
     Value<DateTime?> closedAt = const Value.absent(),
+    bool? isOffline,
   }) => Shift(
     id: id ?? this.id,
     outletId: outletId ?? this.outletId,
@@ -4347,6 +5902,7 @@ class Shift extends DataClass implements Insertable<Shift> {
     status: status ?? this.status,
     openedAt: openedAt ?? this.openedAt,
     closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    isOffline: isOffline ?? this.isOffline,
   );
   Shift copyWithCompanion(ShiftsCompanion data) {
     return Shift(
@@ -4371,6 +5927,7 @@ class Shift extends DataClass implements Insertable<Shift> {
       status: data.status.present ? data.status.value : this.status,
       openedAt: data.openedAt.present ? data.openedAt.value : this.openedAt,
       closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      isOffline: data.isOffline.present ? data.isOffline.value : this.isOffline,
     );
   }
 
@@ -4387,7 +5944,8 @@ class Shift extends DataClass implements Insertable<Shift> {
           ..write('totalSales: $totalSales, ')
           ..write('status: $status, ')
           ..write('openedAt: $openedAt, ')
-          ..write('closedAt: $closedAt')
+          ..write('closedAt: $closedAt, ')
+          ..write('isOffline: $isOffline')
           ..write(')'))
         .toString();
   }
@@ -4405,6 +5963,7 @@ class Shift extends DataClass implements Insertable<Shift> {
     status,
     openedAt,
     closedAt,
+    isOffline,
   );
   @override
   bool operator ==(Object other) =>
@@ -4420,7 +5979,8 @@ class Shift extends DataClass implements Insertable<Shift> {
           other.totalSales == this.totalSales &&
           other.status == this.status &&
           other.openedAt == this.openedAt &&
-          other.closedAt == this.closedAt);
+          other.closedAt == this.closedAt &&
+          other.isOffline == this.isOffline);
 }
 
 class ShiftsCompanion extends UpdateCompanion<Shift> {
@@ -4435,6 +5995,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
   final Value<String> status;
   final Value<DateTime> openedAt;
   final Value<DateTime?> closedAt;
+  final Value<bool> isOffline;
   final Value<int> rowid;
   const ShiftsCompanion({
     this.id = const Value.absent(),
@@ -4448,6 +6009,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
     this.status = const Value.absent(),
     this.openedAt = const Value.absent(),
     this.closedAt = const Value.absent(),
+    this.isOffline = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ShiftsCompanion.insert({
@@ -4462,6 +6024,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
     required String status,
     this.openedAt = const Value.absent(),
     this.closedAt = const Value.absent(),
+    this.isOffline = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        outletId = Value(outletId),
@@ -4481,6 +6044,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
     Expression<String>? status,
     Expression<DateTime>? openedAt,
     Expression<DateTime>? closedAt,
+    Expression<bool>? isOffline,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4495,6 +6059,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
       if (status != null) 'status': status,
       if (openedAt != null) 'opened_at': openedAt,
       if (closedAt != null) 'closed_at': closedAt,
+      if (isOffline != null) 'is_offline': isOffline,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4511,6 +6076,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
     Value<String>? status,
     Value<DateTime>? openedAt,
     Value<DateTime?>? closedAt,
+    Value<bool>? isOffline,
     Value<int>? rowid,
   }) {
     return ShiftsCompanion(
@@ -4525,6 +6091,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
       status: status ?? this.status,
       openedAt: openedAt ?? this.openedAt,
       closedAt: closedAt ?? this.closedAt,
+      isOffline: isOffline ?? this.isOffline,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4565,6 +6132,9 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
     if (closedAt.present) {
       map['closed_at'] = Variable<DateTime>(closedAt.value);
     }
+    if (isOffline.present) {
+      map['is_offline'] = Variable<bool>(isOffline.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4585,6 +6155,7 @@ class ShiftsCompanion extends UpdateCompanion<Shift> {
           ..write('status: $status, ')
           ..write('openedAt: $openedAt, ')
           ..write('closedAt: $closedAt, ')
+          ..write('isOffline: $isOffline, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4659,6 +6230,21 @@ class $ShiftCashLogsTable extends ShiftCashLogs
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _isOfflineMeta = const VerificationMeta(
+    'isOffline',
+  );
+  @override
+  late final GeneratedColumn<bool> isOffline = GeneratedColumn<bool>(
+    'is_offline',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_offline" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4667,6 +6253,7 @@ class $ShiftCashLogsTable extends ShiftCashLogs
     amount,
     note,
     createdAt,
+    isOffline,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4721,6 +6308,12 @@ class $ShiftCashLogsTable extends ShiftCashLogs
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('is_offline')) {
+      context.handle(
+        _isOfflineMeta,
+        isOffline.isAcceptableOrUnknown(data['is_offline']!, _isOfflineMeta),
+      );
+    }
     return context;
   }
 
@@ -4754,6 +6347,10 @@ class $ShiftCashLogsTable extends ShiftCashLogs
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      isOffline: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_offline'],
+      )!,
     );
   }
 
@@ -4770,6 +6367,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
   final double amount;
   final String? note;
   final DateTime createdAt;
+  final bool isOffline;
   const ShiftCashLog({
     required this.id,
     required this.shiftId,
@@ -4777,6 +6375,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
     required this.amount,
     this.note,
     required this.createdAt,
+    required this.isOffline,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4789,6 +6388,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
       map['note'] = Variable<String>(note);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['is_offline'] = Variable<bool>(isOffline);
     return map;
   }
 
@@ -4800,6 +6400,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
       amount: Value(amount),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdAt: Value(createdAt),
+      isOffline: Value(isOffline),
     );
   }
 
@@ -4815,6 +6416,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
       amount: serializer.fromJson<double>(json['amount']),
       note: serializer.fromJson<String?>(json['note']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      isOffline: serializer.fromJson<bool>(json['isOffline']),
     );
   }
   @override
@@ -4827,6 +6429,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
       'amount': serializer.toJson<double>(amount),
       'note': serializer.toJson<String?>(note),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'isOffline': serializer.toJson<bool>(isOffline),
     };
   }
 
@@ -4837,6 +6440,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
     double? amount,
     Value<String?> note = const Value.absent(),
     DateTime? createdAt,
+    bool? isOffline,
   }) => ShiftCashLog(
     id: id ?? this.id,
     shiftId: shiftId ?? this.shiftId,
@@ -4844,6 +6448,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
     amount: amount ?? this.amount,
     note: note.present ? note.value : this.note,
     createdAt: createdAt ?? this.createdAt,
+    isOffline: isOffline ?? this.isOffline,
   );
   ShiftCashLog copyWithCompanion(ShiftCashLogsCompanion data) {
     return ShiftCashLog(
@@ -4853,6 +6458,7 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
       amount: data.amount.present ? data.amount.value : this.amount,
       note: data.note.present ? data.note.value : this.note,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      isOffline: data.isOffline.present ? data.isOffline.value : this.isOffline,
     );
   }
 
@@ -4864,13 +6470,15 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('note: $note, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('isOffline: $isOffline')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, shiftId, type, amount, note, createdAt);
+  int get hashCode =>
+      Object.hash(id, shiftId, type, amount, note, createdAt, isOffline);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4880,7 +6488,8 @@ class ShiftCashLog extends DataClass implements Insertable<ShiftCashLog> {
           other.type == this.type &&
           other.amount == this.amount &&
           other.note == this.note &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.isOffline == this.isOffline);
 }
 
 class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
@@ -4890,6 +6499,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
   final Value<double> amount;
   final Value<String?> note;
   final Value<DateTime> createdAt;
+  final Value<bool> isOffline;
   final Value<int> rowid;
   const ShiftCashLogsCompanion({
     this.id = const Value.absent(),
@@ -4898,6 +6508,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
     this.amount = const Value.absent(),
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.isOffline = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ShiftCashLogsCompanion.insert({
@@ -4907,6 +6518,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
     required double amount,
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.isOffline = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        shiftId = Value(shiftId),
@@ -4919,6 +6531,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
     Expression<double>? amount,
     Expression<String>? note,
     Expression<DateTime>? createdAt,
+    Expression<bool>? isOffline,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4928,6 +6541,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
       if (amount != null) 'amount': amount,
       if (note != null) 'note': note,
       if (createdAt != null) 'created_at': createdAt,
+      if (isOffline != null) 'is_offline': isOffline,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4939,6 +6553,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
     Value<double>? amount,
     Value<String?>? note,
     Value<DateTime>? createdAt,
+    Value<bool>? isOffline,
     Value<int>? rowid,
   }) {
     return ShiftCashLogsCompanion(
@@ -4948,6 +6563,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
       amount: amount ?? this.amount,
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
+      isOffline: isOffline ?? this.isOffline,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4973,6 +6589,9 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (isOffline.present) {
+      map['is_offline'] = Variable<bool>(isOffline.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4988,6 +6607,7 @@ class ShiftCashLogsCompanion extends UpdateCompanion<ShiftCashLog> {
           ..write('amount: $amount, ')
           ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
+          ..write('isOffline: $isOffline, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -14276,6 +15896,8 @@ typedef $$PaymentMethodsTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String type,
+      Value<int> sortOrder,
+      Value<int?> localSortOrder,
       Value<bool> isActive,
       Value<int> rowid,
     });
@@ -14284,6 +15906,8 @@ typedef $$PaymentMethodsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> type,
+      Value<int> sortOrder,
+      Value<int?> localSortOrder,
       Value<bool> isActive,
       Value<int> rowid,
     });
@@ -14349,6 +15973,16 @@ class $$PaymentMethodsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localSortOrder => $composableBuilder(
+    column: $table.localSortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnFilters(column),
@@ -14404,6 +16038,16 @@ class $$PaymentMethodsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get localSortOrder => $composableBuilder(
+    column: $table.localSortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -14427,6 +16071,14 @@ class $$PaymentMethodsTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get localSortOrder => $composableBuilder(
+    column: $table.localSortOrder,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -14491,12 +16143,16 @@ class $$PaymentMethodsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int?> localSortOrder = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaymentMethodsCompanion(
                 id: id,
                 name: name,
                 type: type,
+                sortOrder: sortOrder,
+                localSortOrder: localSortOrder,
                 isActive: isActive,
                 rowid: rowid,
               ),
@@ -14505,12 +16161,16 @@ class $$PaymentMethodsTableTableManager
                 required String id,
                 required String name,
                 required String type,
+                Value<int> sortOrder = const Value.absent(),
+                Value<int?> localSortOrder = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaymentMethodsCompanion.insert(
                 id: id,
                 name: name,
                 type: type,
+                sortOrder: sortOrder,
+                localSortOrder: localSortOrder,
                 isActive: isActive,
                 rowid: rowid,
               ),
@@ -14579,7 +16239,34 @@ typedef $$OutletSettingsTableCreateCompanionBuilder =
       required String id,
       Value<double> taxPercentage,
       Value<double> serviceChargePercentage,
+      Value<bool> taxIncludedInPrice,
+      Value<bool> roundingEnabled,
+      Value<String> roundingMode,
       Value<String?> printerMacAddress,
+      Value<String> paperSize,
+      Value<bool> autoPrint,
+      Value<bool> printKitchenCopy,
+      Value<bool> printCheckerCopy,
+      Value<bool> showLogo,
+      Value<String?> customHeaderTitle,
+      Value<String?> headerNotes,
+      Value<bool> showAddress,
+      Value<bool> showPhone,
+      Value<bool> showEmail,
+      Value<bool> showCashierName,
+      Value<bool> showCustomerName,
+      Value<bool> showOrderType,
+      Value<bool> showModifiers,
+      Value<bool> showItemNotes,
+      Value<bool> showTaxDetail,
+      Value<bool> showServiceCharge,
+      Value<String?> footerNotes,
+      Value<String?> socialMediaInfo,
+      Value<String?> wifiInfo,
+      Value<bool> showQrCode,
+      Value<String> qrType,
+      Value<String?> logoUrl,
+      Value<String?> localLogoPath,
       Value<int> rowid,
     });
 typedef $$OutletSettingsTableUpdateCompanionBuilder =
@@ -14587,7 +16274,34 @@ typedef $$OutletSettingsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<double> taxPercentage,
       Value<double> serviceChargePercentage,
+      Value<bool> taxIncludedInPrice,
+      Value<bool> roundingEnabled,
+      Value<String> roundingMode,
       Value<String?> printerMacAddress,
+      Value<String> paperSize,
+      Value<bool> autoPrint,
+      Value<bool> printKitchenCopy,
+      Value<bool> printCheckerCopy,
+      Value<bool> showLogo,
+      Value<String?> customHeaderTitle,
+      Value<String?> headerNotes,
+      Value<bool> showAddress,
+      Value<bool> showPhone,
+      Value<bool> showEmail,
+      Value<bool> showCashierName,
+      Value<bool> showCustomerName,
+      Value<bool> showOrderType,
+      Value<bool> showModifiers,
+      Value<bool> showItemNotes,
+      Value<bool> showTaxDetail,
+      Value<bool> showServiceCharge,
+      Value<String?> footerNotes,
+      Value<String?> socialMediaInfo,
+      Value<String?> wifiInfo,
+      Value<bool> showQrCode,
+      Value<String> qrType,
+      Value<String?> logoUrl,
+      Value<String?> localLogoPath,
       Value<int> rowid,
     });
 
@@ -14615,8 +16329,143 @@ class $$OutletSettingsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get taxIncludedInPrice => $composableBuilder(
+    column: $table.taxIncludedInPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get roundingEnabled => $composableBuilder(
+    column: $table.roundingEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roundingMode => $composableBuilder(
+    column: $table.roundingMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get printerMacAddress => $composableBuilder(
     column: $table.printerMacAddress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paperSize => $composableBuilder(
+    column: $table.paperSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoPrint => $composableBuilder(
+    column: $table.autoPrint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get printKitchenCopy => $composableBuilder(
+    column: $table.printKitchenCopy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get printCheckerCopy => $composableBuilder(
+    column: $table.printCheckerCopy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showLogo => $composableBuilder(
+    column: $table.showLogo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customHeaderTitle => $composableBuilder(
+    column: $table.customHeaderTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get headerNotes => $composableBuilder(
+    column: $table.headerNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showAddress => $composableBuilder(
+    column: $table.showAddress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showPhone => $composableBuilder(
+    column: $table.showPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showEmail => $composableBuilder(
+    column: $table.showEmail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showCashierName => $composableBuilder(
+    column: $table.showCashierName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showCustomerName => $composableBuilder(
+    column: $table.showCustomerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showOrderType => $composableBuilder(
+    column: $table.showOrderType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showModifiers => $composableBuilder(
+    column: $table.showModifiers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showItemNotes => $composableBuilder(
+    column: $table.showItemNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showTaxDetail => $composableBuilder(
+    column: $table.showTaxDetail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showServiceCharge => $composableBuilder(
+    column: $table.showServiceCharge,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get footerNotes => $composableBuilder(
+    column: $table.footerNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get socialMediaInfo => $composableBuilder(
+    column: $table.socialMediaInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wifiInfo => $composableBuilder(
+    column: $table.wifiInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showQrCode => $composableBuilder(
+    column: $table.showQrCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get qrType => $composableBuilder(
+    column: $table.qrType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get logoUrl => $composableBuilder(
+    column: $table.logoUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localLogoPath => $composableBuilder(
+    column: $table.localLogoPath,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14645,8 +16494,143 @@ class $$OutletSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get taxIncludedInPrice => $composableBuilder(
+    column: $table.taxIncludedInPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get roundingEnabled => $composableBuilder(
+    column: $table.roundingEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roundingMode => $composableBuilder(
+    column: $table.roundingMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get printerMacAddress => $composableBuilder(
     column: $table.printerMacAddress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paperSize => $composableBuilder(
+    column: $table.paperSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get autoPrint => $composableBuilder(
+    column: $table.autoPrint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get printKitchenCopy => $composableBuilder(
+    column: $table.printKitchenCopy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get printCheckerCopy => $composableBuilder(
+    column: $table.printCheckerCopy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showLogo => $composableBuilder(
+    column: $table.showLogo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customHeaderTitle => $composableBuilder(
+    column: $table.customHeaderTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get headerNotes => $composableBuilder(
+    column: $table.headerNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showAddress => $composableBuilder(
+    column: $table.showAddress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showPhone => $composableBuilder(
+    column: $table.showPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showEmail => $composableBuilder(
+    column: $table.showEmail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showCashierName => $composableBuilder(
+    column: $table.showCashierName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showCustomerName => $composableBuilder(
+    column: $table.showCustomerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showOrderType => $composableBuilder(
+    column: $table.showOrderType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showModifiers => $composableBuilder(
+    column: $table.showModifiers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showItemNotes => $composableBuilder(
+    column: $table.showItemNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showTaxDetail => $composableBuilder(
+    column: $table.showTaxDetail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showServiceCharge => $composableBuilder(
+    column: $table.showServiceCharge,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get footerNotes => $composableBuilder(
+    column: $table.footerNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get socialMediaInfo => $composableBuilder(
+    column: $table.socialMediaInfo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get wifiInfo => $composableBuilder(
+    column: $table.wifiInfo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showQrCode => $composableBuilder(
+    column: $table.showQrCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get qrType => $composableBuilder(
+    column: $table.qrType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get logoUrl => $composableBuilder(
+    column: $table.logoUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localLogoPath => $composableBuilder(
+    column: $table.localLogoPath,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -14673,8 +16657,127 @@ class $$OutletSettingsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get taxIncludedInPrice => $composableBuilder(
+    column: $table.taxIncludedInPrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get roundingEnabled => $composableBuilder(
+    column: $table.roundingEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get roundingMode => $composableBuilder(
+    column: $table.roundingMode,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get printerMacAddress => $composableBuilder(
     column: $table.printerMacAddress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paperSize =>
+      $composableBuilder(column: $table.paperSize, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoPrint =>
+      $composableBuilder(column: $table.autoPrint, builder: (column) => column);
+
+  GeneratedColumn<bool> get printKitchenCopy => $composableBuilder(
+    column: $table.printKitchenCopy,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get printCheckerCopy => $composableBuilder(
+    column: $table.printCheckerCopy,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showLogo =>
+      $composableBuilder(column: $table.showLogo, builder: (column) => column);
+
+  GeneratedColumn<String> get customHeaderTitle => $composableBuilder(
+    column: $table.customHeaderTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get headerNotes => $composableBuilder(
+    column: $table.headerNotes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showAddress => $composableBuilder(
+    column: $table.showAddress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showPhone =>
+      $composableBuilder(column: $table.showPhone, builder: (column) => column);
+
+  GeneratedColumn<bool> get showEmail =>
+      $composableBuilder(column: $table.showEmail, builder: (column) => column);
+
+  GeneratedColumn<bool> get showCashierName => $composableBuilder(
+    column: $table.showCashierName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showCustomerName => $composableBuilder(
+    column: $table.showCustomerName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showOrderType => $composableBuilder(
+    column: $table.showOrderType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showModifiers => $composableBuilder(
+    column: $table.showModifiers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showItemNotes => $composableBuilder(
+    column: $table.showItemNotes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showTaxDetail => $composableBuilder(
+    column: $table.showTaxDetail,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showServiceCharge => $composableBuilder(
+    column: $table.showServiceCharge,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get footerNotes => $composableBuilder(
+    column: $table.footerNotes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get socialMediaInfo => $composableBuilder(
+    column: $table.socialMediaInfo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get wifiInfo =>
+      $composableBuilder(column: $table.wifiInfo, builder: (column) => column);
+
+  GeneratedColumn<bool> get showQrCode => $composableBuilder(
+    column: $table.showQrCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get qrType =>
+      $composableBuilder(column: $table.qrType, builder: (column) => column);
+
+  GeneratedColumn<String> get logoUrl =>
+      $composableBuilder(column: $table.logoUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get localLogoPath => $composableBuilder(
+    column: $table.localLogoPath,
     builder: (column) => column,
   );
 }
@@ -14715,13 +16818,67 @@ class $$OutletSettingsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<double> taxPercentage = const Value.absent(),
                 Value<double> serviceChargePercentage = const Value.absent(),
+                Value<bool> taxIncludedInPrice = const Value.absent(),
+                Value<bool> roundingEnabled = const Value.absent(),
+                Value<String> roundingMode = const Value.absent(),
                 Value<String?> printerMacAddress = const Value.absent(),
+                Value<String> paperSize = const Value.absent(),
+                Value<bool> autoPrint = const Value.absent(),
+                Value<bool> printKitchenCopy = const Value.absent(),
+                Value<bool> printCheckerCopy = const Value.absent(),
+                Value<bool> showLogo = const Value.absent(),
+                Value<String?> customHeaderTitle = const Value.absent(),
+                Value<String?> headerNotes = const Value.absent(),
+                Value<bool> showAddress = const Value.absent(),
+                Value<bool> showPhone = const Value.absent(),
+                Value<bool> showEmail = const Value.absent(),
+                Value<bool> showCashierName = const Value.absent(),
+                Value<bool> showCustomerName = const Value.absent(),
+                Value<bool> showOrderType = const Value.absent(),
+                Value<bool> showModifiers = const Value.absent(),
+                Value<bool> showItemNotes = const Value.absent(),
+                Value<bool> showTaxDetail = const Value.absent(),
+                Value<bool> showServiceCharge = const Value.absent(),
+                Value<String?> footerNotes = const Value.absent(),
+                Value<String?> socialMediaInfo = const Value.absent(),
+                Value<String?> wifiInfo = const Value.absent(),
+                Value<bool> showQrCode = const Value.absent(),
+                Value<String> qrType = const Value.absent(),
+                Value<String?> logoUrl = const Value.absent(),
+                Value<String?> localLogoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutletSettingsCompanion(
                 id: id,
                 taxPercentage: taxPercentage,
                 serviceChargePercentage: serviceChargePercentage,
+                taxIncludedInPrice: taxIncludedInPrice,
+                roundingEnabled: roundingEnabled,
+                roundingMode: roundingMode,
                 printerMacAddress: printerMacAddress,
+                paperSize: paperSize,
+                autoPrint: autoPrint,
+                printKitchenCopy: printKitchenCopy,
+                printCheckerCopy: printCheckerCopy,
+                showLogo: showLogo,
+                customHeaderTitle: customHeaderTitle,
+                headerNotes: headerNotes,
+                showAddress: showAddress,
+                showPhone: showPhone,
+                showEmail: showEmail,
+                showCashierName: showCashierName,
+                showCustomerName: showCustomerName,
+                showOrderType: showOrderType,
+                showModifiers: showModifiers,
+                showItemNotes: showItemNotes,
+                showTaxDetail: showTaxDetail,
+                showServiceCharge: showServiceCharge,
+                footerNotes: footerNotes,
+                socialMediaInfo: socialMediaInfo,
+                wifiInfo: wifiInfo,
+                showQrCode: showQrCode,
+                qrType: qrType,
+                logoUrl: logoUrl,
+                localLogoPath: localLogoPath,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -14729,13 +16886,67 @@ class $$OutletSettingsTableTableManager
                 required String id,
                 Value<double> taxPercentage = const Value.absent(),
                 Value<double> serviceChargePercentage = const Value.absent(),
+                Value<bool> taxIncludedInPrice = const Value.absent(),
+                Value<bool> roundingEnabled = const Value.absent(),
+                Value<String> roundingMode = const Value.absent(),
                 Value<String?> printerMacAddress = const Value.absent(),
+                Value<String> paperSize = const Value.absent(),
+                Value<bool> autoPrint = const Value.absent(),
+                Value<bool> printKitchenCopy = const Value.absent(),
+                Value<bool> printCheckerCopy = const Value.absent(),
+                Value<bool> showLogo = const Value.absent(),
+                Value<String?> customHeaderTitle = const Value.absent(),
+                Value<String?> headerNotes = const Value.absent(),
+                Value<bool> showAddress = const Value.absent(),
+                Value<bool> showPhone = const Value.absent(),
+                Value<bool> showEmail = const Value.absent(),
+                Value<bool> showCashierName = const Value.absent(),
+                Value<bool> showCustomerName = const Value.absent(),
+                Value<bool> showOrderType = const Value.absent(),
+                Value<bool> showModifiers = const Value.absent(),
+                Value<bool> showItemNotes = const Value.absent(),
+                Value<bool> showTaxDetail = const Value.absent(),
+                Value<bool> showServiceCharge = const Value.absent(),
+                Value<String?> footerNotes = const Value.absent(),
+                Value<String?> socialMediaInfo = const Value.absent(),
+                Value<String?> wifiInfo = const Value.absent(),
+                Value<bool> showQrCode = const Value.absent(),
+                Value<String> qrType = const Value.absent(),
+                Value<String?> logoUrl = const Value.absent(),
+                Value<String?> localLogoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutletSettingsCompanion.insert(
                 id: id,
                 taxPercentage: taxPercentage,
                 serviceChargePercentage: serviceChargePercentage,
+                taxIncludedInPrice: taxIncludedInPrice,
+                roundingEnabled: roundingEnabled,
+                roundingMode: roundingMode,
                 printerMacAddress: printerMacAddress,
+                paperSize: paperSize,
+                autoPrint: autoPrint,
+                printKitchenCopy: printKitchenCopy,
+                printCheckerCopy: printCheckerCopy,
+                showLogo: showLogo,
+                customHeaderTitle: customHeaderTitle,
+                headerNotes: headerNotes,
+                showAddress: showAddress,
+                showPhone: showPhone,
+                showEmail: showEmail,
+                showCashierName: showCashierName,
+                showCustomerName: showCustomerName,
+                showOrderType: showOrderType,
+                showModifiers: showModifiers,
+                showItemNotes: showItemNotes,
+                showTaxDetail: showTaxDetail,
+                showServiceCharge: showServiceCharge,
+                footerNotes: footerNotes,
+                socialMediaInfo: socialMediaInfo,
+                wifiInfo: wifiInfo,
+                showQrCode: showQrCode,
+                qrType: qrType,
+                logoUrl: logoUrl,
+                localLogoPath: localLogoPath,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -14776,6 +16987,7 @@ typedef $$ShiftsTableCreateCompanionBuilder =
       required String status,
       Value<DateTime> openedAt,
       Value<DateTime?> closedAt,
+      Value<bool> isOffline,
       Value<int> rowid,
     });
 typedef $$ShiftsTableUpdateCompanionBuilder =
@@ -14791,6 +17003,7 @@ typedef $$ShiftsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<DateTime> openedAt,
       Value<DateTime?> closedAt,
+      Value<bool> isOffline,
       Value<int> rowid,
     });
 
@@ -14896,6 +17109,11 @@ class $$ShiftsTableFilterComposer
 
   ColumnFilters<DateTime> get closedAt => $composableBuilder(
     column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isOffline => $composableBuilder(
+    column: $table.isOffline,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15013,6 +17231,11 @@ class $$ShiftsTableOrderingComposer
     column: $table.closedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isOffline => $composableBuilder(
+    column: $table.isOffline,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ShiftsTableAnnotationComposer
@@ -15066,6 +17289,9 @@ class $$ShiftsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get closedAt =>
       $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOffline =>
+      $composableBuilder(column: $table.isOffline, builder: (column) => column);
 
   Expression<T> shiftCashLogsRefs<T extends Object>(
     Expression<T> Function($$ShiftCashLogsTableAnnotationComposer a) f,
@@ -15160,6 +17386,7 @@ class $$ShiftsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<DateTime> openedAt = const Value.absent(),
                 Value<DateTime?> closedAt = const Value.absent(),
+                Value<bool> isOffline = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShiftsCompanion(
                 id: id,
@@ -15173,6 +17400,7 @@ class $$ShiftsTableTableManager
                 status: status,
                 openedAt: openedAt,
                 closedAt: closedAt,
+                isOffline: isOffline,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -15188,6 +17416,7 @@ class $$ShiftsTableTableManager
                 required String status,
                 Value<DateTime> openedAt = const Value.absent(),
                 Value<DateTime?> closedAt = const Value.absent(),
+                Value<bool> isOffline = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShiftsCompanion.insert(
                 id: id,
@@ -15201,6 +17430,7 @@ class $$ShiftsTableTableManager
                 status: status,
                 openedAt: openedAt,
                 closedAt: closedAt,
+                isOffline: isOffline,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -15292,6 +17522,7 @@ typedef $$ShiftCashLogsTableCreateCompanionBuilder =
       required double amount,
       Value<String?> note,
       Value<DateTime> createdAt,
+      Value<bool> isOffline,
       Value<int> rowid,
     });
 typedef $$ShiftCashLogsTableUpdateCompanionBuilder =
@@ -15302,6 +17533,7 @@ typedef $$ShiftCashLogsTableUpdateCompanionBuilder =
       Value<double> amount,
       Value<String?> note,
       Value<DateTime> createdAt,
+      Value<bool> isOffline,
       Value<int> rowid,
     });
 
@@ -15365,6 +17597,11 @@ class $$ShiftCashLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isOffline => $composableBuilder(
+    column: $table.isOffline,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$ShiftsTableFilterComposer get shiftId {
     final $$ShiftsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -15423,6 +17660,11 @@ class $$ShiftCashLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isOffline => $composableBuilder(
+    column: $table.isOffline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ShiftsTableOrderingComposer get shiftId {
     final $$ShiftsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -15470,6 +17712,9 @@ class $$ShiftCashLogsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOffline =>
+      $composableBuilder(column: $table.isOffline, builder: (column) => column);
 
   $$ShiftsTableAnnotationComposer get shiftId {
     final $$ShiftsTableAnnotationComposer composer = $composerBuilder(
@@ -15529,6 +17774,7 @@ class $$ShiftCashLogsTableTableManager
                 Value<double> amount = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> isOffline = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShiftCashLogsCompanion(
                 id: id,
@@ -15537,6 +17783,7 @@ class $$ShiftCashLogsTableTableManager
                 amount: amount,
                 note: note,
                 createdAt: createdAt,
+                isOffline: isOffline,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -15547,6 +17794,7 @@ class $$ShiftCashLogsTableTableManager
                 required double amount,
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> isOffline = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShiftCashLogsCompanion.insert(
                 id: id,
@@ -15555,6 +17803,7 @@ class $$ShiftCashLogsTableTableManager
                 amount: amount,
                 note: note,
                 createdAt: createdAt,
+                isOffline: isOffline,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

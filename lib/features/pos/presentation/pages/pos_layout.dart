@@ -25,6 +25,7 @@ import 'package:sollu_pos_client/features/shift/presentation/providers/shift_pro
 import 'package:sollu_pos_client/features/settings/presentation/providers/bootstrap_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/widgets/sync_progress_overlay.dart';
 import 'package:sollu_pos_client/core/providers/auto_sync_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -175,11 +176,15 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     }
 
     final appliedDiscount = ref.read(appliedDiscountProvider);
-    final double subtotal = cart.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+    final taxRate = ref.read(activeTaxRateProvider);
+    final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
+
+    final double subtotal = cart.fold(0.0, (sum, item) => sum + item.calculatedSubtotal);
     final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
     final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
-    final double tax = taxableAmount * 0.1;
-    final int total = (taxableAmount + tax).toInt();
+    final double tax = taxableAmount * (taxRate / 100.0);
+    final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
+    final int total = (taxableAmount + tax + serviceCharge).toInt();
     PaymentDialog.show(context, total);
   }
 

@@ -8,6 +8,7 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provid
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 
@@ -113,11 +114,14 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
     try {
       final appliedDiscount = ref.read(appliedDiscountProvider);
       final activeShift = ref.read(activeShiftProvider).asData?.value;
+      final taxRate = ref.read(activeTaxRateProvider);
+      final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
 
-      final double subtotal = cart.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+      final double subtotal = cart.fold(0.0, (sum, item) => sum + item.calculatedSubtotal);
       final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
       final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
-      final double tax = taxableAmount * 0.1;
+      final double tax = taxableAmount * (taxRate / 100.0);
+      final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
       final double changeAmount = isCash ? (_cashReceived - widget.totalAmount) : 0.0;
 
       final repository = ref.read(transactionRepositoryProvider);
@@ -131,6 +135,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         promoName: appliedDiscount?.name,
         promoId: appliedDiscount?.promoId,
         taxAmount: tax,
+        serviceChargeAmount: serviceCharge,
         total: widget.totalAmount.toDouble(),
         paymentMethod: method,
         cashReceived: isCash ? _cashReceived : widget.totalAmount.toDouble(),
@@ -339,8 +344,8 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
             final activeMethods = methods.isNotEmpty
                 ? methods
                 : [
-                    PaymentMethod(id: 'default-cash', name: 'Tunai', type: 'cash', isActive: true),
-                    PaymentMethod(id: 'default-qris', name: 'QRIS', type: 'qris', isActive: true),
+                    PaymentMethod(id: 'default-cash', name: 'Tunai', type: 'cash', sortOrder: 0, localSortOrder: null, isActive: true),
+                    PaymentMethod(id: 'default-qris', name: 'QRIS', type: 'qris', sortOrder: 1, localSortOrder: null, isActive: true),
                   ];
 
             _selectedMethod ??= activeMethods.first;

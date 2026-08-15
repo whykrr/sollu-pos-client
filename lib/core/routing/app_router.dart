@@ -10,6 +10,7 @@ import 'package:sollu_pos_client/features/history/presentation/pages/history_scr
 
 import 'package:sollu_pos_client/features/settings/presentation/pages/settings_screen.dart';
 import 'package:sollu_pos_client/features/settings/presentation/pages/printer_settings_screen.dart';
+import 'package:sollu_pos_client/features/settings/presentation/pages/payment_method_settings_screen.dart';
 import 'package:sollu_pos_client/features/pos/presentation/pages/products_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -64,6 +65,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'printer',
             pageBuilder: (context, state) => CustomTransitionPage(
               child: const PrinterSettingsScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          ),
+          GoRoute(
+            path: 'payment-methods',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PaymentMethodSettingsScreen(),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 return FadeTransition(opacity: animation, child: child);
               },

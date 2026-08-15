@@ -10,6 +10,7 @@ import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dia
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 
 class CartPanel extends ConsumerStatefulWidget {
   final FocusNode? focusNode;
@@ -68,12 +69,15 @@ class _CartPanelState extends ConsumerState<CartPanel> {
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
     final appliedDiscount = ref.watch(appliedDiscountProvider);
+    final taxRate = ref.watch(activeTaxRateProvider);
+    final serviceChargeRate = ref.watch(activeServiceChargeRateProvider);
 
     final double subtotal = cart.fold(0, (sum, item) => sum + item.calculatedSubtotal);
     final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
     final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
-    final double tax = taxableAmount * 0.1; // 10% tax
-    final double total = taxableAmount + tax;
+    final double tax = taxableAmount * (taxRate / 100.0);
+    final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
+    final double total = taxableAmount + tax + serviceCharge;
 
     final isCartFocused = widget.focusNode?.hasFocus ?? false;
     if (_selectedCartIndex >= cart.length && cart.isNotEmpty) {
@@ -376,12 +380,21 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                ] else ...[
-                  _SummaryRow(label: 'Diskon', value: CurrencyFormatter.format(0)),
+                ],
+                if (serviceCharge > 0) ...[
+                  _SummaryRow(
+                    label: 'Service (${serviceChargeRate % 1 == 0 ? serviceChargeRate.toInt() : serviceChargeRate}%)',
+                    value: CurrencyFormatter.format(serviceCharge.toInt()),
+                  ),
                   const SizedBox(height: 8),
                 ],
-                _SummaryRow(label: '10% Pajak', value: CurrencyFormatter.format(tax.toInt())),
-                const SizedBox(height: 16),
+                if (tax > 0) ...[
+                  _SummaryRow(
+                    label: 'Pajak (${taxRate % 1 == 0 ? taxRate.toInt() : taxRate}%)',
+                    value: CurrencyFormatter.format(tax.toInt()),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 const Divider(color: SolluColors.neutral),
                 const SizedBox(height: 20),
                 Row(

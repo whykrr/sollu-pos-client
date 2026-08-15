@@ -15,6 +15,9 @@ class Shifts extends Table {
   DateTimeColumn get openedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get closedAt => dateTime().nullable()();
   
+  // Offline Sync
+  BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
+  
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -27,6 +30,9 @@ class ShiftCashLogs extends Table {
   RealColumn get amount => real()();
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  
+  // Offline Sync
+  BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
   
   @override
   Set<Column> get primaryKey => {id};
