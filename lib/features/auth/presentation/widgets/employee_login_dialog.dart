@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bcrypt/bcrypt.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/features/auth/presentation/providers/auth_provider.dart';
-import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
-import 'package:sollu_pos_app/core/database/app_database.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_client/core/database/app_database.dart';
 
 class EmployeeLoginDialog extends ConsumerStatefulWidget {
   const EmployeeLoginDialog({super.key});

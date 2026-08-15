@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/core/routing/app_router.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/shortcut_provider.dart';
-import 'package:sollu_pos_app/core/providers/preferences_provider.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/core/routing/app_router.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -32,7 +32,7 @@ class SolluPosApp extends ConsumerWidget {
 
     return _GlobalShortcutWrapper(
       child: MaterialApp.router(
-        title: 'Sollu POS App',
+        title: 'Sollu POS Client',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: SolluColors.primary,
@@ -137,8 +137,14 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
           } else if (logicalKey == LogicalKeyboardKey.f6) {
             ref.read(shortcutProvider.notifier).trigger('F6');
             return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f7) {
+            ref.read(shortcutProvider.notifier).trigger('F7');
+            return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.f8) {
             ref.read(shortcutProvider.notifier).trigger('F8');
+            return KeyEventResult.handled;
+          } else if (logicalKey == LogicalKeyboardKey.f9) {
+            ref.read(shortcutProvider.notifier).trigger('F9');
             return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.f10) {
             ref.read(shortcutProvider.notifier).trigger('F10');

@@ -2,7 +2,7 @@ import os
 import re
 
 lib_dir = 'lib'
-package_name = 'sollu_pos_app'
+package_name = 'sollu_pos_client'
 
 # Build a map of filename -> package path
 # E.g., 'sollu_colors.dart' -> 'package:sollu_pos_app/core/theme/sollu_colors.dart'

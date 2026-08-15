@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/features/auth/presentation/providers/auth_provider.dart';
-import 'package:sollu_pos_app/features/auth/presentation/widgets/employee_login_dialog.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/features/auth/providers/auth_provider.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/features/auth/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

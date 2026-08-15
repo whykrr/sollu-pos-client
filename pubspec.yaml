@@ -1,4 +1,4 @@
-name: sollu_pos_app
+name: sollu_pos_client
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -50,6 +50,12 @@ dependencies:
   sqflite: ^2.4.3
   bcrypt: ^1.2.0
   shared_preferences: ^2.5.5
+  print_bluetooth_thermal: ^1.1.1
+  esc_pos_utils_plus: ^2.0.4
+  permission_handler: ^11.4.0
+  collection: ^1.19.0
+  printing: ^5.13.2
+  pdf: ^3.11.1
 
 dev_dependencies:
   flutter_test:

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/core/utils/currency_formatter.dart';
-import 'package:sollu_pos_app/features/pos/data/pos_repository.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/variant_dialog_provider.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/cart_provider.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
+import 'package:sollu_pos_client/features/pos/data/pos_repository.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/variant_dialog_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 
 class VariantDialog extends ConsumerWidget {
   final PosItem posItem;
@@ -183,10 +183,13 @@ class VariantDialog extends ConsumerWidget {
                   onPressed: () {
                     // TODO: Validasi Modifier Required
                     
+                    final selectedVariantOptionId = state.selectedVariants.values.firstOrNull;
+
                     final cartItem = CartItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       productId: posItem.isProductMode ? posItem.id : posItem.inventory!.productId,
-                      inventoryItemId: posItem.isProductMode ? state.selectedVariants.values.join('-') : posItem.id, // simplified
+                      inventoryItemId: posItem.isProductMode ? '' : posItem.id,
+                      variantGroupOptionId: selectedVariantOptionId,
                       name: posItem.name,
                       price: totalPrice,
                       qty: 1,

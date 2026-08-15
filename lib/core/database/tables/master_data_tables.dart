@@ -145,3 +145,33 @@ class Employees extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+@DataClassName('Promo')
+class Promos extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get promoType => text()(); // 'percentage', 'fixed'
+  TextColumn get targetType => text()(); // 'product', 'bill'
+  RealColumn get discountValue => real()();
+  RealColumn get maxDiscount => real().nullable()();
+  BoolColumn get appliesToAllOutlets => boolean().withDefault(const Constant(true))();
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('Customer')
+class Customers extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get name => text()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get email => text().nullable()();
+  TextColumn get code => text().nullable()();
+  
+  @override
+  Set<Column> get primaryKey => {id};
+}

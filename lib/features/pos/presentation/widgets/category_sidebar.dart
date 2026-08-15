@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
 
 class CategorySidebar extends ConsumerWidget {
   const CategorySidebar({super.key});
@@ -68,7 +68,9 @@ class CategorySidebar extends ConsumerWidget {
                         context, 
                         ref, 
                         name: child.name, 
-                        icon: Icons.category, 
+                        icon: Icons.circle, 
+                        iconSize: 8,
+                        isChild: true,
                         categoryId: child.id, 
                         isSelected: selectedCategory == child.id,
                       )),
@@ -79,7 +81,7 @@ class CategorySidebar extends ConsumerWidget {
                         context, 
                         ref, 
                         name: root.name, 
-                        icon: Icons.category, 
+                        icon: Icons.folder_outlined, 
                         categoryId: root.id, 
                         isSelected: selectedCategory == root.id,
                       ),
@@ -101,6 +103,8 @@ class CategorySidebar extends ConsumerWidget {
     WidgetRef ref, {
     required String name, 
     required IconData icon, 
+    double iconSize = 18,
+    bool isChild = false,
     required String? categoryId, 
     required bool isSelected,
   }) {
@@ -109,7 +113,10 @@ class CategorySidebar extends ConsumerWidget {
         ref.read(posSelectedCategoryProvider.notifier).setCategory(categoryId);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: isChild ? 32 : 24, 
+          vertical: isChild ? 12 : 14,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? SolluColors.primary.withValues(alpha: 0.08) : Colors.transparent,
           border: isSelected
@@ -118,12 +125,18 @@ class CategorySidebar extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? SolluColors.primary : SolluColors.textMuted,
-              size: 20,
+            Container(
+              width: 20,
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                color: isSelected 
+                    ? SolluColors.primary 
+                    : (isChild ? SolluColors.neutralDark.withValues(alpha: 0.6) : SolluColors.textMuted),
+                size: iconSize,
+              ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 name,
@@ -131,8 +144,8 @@ class CategorySidebar extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: isSelected ? SolluColors.primary : SolluColors.textDark,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : (isChild ? FontWeight.normal : FontWeight.w500),
+                  fontSize: isChild ? 12.5 : 13,
                 ),
               ),
             ),

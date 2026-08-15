@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/core/services/secure_storage_service.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/core/services/secure_storage_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
-import 'package:sollu_pos_app/features/settings/presentation/providers/sync_provider.dart';
-import 'package:sollu_pos_app/core/providers/preferences_provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -56,22 +58,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: SolluColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.print, color: SolluColors.primary),
-                ),
-                title: const Text(
-                  'Pengaturan Printer',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('Kelola koneksi printer Bluetooth & Thermal'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+              Builder(
+                builder: (context) {
+                  final printerConfig = ref.watch(selectedPrinterProvider);
+                  return ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: SolluColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.print, color: SolluColors.primary),
+                    ),
+                    title: const Text(
+                      'Pengaturan Printer',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      printerConfig != null
+                          ? '${printerConfig.name} (${printerConfig.paperSize.label.split(' ').first})'
+                          : 'Kelola koneksi printer Bluetooth & Thermal',
+                      style: TextStyle(
+                        color: printerConfig != null ? SolluColors.primary : null,
+                        fontWeight: printerConfig != null ? FontWeight.w500 : null,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/printer'),
+                  );
+                },
               ),
               const Divider(height: 24),
               ListTile(

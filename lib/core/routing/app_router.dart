@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:sollu_pos_app/features/auth/presentation/pages/splash_screen.dart';
-import 'package:sollu_pos_app/features/auth/presentation/pages/login_screen.dart';
-import 'package:sollu_pos_app/features/dashboard/presentation/pages/dashboard_screen.dart';
-import 'package:sollu_pos_app/features/pos/presentation/pages/pos_layout.dart';
-import 'package:sollu_pos_app/features/history/presentation/pages/history_screen.dart';
+import 'package:sollu_pos_client/features/auth/presentation/pages/splash_screen.dart';
+import 'package:sollu_pos_client/features/auth/presentation/pages/login_screen.dart';
+import 'package:sollu_pos_client/features/dashboard/presentation/pages/dashboard_screen.dart';
+import 'package:sollu_pos_client/features/pos/presentation/pages/pos_layout.dart';
+import 'package:sollu_pos_client/features/history/presentation/pages/history_screen.dart';
 
-import 'package:sollu_pos_app/features/settings/presentation/pages/settings_screen.dart';
-import 'package:sollu_pos_app/features/pos/presentation/pages/products_screen.dart';
+import 'package:sollu_pos_client/features/settings/presentation/pages/settings_screen.dart';
+import 'package:sollu_pos_client/features/settings/presentation/pages/printer_settings_screen.dart';
+import 'package:sollu_pos_client/features/pos/presentation/pages/products_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -58,6 +59,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
+        routes: [
+          GoRoute(
+            path: 'printer',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PrinterSettingsScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/products',

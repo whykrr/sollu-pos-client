@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/shortcut_provider.dart';
-import 'package:sollu_pos_app/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_app/features/payment/presentation/widgets/payment_dialog.dart';
-import 'package:sollu_pos_app/features/pos/presentation/widgets/product_grid.dart';
-import 'package:sollu_pos_app/features/pos/presentation/widgets/cart_panel.dart';
-import 'package:sollu_pos_app/features/pos/presentation/widgets/pos_extra_dialogs.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/pos_provider.dart';
-import 'package:sollu_pos_app/features/pos/presentation/providers/cart_provider.dart';
-import 'package:sollu_pos_app/features/shift/presentation/widgets/shift_dialogs.dart';
-import 'package:sollu_pos_app/features/pos/presentation/widgets/category_sidebar.dart';
-import 'package:sollu_pos_app/features/auth/presentation/providers/employee_provider.dart';
-import 'package:sollu_pos_app/features/settings/presentation/providers/sync_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
+import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
+import 'package:sollu_pos_client/features/payment/presentation/widgets/payment_dialog.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/product_grid.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/cart_panel.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dialogs.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
+import 'package:sollu_pos_client/features/shift/presentation/widgets/shift_dialogs.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/category_sidebar.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
+
+import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/hold_orders_dialog.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/transaction_history_dialog.dart';
+
+import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/bootstrap_provider.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -22,14 +30,27 @@ class PosLayout extends ConsumerStatefulWidget {
 
 class _PosLayoutState extends ConsumerState<PosLayout> {
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _productGridFocusNode = FocusNode();
+  final FocusNode _cartFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
+  int _selectedProductIndex = 0;
   bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      OpenShiftDialog.show(context);
+    // Jalankan auto-sync bootstrap data master & karyawan di background jika online
+    ref.read(bootstrapProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Cek langsung ke database SQLite apakah sudah ada shift yang berstatus 'open'
+      final shiftRepository = ref.read(shiftRepositoryProvider);
+      final activeShift = await shiftRepository.getActiveShift();
+
+      // Selalu munculkan dialog Buka Shift jika belum ada sesi shift aktif
+      if (activeShift == null && mounted) {
+        OpenShiftDialog.show(context);
+      }
     });
   }
 
@@ -37,6 +58,8 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _productGridFocusNode.dispose();
+    _cartFocusNode.dispose();
     super.dispose();
   }
 
@@ -46,26 +69,34 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     switch (key) {
       case 'F1':
         _searchFocusNode.requestFocus();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Fokusan kursor dipindah ke Pencarian Produk (F1)'),
+            content: Text('Pencarian Produk / Scan Barcode (F1)'),
             duration: Duration(seconds: 1),
           ),
         );
         break;
       case 'F2':
+        _productGridFocusNode.requestFocus();
+        setState(() {
+          _selectedProductIndex = 0;
+        });
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Panel Keranjang Terpilih (F2)'),
+            content: Text('Fokus Daftar Produk: Item #1 Terpilih (F2)'),
             duration: Duration(seconds: 1),
           ),
         );
         break;
       case 'F3':
+        _cartFocusNode.requestFocus();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Pesanan Berhasil Ditahan (F3)'),
-            duration: Duration(seconds: 2),
+            content: Text('Fokus Keranjang (F3) - Tekan Enter untuk ubah Qty'),
+            duration: Duration(seconds: 1),
           ),
         );
         break;
@@ -76,10 +107,16 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         CustomerDialog.show(context);
         break;
       case 'F6':
-        _handleChangeQuantity();
+        _handleHoldOrder();
+        break;
+      case 'F7':
+        HoldOrdersDialog.show(context);
         break;
       case 'F8':
-        PaymentDialog.show(context, 27750);
+        _handleCheckout();
+        break;
+      case 'F9':
+        TransactionHistoryDialog.show(context);
         break;
       case 'F10':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,59 +132,54 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     }
   }
 
-  void _handleChangeQuantity() {
+  void _handleHoldOrder() {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keranjang kosong')),
+        const SnackBar(
+          content: Text('Keranjang masih kosong, tidak ada pesanan untuk ditahan.'),
+          backgroundColor: SolluColors.warning,
+          duration: Duration(seconds: 2),
+        ),
       );
       return;
     }
-    
-    // In a real app, this would show a dialog to enter quantity for the last/selected item
-    final lastItem = cart.last;
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        final ctrl = TextEditingController(text: lastItem.qty.toString());
-        ctrl.selection = TextSelection(baseOffset: 0, extentOffset: ctrl.text.length);
-        
-        return AlertDialog(
-          title: Text('Ubah Qty: ${lastItem.name}'),
-          content: TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-            onSubmitted: (val) {
-              final newQty = int.tryParse(val);
-              if (newQty != null && newQty > 0) {
-                ref.read(cartProvider.notifier).updateQty(lastItem.id, newQty - lastItem.qty);
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () {
-                final newQty = int.tryParse(ctrl.text);
-                if (newQty != null && newQty > 0) {
-                  ref.read(cartProvider.notifier).updateQty(lastItem.id, newQty - lastItem.qty);
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
+
+    final heldOrder = ref.read(holdCartProvider.notifier).holdCurrentCart(cart);
+    if (heldOrder != null) {
+      ref.read(cartProvider.notifier).clearCart();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pesanan berhasil ditahan (${heldOrder.id}). Tekan F7 untuk memuat kembali.'),
+          backgroundColor: SolluColors.success,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _handleCheckout() {
+    final cart = ref.read(cartProvider);
+    if (cart.isEmpty) {
+      EmptyCartDialog.show(context);
+      return;
+    }
+
+    final appliedDiscount = ref.read(appliedDiscountProvider);
+    final double subtotal = cart.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+    final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
+    final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
+    final double tax = taxableAmount * 0.1;
+    final int total = (taxableAmount + tax).toInt();
+    PaymentDialog.show(context, total);
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeShiftAsync = ref.watch(activeShiftProvider);
+
     // Optimasi Riverpod: ref.listen tidak memicu rebuild UI, cukup merespons event shortcut
     ref.listen<String?>(shortcutProvider, (previous, next) {
       if (next != null) {
@@ -256,24 +288,65 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           ),
           const SizedBox(width: 8),
           Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
+            child: activeShiftAsync.when(
+              data: (shift) {
+                final isShiftOpen = shift != null;
+                final shiftText = isShiftOpen
+                    ? 'Shift #${shift.shiftNumber}  •  Kasir: ${shift.userId}'
+                    : 'Shift: Belum Dibuka';
+
+                return InkWell(
+                  onTap: () {
+                    if (isShiftOpen) {
+                      CloseShiftDialog.show(context);
+                    } else {
+                      OpenShiftDialog.show(context);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isShiftOpen 
+                          ? SolluColors.primary.withValues(alpha: 0.08) 
+                          : SolluColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isShiftOpen 
+                            ? SolluColors.primary.withValues(alpha: 0.3) 
+                            : SolluColors.warning,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isShiftOpen ? Icons.storefront : Icons.warning_amber_rounded,
+                          size: 16,
+                          color: isShiftOpen ? SolluColors.primary : SolluColors.warning,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          shiftText,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isShiftOpen ? SolluColors.primary : SolluColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              decoration: BoxDecoration(
-                color: SolluColors.background,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: SolluColors.neutral),
-              ),
-              child: const Text(
-                'Shift: Siang  •  Kasir: Budi',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: SolluColors.textDark,
-                ),
-              ),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ),
           const SizedBox(width: 8),
@@ -361,11 +434,25 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             flex: 5,
             child: Container(
               color: const Color(0xFFF8FAFC),
-              child: ProductGrid(searchFocusNode: _searchFocusNode),
+              child: ProductGrid(
+                searchFocusNode: _searchFocusNode,
+                focusNode: _productGridFocusNode,
+                selectedIndex: _selectedProductIndex,
+                onSelectedIndexChanged: (idx) {
+                  setState(() {
+                    _selectedProductIndex = idx;
+                  });
+                },
+              ),
             ),
           ),
           // Right Pane: Cart Panel (3/10 of screen)
-          const Expanded(flex: 3, child: CartPanel()),
+          Expanded(
+            flex: 3,
+            child: CartPanel(
+              focusNode: _cartFocusNode,
+            ),
+          ),
         ],
       ),
     );

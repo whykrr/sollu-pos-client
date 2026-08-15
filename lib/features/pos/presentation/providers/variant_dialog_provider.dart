@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/app_database.dart';
@@ -115,6 +116,38 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
   
   Future<void> _updateVariantPrice(Map<String, String> currentVariants) async {
     if (currentVariants.isEmpty) return;
+
+    final db = ref.read(databaseProvider);
+    final productId = _posItem.isProductMode ? _posItem.id : _posItem.inventory!.productId;
+    final variantOptionId = currentVariants.values.firstOrNull;
+
+    if (variantOptionId != null) {
+      final row = await db.customSelect(
+        '''
+        SELECT COALESCE(
+          (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
+          (SELECT amount FROM product_prices WHERE product_id = ? AND inventory_item_id IS NULL LIMIT 1),
+          (SELECT price FROM products WHERE id = ?),
+          0.0
+        ) as price
+        FROM inventories i
+        INNER JOIN inventory_item_variant_group_options piv ON piv.inventory_item_id = i.id
+        WHERE i.product_id = ? AND piv.variant_group_option_id = ?
+        LIMIT 1
+        ''',
+        variables: [
+          Variable.withString(productId),
+          Variable.withString(productId),
+          Variable.withString(productId),
+          Variable.withString(variantOptionId),
+        ],
+      ).getSingleOrNull();
+
+      if (row != null) {
+        final price = row.read<double>('price');
+        state = state.copyWith(variantPrice: price);
+      }
+    }
   }
 
   void selectVariant(String groupId, String optionId) {

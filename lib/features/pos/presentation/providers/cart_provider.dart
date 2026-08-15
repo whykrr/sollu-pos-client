@@ -5,6 +5,7 @@ class CartItem {
   final String id;
   final String productId;
   final String inventoryItemId;
+  final String? variantGroupOptionId;
   final String name;
   final double price;
   final int qty;
@@ -18,6 +19,7 @@ class CartItem {
     required this.id,
     required this.productId,
     required this.inventoryItemId,
+    this.variantGroupOptionId,
     required this.name,
     required this.price,
     this.qty = 1,
@@ -29,11 +31,13 @@ class CartItem {
   CartItem copyWith({
     int? qty,
     String? notes,
+    String? variantGroupOptionId,
   }) {
     return CartItem(
       id: id,
       productId: productId,
       inventoryItemId: inventoryItemId,
+      variantGroupOptionId: variantGroupOptionId ?? this.variantGroupOptionId,
       name: name,
       price: price,
       qty: qty ?? this.qty,

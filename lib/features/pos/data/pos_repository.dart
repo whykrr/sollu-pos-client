@@ -41,12 +41,15 @@ class PosRepository {
       SELECT 
         i.*,
         p.category_id,
+        p.is_available as product_is_available,
         (SELECT COUNT(id) FROM variant_groups WHERE product_id = p.id) as variant_count,
         (SELECT COUNT(modifier_group_id) FROM product_modifier_groups WHERE product_id = p.id) as modifier_count,
         COALESCE(
           (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
           (SELECT amount FROM product_prices WHERE product_id = p.id AND inventory_item_id IS NULL LIMIT 1),
-          p.price
+          (SELECT amount FROM product_prices WHERE product_id = p.id LIMIT 1),
+          p.price,
+          0.0
         ) as item_price
       FROM inventories i
       INNER JOIN products p ON i.product_id = p.id
@@ -66,7 +69,9 @@ class PosRepository {
         final sku = row.read<String?>('sku');
         final barcode = row.read<String?>('barcode');
         final trackInventory = row.read<bool>('track_inventory');
-        final isActive = row.read<bool>('is_active');
+        final isInventoryActive = row.read<bool>('is_active');
+        final isProductAvailable = row.read<bool>('product_is_available');
+        final isActive = isInventoryActive && isProductAvailable;
         final stock = row.read<double>('stock');
         final categoryId = row.read<String?>('category_id');
         final variantCount = row.read<int>('variant_count');
@@ -107,7 +112,12 @@ class PosRepository {
         (SELECT SUM(stock) FROM inventories WHERE product_id = p.id) as total_stock,
         (SELECT COUNT(id) FROM variant_groups WHERE product_id = p.id) as variant_count,
         (SELECT COUNT(modifier_group_id) FROM product_modifier_groups WHERE product_id = p.id) as modifier_count,
-        COALESCE((SELECT amount FROM product_prices WHERE product_id = p.id AND inventory_item_id IS NULL LIMIT 1), p.price) as base_price
+        COALESCE(
+          (SELECT amount FROM product_prices WHERE product_id = p.id AND inventory_item_id IS NULL LIMIT 1),
+          (SELECT amount FROM product_prices WHERE product_id = p.id LIMIT 1),
+          p.price,
+          0.0
+        ) as base_price
       FROM products p
       ''',
       readsFrom: {
@@ -181,12 +191,15 @@ class PosRepository {
       SELECT 
         i.*,
         p.category_id,
+        p.is_available as product_is_available,
         (SELECT COUNT(id) FROM variant_groups WHERE product_id = p.id) as variant_count,
         (SELECT COUNT(modifier_group_id) FROM product_modifier_groups WHERE product_id = p.id) as modifier_count,
         COALESCE(
           (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
           (SELECT amount FROM product_prices WHERE product_id = p.id AND inventory_item_id IS NULL LIMIT 1),
-          p.price
+          (SELECT amount FROM product_prices WHERE product_id = p.id LIMIT 1),
+          p.price,
+          0.0
         ) as item_price
       FROM inventories i
       INNER JOIN products p ON i.product_id = p.id
@@ -198,13 +211,17 @@ class PosRepository {
 
     if (invRows.isNotEmpty) {
       final row = invRows.first;
+      final isInventoryActive = row.read<bool>('is_active');
+      final isProductAvailable = row.read<bool>('product_is_available');
+      final isActive = isInventoryActive && isProductAvailable;
+
       return PosItem(
         id: row.read<String>('id'),
         name: row.read<String>('name'),
         categoryId: row.read<String?>('category_id'),
         price: row.read<double>('item_price'),
         stock: row.read<double>('stock'),
-        isActive: row.read<bool>('is_active'),
+        isActive: isActive,
         hasVariants: row.read<int>('variant_count') > 0,
         hasModifiers: row.read<int>('modifier_count') > 0,
         isProductMode: false,
@@ -215,12 +232,38 @@ class PosRepository {
           sku: row.read<String?>('sku'),
           barcode: row.read<String?>('barcode'),
           trackInventory: row.read<bool>('track_inventory'),
-          isActive: row.read<bool>('is_active'),
+          isActive: isActive,
           stock: row.read<double>('stock'),
         ),
       );
     }
 
     return null;
+  }
+
+  /// Resolves the inventory_item_id for a given product and variant option
+  Future<String?> findInventoryItemIdForVariant(String productId, String variantGroupOptionId) async {
+    final row = await _database.customSelect(
+      '''
+      SELECT i.id FROM inventories i
+      INNER JOIN inventory_item_variant_group_options piv ON piv.inventory_item_id = i.id
+      WHERE i.product_id = ? AND piv.variant_group_option_id = ?
+      LIMIT 1
+      ''',
+      variables: [
+        Variable.withString(productId),
+        Variable.withString(variantGroupOptionId),
+      ],
+    ).getSingleOrNull();
+
+    return row?.read<String>('id');
+  }
+
+  /// Resolves the standalone inventory_item_id for a product without variants
+  Future<String?> findStandaloneInventoryItemId(String productId) async {
+    final inv = await (_database.select(_database.inventories)
+          ..where((i) => i.productId.equals(productId)))
+        .getSingleOrNull();
+    return inv?.id;
   }
 }

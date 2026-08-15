@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_app/core/database/app_database.dart';
+import 'package:sollu_pos_client/core/database/app_database.dart';
 
 /// Provider global untuk instance database utama.
 /// Penggunaan: ref.read(databaseProvider) atau ref.watch(databaseProvider)

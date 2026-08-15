@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'package:sollu_pos_app/core/database/tables/master_data_tables.dart';
-import 'package:sollu_pos_app/core/database/tables/transaction_tables.dart';
+import 'package:sollu_pos_client/core/database/tables/master_data_tables.dart';
+import 'package:sollu_pos_client/core/database/tables/transaction_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -28,7 +28,10 @@ part 'app_database.g.dart';
   TransactionItems,
   TransactionItemModifiers,
   TransactionPayments,
+  TransactionPromos,
   Employees,
+  Promos,
+  Customers,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -39,11 +42,12 @@ class AppDatabase extends _$AppDatabase {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    // Cetak path database
-    String databasesPath = await getDatabasesPath();
-    print("LOKASI DATABASE: $databasesPath");
+    // Gunakan path_provider yang kompatibel untuk cross-platform (termasuk Windows)
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'sollu_pos.sqlite'));
     
-    final file = File(p.join(databasesPath, 'sollu_pos.sqlite'));
+    // Cetak path database
+    print("LOKASI DATABASE: ${file.path}");
     
     // Gunakan logStatements: true jika perlu debug query di terminal
     return NativeDatabase.createInBackground(file, logStatements: true);
