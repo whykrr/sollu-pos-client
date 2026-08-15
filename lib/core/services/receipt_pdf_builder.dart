@@ -13,7 +13,7 @@ class ReceiptPdfBuilder {
     return PdfPageFormat(
       widthMm * PdfPageFormat.mm,
       double.infinity,
-      marginAll: 4 * PdfPageFormat.mm,
+      marginAll: 0 * PdfPageFormat.mm,
     );
   }
 
@@ -31,13 +31,19 @@ class ReceiptPdfBuilder {
               pw.Text(
                 config.storeName ?? 'SOLLU POS',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
               pw.SizedBox(height: 2),
               pw.Text(
                 'UJI COBA CETAK STRUK (DESKTOP)',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 9,
+                ),
               ),
               pw.Text(
                 DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now()),
@@ -45,22 +51,43 @@ class ReceiptPdfBuilder {
                 style: const pw.TextStyle(fontSize: 8),
               ),
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
-              pw.Text('Status: TERHUBUNG KE SISTEM OS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
-              pw.Text('Printer: ${config.name}', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Tipe: ${config.connectionType.label}', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Ukuran Kertas: ${config.paperSize.label}', style: const pw.TextStyle(fontSize: 8)),
+              pw.Text(
+                'Status: TERHUBUNG KE SISTEM OS',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 8,
+                ),
+              ),
+              pw.Text(
+                'Printer: ${config.name}',
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+              pw.Text(
+                'Tipe: ${config.connectionType.label}',
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+              pw.Text(
+                'Ukuran Kertas: ${config.paperSize.label}',
+                style: const pw.TextStyle(fontSize: 8),
+              ),
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Item Contoh A x1', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text(
+                    'Item Contoh A x1',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                   pw.Text('Rp 15.000', style: const pw.TextStyle(fontSize: 8)),
                 ],
               ),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Item Contoh B x2', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text(
+                    'Item Contoh B x2',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                   pw.Text('Rp 20.000', style: const pw.TextStyle(fontSize: 8)),
                 ],
               ),
@@ -68,13 +95,26 @@ class ReceiptPdfBuilder {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('TOTAL', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
-                  pw.Text('Rp 35.000', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                  pw.Text(
+                    'TOTAL',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
+                  pw.Text(
+                    'Rp 35.000',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
                 ],
               ),
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
               pw.Text(
-                config.footerNote ?? 'Printer Desktop siap digunakan untuk transaksi!',
+                config.footerNote ??
+                    'Printer Desktop siap digunakan untuk transaksi!',
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(fontSize: 8),
               ),
@@ -111,7 +151,10 @@ class ReceiptPdfBuilder {
               pw.Text(
                 outletName ?? config.storeName ?? 'SOLLU POS',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
               if (outletAddress != null && outletAddress.isNotEmpty)
                 pw.Text(
@@ -137,7 +180,10 @@ class ReceiptPdfBuilder {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('No: ${tx.transactionNumber}', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text(
+                    'No: ${tx.transactionNumber}',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                   pw.Text(
                     DateFormat('dd/MM/yy HH:mm').format(tx.createdAt),
                     style: const pw.TextStyle(fontSize: 8),
@@ -145,15 +191,22 @@ class ReceiptPdfBuilder {
                 ],
               ),
               if (cashierName != null && cashierName.isNotEmpty)
-                pw.Text('Kasir: $cashierName', style: const pw.TextStyle(fontSize: 8)),
+                pw.Text(
+                  'Kasir: $cashierName',
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
 
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
 
               // 3. Item List
               ...detail.items.map((item) {
-                final qtyStr = item.qty % 1 == 0 ? item.qty.toInt().toString() : item.qty.toString();
+                final qtyStr = item.qty % 1 == 0
+                    ? item.qty.toInt().toString()
+                    : item.qty.toString();
                 final priceStr = CurrencyFormatter.format(item.price.toInt());
-                final subtotalStr = CurrencyFormatter.format(item.subtotal.toInt());
+                final subtotalStr = CurrencyFormatter.format(
+                  item.subtotal.toInt(),
+                );
                 final modifiers = detail.modifiersByItemId[item.id] ?? [];
 
                 return pw.Padding(
@@ -163,30 +216,51 @@ class ReceiptPdfBuilder {
                     children: [
                       pw.Text(
                         item.productName,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 8.5,
+                        ),
                       ),
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
-                          pw.Text('$qtyStr x $priceStr', style: const pw.TextStyle(fontSize: 8)),
-                          pw.Text(subtotalStr, style: const pw.TextStyle(fontSize: 8)),
+                          pw.Text(
+                            '$qtyStr x $priceStr',
+                            style: const pw.TextStyle(fontSize: 8),
+                          ),
+                          pw.Text(
+                            subtotalStr,
+                            style: const pw.TextStyle(fontSize: 8),
+                          ),
                         ],
                       ),
                       ...modifiers.map((m) {
-                        final modPrice = m.price > 0 ? ' (+${CurrencyFormatter.format(m.price.toInt())})' : '';
+                        final modPrice = m.price > 0
+                            ? ' (+${CurrencyFormatter.format(m.price.toInt())})'
+                            : '';
                         return pw.Padding(
                           padding: const pw.EdgeInsets.only(left: 4),
-                          child: pw.Text('+ ${m.modifierName}$modPrice', style: const pw.TextStyle(fontSize: 7.5)),
+                          child: pw.Text(
+                            '+ ${m.modifierName}$modPrice',
+                            style: const pw.TextStyle(fontSize: 7.5),
+                          ),
                         );
                       }),
                       if (item.discountAmount > 0)
                         pw.Padding(
                           padding: const pw.EdgeInsets.only(left: 4),
                           child: pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
                             children: [
-                              pw.Text('Diskon Item', style: const pw.TextStyle(fontSize: 7.5)),
-                              pw.Text('-${CurrencyFormatter.format(item.discountAmount.toInt())}', style: const pw.TextStyle(fontSize: 7.5)),
+                              pw.Text(
+                                'Diskon Item',
+                                style: const pw.TextStyle(fontSize: 7.5),
+                              ),
+                              pw.Text(
+                                '-${CurrencyFormatter.format(item.discountAmount.toInt())}',
+                                style: const pw.TextStyle(fontSize: 7.5),
+                              ),
                             ],
                           ),
                         ),
@@ -202,31 +276,52 @@ class ReceiptPdfBuilder {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Subtotal', style: const pw.TextStyle(fontSize: 8.5)),
-                  pw.Text(CurrencyFormatter.format(tx.subtotal.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text(
+                    CurrencyFormatter.format(tx.subtotal.toInt()),
+                    style: const pw.TextStyle(fontSize: 8.5),
+                  ),
                 ],
               ),
               if (tx.discountAmount > 0)
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Diskon ${tx.promoName != null ? "(${tx.promoName})" : ""}', style: const pw.TextStyle(fontSize: 8.5)),
-                    pw.Text('-${CurrencyFormatter.format(tx.discountAmount.toInt())}', style: const pw.TextStyle(fontSize: 8.5)),
+                    pw.Text(
+                      'Diskon ${tx.promoName != null ? "(${tx.promoName})" : ""}',
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
+                    pw.Text(
+                      '-${CurrencyFormatter.format(tx.discountAmount.toInt())}',
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
                   ],
                 ),
               if (tx.taxAmount > 0)
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Pajak (PB1/PPN)', style: const pw.TextStyle(fontSize: 8.5)),
-                    pw.Text(CurrencyFormatter.format(tx.taxAmount.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                    pw.Text(
+                      'Pajak (PB1/PPN)',
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
+                    pw.Text(
+                      CurrencyFormatter.format(tx.taxAmount.toInt()),
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
                   ],
                 ),
               if (tx.serviceChargeAmount > 0)
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Service Charge', style: const pw.TextStyle(fontSize: 8.5)),
-                    pw.Text(CurrencyFormatter.format(tx.serviceChargeAmount.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                    pw.Text(
+                      'Service Charge',
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
+                    pw.Text(
+                      CurrencyFormatter.format(tx.serviceChargeAmount.toInt()),
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
                   ],
                 ),
 
@@ -236,10 +331,19 @@ class ReceiptPdfBuilder {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('TOTAL', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  pw.Text(
+                    'TOTAL',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
                   pw.Text(
                     CurrencyFormatter.format(tx.total.toInt()),
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),
@@ -254,18 +358,33 @@ class ReceiptPdfBuilder {
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
-                          pw.Text(methodName, style: const pw.TextStyle(fontSize: 8.5)),
-                          pw.Text(CurrencyFormatter.format(p.amount.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                          pw.Text(
+                            methodName,
+                            style: const pw.TextStyle(fontSize: 8.5),
+                          ),
+                          pw.Text(
+                            CurrencyFormatter.format(p.amount.toInt()),
+                            style: const pw.TextStyle(fontSize: 8.5),
+                          ),
                         ],
                       ),
                       if (p.changeAmount > 0)
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('Kembalian', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                            pw.Text(
+                              'Kembalian',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 8.5,
+                              ),
+                            ),
                             pw.Text(
                               CurrencyFormatter.format(p.changeAmount.toInt()),
-                              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 8.5,
+                              ),
                             ),
                           ],
                         ),
@@ -280,7 +399,10 @@ class ReceiptPdfBuilder {
               pw.Text(
                 config.footerNote ?? 'Terima Kasih Telah Berbelanja!',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 8.5,
+                ),
               ),
               pw.Text(
                 'Simpan struk ini sebagai bukti pembayaran yang sah',
@@ -319,7 +441,10 @@ class ReceiptPdfBuilder {
               pw.Text(
                 outletName ?? config.storeName ?? 'SOLLU POS',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
               if (outletAddress != null && outletAddress.isNotEmpty)
                 pw.Text(
@@ -337,13 +462,19 @@ class ReceiptPdfBuilder {
               pw.Text(
                 'LAPORAN TUTUP SHIFT',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 11,
+                ),
               ),
               pw.SizedBox(height: 4),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Waktu Cetak:', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text(
+                    'Waktu Cetak:',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                   pw.Text(
                     DateFormat('dd/MM/yy HH:mm').format(DateTime.now()),
                     style: const pw.TextStyle(fontSize: 8),
@@ -355,7 +486,10 @@ class ReceiptPdfBuilder {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text('Kasir:', style: const pw.TextStyle(fontSize: 8)),
-                    pw.Text(cashierName, style: const pw.TextStyle(fontSize: 8)),
+                    pw.Text(
+                      cashierName,
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
                   ],
                 ),
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
@@ -364,18 +498,36 @@ class ReceiptPdfBuilder {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Modal Awal', style: const pw.TextStyle(fontSize: 8.5)),
-                  pw.Text(CurrencyFormatter.format(summary.openingCash.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text(
+                    'Modal Awal',
+                    style: const pw.TextStyle(fontSize: 8.5),
+                  ),
+                  pw.Text(
+                    CurrencyFormatter.format(summary.openingCash.toInt()),
+                    style: const pw.TextStyle(fontSize: 8.5),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 4),
-              pw.Text('Pemasukan per Metode:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+              pw.Text(
+                'Pemasukan per Metode:',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 8.5,
+                ),
+              ),
               ...summary.salesByPaymentMethod.entries.map((entry) {
                 return pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('- ${entry.key}', style: const pw.TextStyle(fontSize: 8.5)),
-                    pw.Text(CurrencyFormatter.format(entry.value.toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                    pw.Text(
+                      '- ${entry.key}',
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
+                    pw.Text(
+                      CurrencyFormatter.format(entry.value.toInt()),
+                      style: const pw.TextStyle(fontSize: 8.5),
+                    ),
                   ],
                 );
               }),
@@ -383,21 +535,41 @@ class ReceiptPdfBuilder {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Kas Masuk/Keluar', style: const pw.TextStyle(fontSize: 8.5)),
-                  pw.Text(CurrencyFormatter.format((summary.cashIn - summary.cashOut).toInt()), style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text(
+                    'Kas Masuk/Keluar',
+                    style: const pw.TextStyle(fontSize: 8.5),
+                  ),
+                  pw.Text(
+                    CurrencyFormatter.format(
+                      (summary.cashIn - summary.cashOut).toInt(),
+                    ),
+                    style: const pw.TextStyle(fontSize: 8.5),
+                  ),
                 ],
               ),
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
-              
+
               // Total
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Ekspektasi Kas di Laci', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
-                  pw.Text(CurrencyFormatter.format(summary.expectedCash.toInt()), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                  pw.Text(
+                    'Ekspektasi Kas di Laci',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
+                  pw.Text(
+                    CurrencyFormatter.format(summary.expectedCash.toInt()),
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
                 ],
               ),
-              
+
               pw.Divider(thickness: 0.5, borderStyle: pw.BorderStyle.dashed),
               pw.Text(
                 'Laporan ini dicetak secara otomatis\ndari sistem Sollu POS.',
