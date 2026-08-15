@@ -371,7 +371,7 @@ class TransactionRepository {
   }
 
   /// Memantau seluruh transaksi lokal (untuk layar Riwayat Transaksi)
-  Stream<List<Transaction>> watchAllTransactions({String? searchQuery, DateTime? date}) {
+  Stream<List<Transaction>> watchAllTransactions({String? searchQuery, DateTime? date, String? channel}) {
     return (_database.select(_database.transactions)
           ..where((t) {
             Expression<bool> predicate = const Constant(true);
@@ -383,10 +383,47 @@ class TransactionRepository {
               final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
               predicate = predicate & t.createdAt.isBiggerOrEqualValue(startOfDay) & t.createdAt.isSmallerOrEqualValue(endOfDay);
             }
+            if (channel != null && channel.isNotEmpty) {
+              predicate = predicate & t.channel.equals(channel);
+            }
             return predicate;
           })
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
         .watch();
+  }
+
+  /// Memantau ringkasan metode pembayaran
+  Stream<List<PaymentMethodSummary>> watchPaymentMethodSummary({String? searchQuery, DateTime? date, String? channel}) {
+    final t = _database.transactions;
+    final p = _database.transactionPayments;
+    final m = _database.paymentMethods;
+    
+    // We can use a custom query to group by payment method
+    return _database.customSelect(
+      '''
+      SELECT 
+        COALESCE(m.name, 'Tunai') as method_name,
+        SUM(p.amount - p.change_amount) as total_amount,
+        COUNT(t.id) as count
+      FROM transactions t
+      LEFT JOIN transaction_payments p ON p.transaction_id = t.id
+      LEFT JOIN payment_methods m ON m.id = p.payment_method_id
+      WHERE 1=1
+      ${searchQuery != null && searchQuery.isNotEmpty ? "AND t.transaction_number LIKE '%$searchQuery%'" : ""}
+      ${date != null ? "AND t.created_at >= '${DateTime(date.year, date.month, date.day).toIso8601String()}' AND t.created_at <= '${DateTime(date.year, date.month, date.day, 23, 59, 59).toIso8601String()}'" : ""}
+      ${channel != null && channel.isNotEmpty ? "AND t.channel = '$channel'" : ""}
+      GROUP BY m.name
+      ''',
+      readsFrom: {t, p, m},
+    ).watch().map((rows) {
+      return rows.map((row) {
+        return PaymentMethodSummary(
+          row.read<String>('method_name'),
+          row.read<double>('total_amount'),
+          row.read<int>('count'),
+        );
+      }).toList();
+    });
   }
 
   /// Mengambil rincian lengkap transaksi
@@ -467,4 +504,12 @@ class TransactionRepository {
           ..orderBy([(c) => OrderingTerm(expression: c.name)]))
         .watch();
   }
+}
+
+class PaymentMethodSummary {
+  final String methodName;
+  final double totalAmount;
+  final int count;
+
+  PaymentMethodSummary(this.methodName, this.totalAmount, this.count);
 }

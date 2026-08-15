@@ -195,7 +195,7 @@ class DashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 24),
                         _DashboardCard(
                           title: 'Pengaturan',
-                          subtitle: 'Konfigurasi printer & profil toko',
+                          subtitle: 'Konfigurasi printer & struk',
                           icon: Icons.settings,
                           color: Colors.orange,
                           onTap: () =>

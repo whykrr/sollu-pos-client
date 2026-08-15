@@ -48,13 +48,21 @@ final currentShiftTransactionsProvider = StreamProvider<List<Transaction>>((ref)
 class TransactionFilterState {
   final String query;
   final DateTime? date;
+  final String? channel;
 
-  const TransactionFilterState({this.query = '', this.date});
+  const TransactionFilterState({this.query = '', this.date, this.channel});
 
-  TransactionFilterState copyWith({String? query, DateTime? date, bool clearDate = false}) {
+  TransactionFilterState copyWith({
+    String? query,
+    DateTime? date,
+    bool clearDate = false,
+    String? channel,
+    bool clearChannel = false,
+  }) {
     return TransactionFilterState(
       query: query ?? this.query,
       date: clearDate ? null : (date ?? this.date),
+      channel: clearChannel ? null : (channel ?? this.channel),
     );
   }
 }
@@ -74,6 +82,14 @@ class TransactionFilterNotifier extends Notifier<TransactionFilterState> {
   void clearDate() {
     state = state.copyWith(clearDate: true);
   }
+
+  void setChannel(String? channel) {
+    if (channel == null || channel.isEmpty) {
+      state = state.copyWith(clearChannel: true);
+    } else {
+      state = state.copyWith(channel: channel);
+    }
+  }
 }
 
 final transactionFilterProvider = NotifierProvider<TransactionFilterNotifier, TransactionFilterState>(TransactionFilterNotifier.new);
@@ -86,6 +102,18 @@ final allTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
   return repository.watchAllTransactions(
     searchQuery: filter.query.trim().isEmpty ? null : filter.query.trim(),
     date: filter.date,
+    channel: filter.channel,
+  );
+});
+
+final paymentMethodSummaryProvider = StreamProvider<List<PaymentMethodSummary>>((ref) {
+  final repository = ref.watch(transactionRepositoryProvider);
+  final filter = ref.watch(transactionFilterProvider);
+  
+  return repository.watchPaymentMethodSummary(
+    searchQuery: filter.query.trim().isEmpty ? null : filter.query.trim(),
+    date: filter.date,
+    channel: filter.channel,
   );
 });
 

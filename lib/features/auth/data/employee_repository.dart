@@ -45,4 +45,40 @@ class EmployeeRepository {
   Future<List<Employee>> getEmployees() async {
     return await _database.select(_database.employees).get();
   }
+
+  Future<void> changePin({
+    required String userId,
+    required String currentPin,
+    required String newPin,
+    required String newPinConfirmation,
+  }) async {
+    try {
+      final response = await _dioClient.dio.put(
+        '/employees/pin',
+        data: {
+          'user_id': userId,
+          'current_pin': currentPin,
+          'pin': newPin,
+          'pin_confirmation': newPinConfirmation,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        final updatedHashedPin = data?['pin'];
+        if (updatedHashedPin != null) {
+          await (_database.update(_database.employees)
+                ..where((tbl) => tbl.id.equals(userId)))
+              .write(EmployeesCompanion(pin: Value(updatedHashedPin)));
+        } else {
+          await syncEmployees();
+        }
+      }
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] ?? e.message ?? 'Gagal mengubah PIN.';
+      throw Exception(message);
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
 }

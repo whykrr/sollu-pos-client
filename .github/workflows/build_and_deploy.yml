@@ -44,19 +44,14 @@ jobs:
           echo "Building Android APK version: $VERSION_NAME (build: ${{ github.run_number }})"
           flutter build apk --release --build-name="$VERSION_NAME" --build-number=${{ github.run_number }}
 
-      - name: Configure AWS Credentials for Cloudflare R2
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws-region: auto
-
       - name: Upload APK to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
           aws s3 cp build/app/outputs/flutter-apk/app-release.apk s3://${{ secrets.R2_BUCKET_NAME }}/android/sollu-pos-android-${{ github.ref_name }}.apk \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-        env:
-          AWS_REGION: auto
 
   build-windows:
     name: Build Windows App
@@ -95,15 +90,10 @@ jobs:
       - name: Compress Build Folder
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath sollu-pos-windows-${{ github.ref_name }}.zip
 
-      - name: Configure AWS Credentials for Cloudflare R2
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws-region: auto
-
       - name: Upload ZIP to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
           aws s3 cp sollu-pos-windows-${{ github.ref_name }}.zip s3://${{ secrets.R2_BUCKET_NAME }}/windows/sollu-pos-windows-${{ github.ref_name }}.zip --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-        env:
-          AWS_REGION: auto

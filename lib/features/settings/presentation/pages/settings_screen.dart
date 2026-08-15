@@ -5,9 +5,13 @@ import 'package:sollu_pos_client/core/services/secure_storage_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
+import 'package:sollu_pos_client/features/auth/presentation/widgets/change_pin_dialog.dart';
+import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/widgets/receipt_settings_dialog.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -94,34 +98,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: SolluColors.secondary.withValues(alpha: 0.1),
+                    color: SolluColors.secondary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.store, color: SolluColors.secondary),
+                  child: const Icon(Icons.receipt_long, color: SolluColors.secondaryDark),
                 ),
                 title: const Text(
-                  'Profil Toko & Struk',
+                  'Pengaturan Struk',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: const Text('Ubah nama outlet, header, dan footer struk'),
+                subtitle: const Text('Kustomisasi teks header, footer, dan catatan struk'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () => ReceiptSettingsDialog.show(context),
               ),
               const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.security, color: Colors.orange),
-                ),
-                title: const Text(
-                  'Keamanan & Akses PIN',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                onTap: () {},
+              Builder(
+                builder: (context) {
+                  final activeEmployee = ref.watch(activeEmployeeProvider);
+                  return ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.password, color: Colors.orange),
+                    ),
+                    title: const Text(
+                      'Ubah PIN',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      activeEmployee != null
+                          ? 'PIN Pengguna: ${activeEmployee['name']} (${activeEmployee['role']})'
+                          : 'Masuk untuk mengubah PIN akun Anda',
+                      style: TextStyle(
+                        color: activeEmployee != null ? SolluColors.primary : null,
+                        fontWeight: activeEmployee != null ? FontWeight.w500 : null,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      if (activeEmployee == null) {
+                        EmployeeLoginDialog.show(context);
+                      } else {
+                        ChangePinDialog.show(context);
+                      }
+                    },
+                  );
+                },
               ),
               const Divider(height: 24),
               ListTile(

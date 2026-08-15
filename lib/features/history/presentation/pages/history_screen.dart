@@ -276,35 +276,75 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               data: (txList) {
                 final double totalSales = txList.fold(0.0, (sum, tx) => sum + tx.total);
                 final int totalCount = txList.length;
-                final int offlineCount = txList.where((t) => t.isOffline).length;
 
                 return Row(
                   children: [
-                    _buildMetricCard(
-                      title: 'Total Penjualan',
-                      value: CurrencyFormatter.format(totalSales.toInt()),
-                      icon: Icons.monetization_on_outlined,
-                      color: SolluColors.primary,
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Total Penjualan',
+                        value: CurrencyFormatter.format(totalSales.toInt()),
+                        icon: Icons.monetization_on_outlined,
+                        color: SolluColors.primary,
+                      ),
                     ),
                     const SizedBox(width: 16),
-                    _buildMetricCard(
-                      title: 'Jumlah Transaksi',
-                      value: '$totalCount Transaksi',
-                      icon: Icons.receipt_long_outlined,
-                      color: SolluColors.secondaryDark,
-                    ),
-                    const SizedBox(width: 16),
-                    _buildMetricCard(
-                      title: 'Tersimpan Offline',
-                      value: '$offlineCount Transaksi',
-                      icon: Icons.cloud_off_outlined,
-                      color: offlineCount > 0 ? SolluColors.warning : SolluColors.success,
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Jumlah Transaksi',
+                        value: '$totalCount Transaksi',
+                        icon: Icons.receipt_long_outlined,
+                        color: SolluColors.secondaryDark,
+                      ),
                     ),
                   ],
                 );
               },
               loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
               error: (_, _) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 20),
+
+            // Payment Method Summary
+            Consumer(
+              builder: (context, ref, _) {
+                final summaryAsync = ref.watch(paymentMethodSummaryProvider);
+                return summaryAsync.when(
+                  data: (summaries) {
+                    if (summaries.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: summaries.map((s) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: SolluColors.neutral),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(s.methodName, style: const TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  CurrencyFormatter.format(s.totalAmount.toInt()),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: SolluColors.textDark),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -370,13 +410,45 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       ),
                     ),
                   ),
-                  if (filter.date != null || filter.query.isNotEmpty) ...[
+                  const SizedBox(width: 16),
+                  Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: filter.channel != null ? SolluColors.primary : SolluColors.neutral),
+                      borderRadius: BorderRadius.circular(10),
+                      color: filter.channel != null ? SolluColors.primary.withValues(alpha: 0.08) : Colors.white,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: filter.channel,
+                        hint: const Text('Semua Metode', style: TextStyle(fontSize: 13, color: SolluColors.textDark)),
+                        icon: const Icon(Icons.arrow_drop_down, color: SolluColors.textMuted),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: filter.channel != null ? FontWeight.bold : FontWeight.normal,
+                          color: filter.channel != null ? SolluColors.primary : SolluColors.textDark,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: null, child: Text('Semua Metode')),
+                          DropdownMenuItem(value: 'pos', child: Text('POS Kasir')),
+                          DropdownMenuItem(value: 'direct', child: Text('Penjualan Langsung')),
+                          DropdownMenuItem(value: 'invoice', child: Text('Invoice / PO')),
+                        ],
+                        onChanged: (val) {
+                          ref.read(transactionFilterProvider.notifier).setChannel(val);
+                        },
+                      ),
+                    ),
+                  ),
+                  if (filter.date != null || filter.query.isNotEmpty || filter.channel != null) ...[
                     const SizedBox(width: 12),
                     TextButton.icon(
                       onPressed: () {
                         _searchController.clear();
                         ref.read(transactionFilterProvider.notifier).setQuery('');
                         ref.read(transactionFilterProvider.notifier).clearDate();
+                        ref.read(transactionFilterProvider.notifier).setChannel(null);
                       },
                       icon: const Icon(Icons.clear, size: 16, color: SolluColors.danger),
                       label: const Text('Reset Filter', style: TextStyle(color: SolluColors.danger, fontSize: 13)),
@@ -511,6 +583,38 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   error: (err, _) => Center(child: Text('Gagal memuat transaksi: $err')),
                 ),
               ),
+            ),
+            
+            // Footer Info Offline Sync
+            transactionsAsync.when(
+              data: (txList) {
+                final offlineCount = txList.where((t) => t.isOffline).length;
+                if (offlineCount == 0) return const SizedBox.shrink();
+                
+                return Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: SolluColors.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: SolluColors.warning.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: SolluColors.warning, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Terdapat $offlineCount transaksi yang belum tersinkronisasi ke server (tersimpan offline).',
+                          style: const TextStyle(fontSize: 13, color: SolluColors.textDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
           ],
         ),
