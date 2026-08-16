@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  sollu-pos-client:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    container_name: sollu-pos-client
+    restart: always
+    ports:
+      - "8080:80"

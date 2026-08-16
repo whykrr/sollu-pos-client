@@ -1,12 +1,12 @@
 {
-    "name": "sollu_pos_app",
-    "short_name": "sollu_pos_app",
+    "name": "Sollu POS",
+    "short_name": "Sollu POS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#0F172A",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "description": "Sollu POS Client - Progressive Web Application Kasir",
+    "orientation": "landscape-primary",
     "prefer_related_applications": false,
     "icons": [
         {
