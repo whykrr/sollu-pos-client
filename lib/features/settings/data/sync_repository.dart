@@ -281,6 +281,7 @@ class SyncRepository {
                 id: item['id'],
                 name: item['name'],
                 parentId: Value(item['parent_id']),
+                sortOrder: Value(int.tryParse(item['sort_order']?.toString() ?? '0') ?? 0),
               ),
             );
           }

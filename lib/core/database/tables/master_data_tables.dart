@@ -19,6 +19,7 @@ class ProductCategories extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get name => text()();
   TextColumn get parentId => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   
   @override
   Set<Column> get primaryKey => {id};

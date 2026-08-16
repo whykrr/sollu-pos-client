@@ -497,8 +497,20 @@ class $ProductCategoriesTable extends ProductCategories
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, parentId];
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, parentId, sortOrder];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -530,6 +542,12 @@ class $ProductCategoriesTable extends ProductCategories
         parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     return context;
   }
 
@@ -551,6 +569,10 @@ class $ProductCategoriesTable extends ProductCategories
         DriftSqlType.string,
         data['${effectivePrefix}parent_id'],
       ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
     );
   }
 
@@ -564,7 +586,13 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
   final String id;
   final String name;
   final String? parentId;
-  const ProductCategory({required this.id, required this.name, this.parentId});
+  final int sortOrder;
+  const ProductCategory({
+    required this.id,
+    required this.name,
+    this.parentId,
+    required this.sortOrder,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -573,6 +601,7 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
     if (!nullToAbsent || parentId != null) {
       map['parent_id'] = Variable<String>(parentId);
     }
+    map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
 
@@ -583,6 +612,7 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
       parentId: parentId == null && nullToAbsent
           ? const Value.absent()
           : Value(parentId),
+      sortOrder: Value(sortOrder),
     );
   }
 
@@ -595,6 +625,7 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       parentId: serializer.fromJson<String?>(json['parentId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
   @override
@@ -604,6 +635,7 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'parentId': serializer.toJson<String?>(parentId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
 
@@ -611,16 +643,19 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
     String? id,
     String? name,
     Value<String?> parentId = const Value.absent(),
+    int? sortOrder,
   }) => ProductCategory(
     id: id ?? this.id,
     name: name ?? this.name,
     parentId: parentId.present ? parentId.value : this.parentId,
+    sortOrder: sortOrder ?? this.sortOrder,
   );
   ProductCategory copyWithCompanion(ProductCategoriesCompanion data) {
     return ProductCategory(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
 
@@ -629,37 +664,42 @@ class ProductCategory extends DataClass implements Insertable<ProductCategory> {
     return (StringBuffer('ProductCategory(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('parentId: $parentId')
+          ..write('parentId: $parentId, ')
+          ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, parentId);
+  int get hashCode => Object.hash(id, name, parentId, sortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ProductCategory &&
           other.id == this.id &&
           other.name == this.name &&
-          other.parentId == this.parentId);
+          other.parentId == this.parentId &&
+          other.sortOrder == this.sortOrder);
 }
 
 class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> parentId;
+  final Value<int> sortOrder;
   final Value<int> rowid;
   const ProductCategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.parentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProductCategoriesCompanion.insert({
     required String id,
     required String name,
     this.parentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -667,12 +707,14 @@ class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? parentId,
+    Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (parentId != null) 'parent_id': parentId,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -681,12 +723,14 @@ class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
     Value<String>? id,
     Value<String>? name,
     Value<String?>? parentId,
+    Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
     return ProductCategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       parentId: parentId ?? this.parentId,
+      sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -703,6 +747,9 @@ class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
     if (parentId.present) {
       map['parent_id'] = Variable<String>(parentId.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -715,6 +762,7 @@ class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('parentId: $parentId, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12423,6 +12471,7 @@ typedef $$ProductCategoriesTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<String?> parentId,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 typedef $$ProductCategoriesTableUpdateCompanionBuilder =
@@ -12430,6 +12479,7 @@ typedef $$ProductCategoriesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String?> parentId,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 
@@ -12454,6 +12504,11 @@ class $$ProductCategoriesTableFilterComposer
 
   ColumnFilters<String> get parentId => $composableBuilder(
     column: $table.parentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12481,6 +12536,11 @@ class $$ProductCategoriesTableOrderingComposer
     column: $table.parentId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProductCategoriesTableAnnotationComposer
@@ -12500,6 +12560,9 @@ class $$ProductCategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get parentId =>
       $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 }
 
 class $$ProductCategoriesTableTableManager
@@ -12545,11 +12608,13 @@ class $$ProductCategoriesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> parentId = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductCategoriesCompanion(
                 id: id,
                 name: name,
                 parentId: parentId,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12557,11 +12622,13 @@ class $$ProductCategoriesTableTableManager
                 required String id,
                 required String name,
                 Value<String?> parentId = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductCategoriesCompanion.insert(
                 id: id,
                 name: name,
                 parentId: parentId,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

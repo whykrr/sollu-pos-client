@@ -181,7 +181,10 @@ class PosRepository {
 
   Stream<List<ProductCategory>> watchCategories() {
     return (_database.select(_database.productCategories)
-          ..orderBy([(t) => OrderingTerm(expression: t.name)]))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.sortOrder, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: t.name, mode: OrderingMode.asc),
+          ]))
         .watch();
   }
 
