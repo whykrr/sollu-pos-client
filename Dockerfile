@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy project source code
 COPY . .
 
-# Ensure .env asset file exists for Flutter asset bundler
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
+# Ensure production .env asset exists for Flutter asset bundler
+RUN if [ -f .env.prod ]; then cp .env.prod .env; else cp .env.example .env; fi
 
 # Resolve dependencies & build PWA release
 RUN flutter pub get

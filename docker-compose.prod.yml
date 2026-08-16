@@ -7,3 +7,5 @@ services:
     restart: always
     ports:
       - "8003:80"
+    env_file:
+      - .env
