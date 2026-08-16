@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -36,19 +36,22 @@ class DeviceInfoService {
     String hardwareData = '';
 
     try {
-      if (Platform.isAndroid) {
+      if (kIsWeb) {
+        final webInfo = await _deviceInfoPlugin.webBrowserInfo;
+        hardwareData = '${webInfo.vendor}-${webInfo.userAgent}';
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
         hardwareData = '${androidInfo.board}-${androidInfo.model}-${androidInfo.id}';
-      } else if (Platform.isIOS) {
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         final iosInfo = await _deviceInfoPlugin.iosInfo;
         hardwareData = iosInfo.identifierForVendor ?? '';
-      } else if (Platform.isWindows) {
+      } else if (defaultTargetPlatform == TargetPlatform.windows) {
         final windowsInfo = await _deviceInfoPlugin.windowsInfo;
         hardwareData = windowsInfo.deviceId;
-      } else if (Platform.isMacOS) {
+      } else if (defaultTargetPlatform == TargetPlatform.macOS) {
         final macOsInfo = await _deviceInfoPlugin.macOsInfo;
         hardwareData = macOsInfo.systemGUID ?? '';
-      } else if (Platform.isLinux) {
+      } else if (defaultTargetPlatform == TargetPlatform.linux) {
         final linuxInfo = await _deviceInfoPlugin.linuxInfo;
         hardwareData = linuxInfo.machineId ?? '';
       } else {
@@ -81,11 +84,14 @@ class DeviceInfoService {
 
   /// Get Platform Type
   String getPlatformType() {
-    if (Platform.isAndroid) return 'android';
-    if (Platform.isIOS) return 'ios';
-    if (Platform.isWindows) return 'windows';
-    if (Platform.isMacOS) return 'macos';
-    if (Platform.isLinux) return 'linux';
-    return 'unknown';
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android: return 'android';
+      case TargetPlatform.iOS: return 'ios';
+      case TargetPlatform.windows: return 'windows';
+      case TargetPlatform.macOS: return 'macos';
+      case TargetPlatform.linux: return 'linux';
+      default: return 'unknown';
+    }
   }
 }

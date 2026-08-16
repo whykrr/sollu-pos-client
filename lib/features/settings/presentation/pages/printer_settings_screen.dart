@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
@@ -73,7 +73,7 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
   Widget build(BuildContext context) {
     final selectedPrinter = ref.watch(selectedPrinterProvider);
     final availablePrintersAsync = ref.watch(availablePrintersProvider);
-    final isDesktop = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux);
 
     return Scaffold(
       backgroundColor: SolluColors.background,

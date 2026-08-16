@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -279,7 +278,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
               ),
-              if (!kIsWeb && Platform.isWindows) ...[
+              if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) ...[
                 const Divider(height: 24),
                 Consumer(
                   builder: (context, ref, child) {

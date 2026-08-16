@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -6,7 +5,9 @@ import 'package:window_manager/window_manager.dart';
 class WindowService {
   static bool get isDesktop {
     if (kIsWeb) return false;
-    return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
   }
 
   /// Inisialisasi window manager saat startup jika berjalan di platform Desktop

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -26,7 +25,7 @@ class ErrorLoggingService {
       
       Map<String, dynamic> deviceData = {};
       
-      if (Platform.isAndroid) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         final androidInfo = await deviceInfo.androidInfo;
         deviceData = {
           'model': androidInfo.model,
@@ -35,7 +34,7 @@ class ErrorLoggingService {
           'version': androidInfo.version.release,
           'sdk': androidInfo.version.sdkInt,
         };
-      } else if (Platform.isIOS) {
+      } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         final iosInfo = await deviceInfo.iosInfo;
         deviceData = {
           'model': iosInfo.model,

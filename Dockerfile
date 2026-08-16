@@ -8,7 +8,7 @@ COPY . .
 
 # Resolve dependencies & build PWA release
 RUN flutter pub get
-RUN flutter build web --release --pwa-strategy offline-first
+RUN flutter build web --release
 
 # Stage 2: Production Nginx Server
 FROM nginx:alpine AS production-stage
