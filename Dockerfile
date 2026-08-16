@@ -1,14 +1,13 @@
 # Stage 1: Build Flutter Web
-FROM ghcr.io/cirruslabs/flutter:3.29.0 AS build-stage
+FROM ghcr.io/cirruslabs/flutter:stable AS build-stage
 
 WORKDIR /app
 
-# Copy dependency manifests
-COPY pubspec.yaml pubspec.lock ./
-RUN flutter pub get
-
-# Copy source code and build PWA release
+# Copy project source code
 COPY . .
+
+# Resolve dependencies & build PWA release
+RUN flutter pub get
 RUN flutter build web --release --pwa-strategy offline-first
 
 # Stage 2: Production Nginx Server
