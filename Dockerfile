@@ -1,5 +1,5 @@
 # Stage 1: Build Flutter Web
-FROM ghcr.io/cirrusci/flutter:3.29.0 AS build-stage
+FROM ghcr.io/cirruslabs/flutter:3.29.0 AS build-stage
 
 WORKDIR /app
 
