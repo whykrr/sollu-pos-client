@@ -15,6 +15,7 @@ import 'package:sollu_pos_client/features/settings/presentation/providers/sync_p
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/window_service.dart';
+import 'package:sollu_pos_client/core/services/update_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -330,6 +331,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: const Text('Lihat token Sanctum, Device UUID, & Hardware Signature'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showDeviceInfoDialog(context),
+                ),
+              ],
+              if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) ...[
+                const Divider(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.system_update, color: Colors.indigo),
+                  ),
+                  title: const Text(
+                    'Periksa Pembaruan',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Cek apakah ada versi aplikasi terbaru'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    final updateService = UpdateService();
+                    updateService.checkManually();
+                  },
                 ),
               ],
               const Divider(height: 24),

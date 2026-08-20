@@ -508,6 +508,7 @@ class PrinterService {
           printer: printer,
           onLayout: (format) async => pdfBytes,
           name: 'Test_Receipt_${config.name}',
+          usePrinterSettings: true,
         );
         if (printSuccess) {
           return (success: true, message: 'Uji cetak berhasil dikirim ke printer OS!');
@@ -585,6 +586,7 @@ class PrinterService {
           printer: printer,
           onLayout: (format) async => pdfBytes,
           name: 'Struk_${detail.transaction.transactionNumber}',
+          usePrinterSettings: true,
         );
         if (printSuccess) {
           return (success: true, message: 'Struk berhasil dicetak!');
@@ -817,6 +819,7 @@ class PrinterService {
           printer: printer,
           onLayout: (format) async => pdfBytes,
           name: 'Shift_Report_${DateTime.now().millisecondsSinceEpoch}',
+          usePrinterSettings: true,
         );
         if (printSuccess) {
           return (success: true, message: 'Laporan shift berhasil dicetak!');

@@ -122,20 +122,22 @@ class ShiftRepository {
         salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + tx.total;
       } else {
         for (final p in payments) {
+          final trueAmount = p.amount - (p.changeAmount ?? 0.0);
+          
           // Ambil tipe payment method
           if (p.paymentMethodId != null) {
             final pm = await (_database.select(_database.paymentMethods)..where((m) => m.id.equals(p.paymentMethodId!))).getSingleOrNull();
             final methodName = pm?.name ?? 'Lainnya';
-            salesByPaymentMethod[methodName] = (salesByPaymentMethod[methodName] ?? 0) + p.amount;
+            salesByPaymentMethod[methodName] = (salesByPaymentMethod[methodName] ?? 0) + trueAmount;
             
             if (pm?.type == 'cash' || pm?.name.toLowerCase().contains('tunai') == true) {
-              cashSales += p.amount;
+              cashSales += trueAmount;
             } else {
-              nonCashSales += p.amount;
+              nonCashSales += trueAmount;
             }
           } else {
-            cashSales += p.amount;
-            salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + p.amount;
+            cashSales += trueAmount;
+            salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + trueAmount;
           }
         }
       }

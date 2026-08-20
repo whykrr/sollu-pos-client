@@ -378,8 +378,9 @@ class TransactionRepository {
         return true;
       }
       return false;
-    } catch (_) {
-      // Jika offline, data transaksi tetap aman tersimpan di SQLite lokal
+    } catch (e) {
+      // Jika offline atau error 500, data transaksi tetap aman tersimpan di SQLite lokal
+      // Kita kembalikan false agar client bisa mencoba sinkronisasi lagi nanti
       return false;
     }
   }

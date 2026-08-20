@@ -15,9 +15,10 @@ class ReceiptPdfBuilder {
   /// Margin diset 0 karena printer fisik & driver OS sudah memiliki margin bawaan.
   static PdfPageFormat _getPageFormat(PrinterPaperSize size) {
     final double widthMm = size == PrinterPaperSize.mm58 ? 48 : 72;
+    final double heightMm = size == PrinterPaperSize.mm58 ? 200 : 297;
     return PdfPageFormat(
       widthMm * PdfPageFormat.mm,
-      double.infinity,
+      heightMm * PdfPageFormat.mm,
       marginAll: 0 * PdfPageFormat.mm,
     );
   }

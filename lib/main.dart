@@ -14,6 +14,7 @@ import 'dart:ui';
 import 'package:sollu_pos_client/core/providers/error_logging_provider.dart';
 
 import 'package:sollu_pos_client/core/services/window_service.dart';
+import 'package:sollu_pos_client/core/services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,11 @@ void main() async {
   // Inisialisasi Window Manager pada Desktop (Windows/macOS/Linux)
   final isKiosk = container.read(fullscreenKioskProvider);
   await WindowService.initialize(isKiosk: isKiosk);
+
+  // Inisialisasi Auto Updater
+  final updateService = UpdateService();
+  await updateService.initialize();
+  updateService.checkInBackground(); // Non-blocking check
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
