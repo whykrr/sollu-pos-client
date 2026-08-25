@@ -11,35 +11,36 @@ import 'package:flutter/foundation.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [
-  Products,
-  ProductCategories,
-  VariantGroups,
-  VariantGroupOptions,
-  InventoryItemVariantGroupOptions,
-  ModifierGroups,
-  ProductModifierGroups,
-  ModifierOptions,
-  ProductPrices,
-  Inventories,
-  PaymentMethods,
-  OutletSettings,
-  Shifts,
-  ShiftCashLogs,
-  Transactions,
-  TransactionItems,
-  TransactionItemModifiers,
-  TransactionPayments,
-  TransactionPromos,
-  Employees,
-  Promos,
-  Customers,
-])
+@DriftDatabase(
+  tables: [
+    Products,
+    ProductCategories,
+    VariantGroups,
+    VariantGroupOptions,
+    InventoryItemVariantGroupOptions,
+    ModifierGroups,
+    ProductModifierGroups,
+    ModifierOptions,
+    ProductPrices,
+    Inventories,
+    PaymentMethods,
+    Shifts,
+    ShiftCashLogs,
+    Transactions,
+    TransactionItems,
+    TransactionItemModifiers,
+    TransactionPayments,
+    TransactionPromos,
+    Employees,
+    Promos,
+    Customers,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -51,6 +52,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.addColumn(productCategories, productCategories.sortOrder);
         }
+        if (from < 3) {
+          await customStatement('DROP TABLE IF EXISTS outlet_settings;');
+        }
       },
     );
   }
@@ -61,10 +65,10 @@ LazyDatabase _openConnection() {
     // Gunakan path_provider yang kompatibel untuk cross-platform (termasuk Windows)
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'sollu_pos.sqlite'));
-    
+
     // Cetak path database
     debugPrint("LOKASI DATABASE: ${file.path}");
-    
+
     // Gunakan logStatements: true jika perlu debug query di terminal
     return NativeDatabase.createInBackground(file, logStatements: true);
   });

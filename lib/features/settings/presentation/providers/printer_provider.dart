@@ -1,15 +1,13 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sollu_pos_client/core/database/database_provider.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/printer_service.dart';
-import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
-
-import 'package:drift/drift.dart' as drift;
-import 'package:sollu_pos_client/core/database/app_database.dart';
-import 'package:sollu_pos_client/core/database/database_provider.dart';
 import 'package:sollu_pos_client/features/auth/providers/auth_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 
 final printerServiceProvider = Provider<PrinterService>((ref) {
@@ -51,25 +49,34 @@ Future<({bool success, String message})> printTransactionReceiptAction({
     }
   }
 
-  // Dynamically enrich printer config from synced outlet receipt settings if available
-  final outletSetting = await (db.select(db.outletSettings)..limit(1)).getSingleOrNull();
+  
+  // Dynamically enrich printer config from synced outlet receipt settings if available (store header, notes)
+  final outletSetting = ref.read(outletSettingsProvider);
+  final outletProfile = ref.read(outletProfileProvider);
+
+  String? profileOutletName = outletProfile?['name']?.toString();
+  String? profileOutletAddress = outletProfile?['address']?.toString();
+  String? profileOutletPhone = outletProfile?['phone']?.toString();
+
   PrinterConfig effectiveConfig = printerConfig;
   if (outletSetting != null) {
     effectiveConfig = printerConfig.copyWith(
-      storeName: (outletSetting.customHeaderTitle != null && outletSetting.customHeaderTitle!.isNotEmpty)
-          ? outletSetting.customHeaderTitle
-          : (outletName ?? printerConfig.storeName),
-      headerNote: outletSetting.headerNotes ?? printerConfig.headerNote,
-      footerNote: outletSetting.footerNotes ?? printerConfig.footerNote,
-      paperSize: outletSetting.paperSize == '80mm' ? PrinterPaperSize.mm80 : PrinterPaperSize.mm58,
+      storeName:
+          (outletSetting['customHeaderTitle'] != null &&
+              outletSetting['customHeaderTitle'].toString().isNotEmpty)
+          ? outletSetting['customHeaderTitle'].toString()
+          : (outletName ?? profileOutletName ?? printerConfig.storeName),
+      headerNote: outletSetting['headerNotes']?.toString() ?? printerConfig.headerNote,
+      footerNote: outletSetting['footerNotes']?.toString() ?? printerConfig.footerNote,
     );
   }
 
   // Load cached logo bytes if showLogo is enabled
   Uint8List? logoBytes;
-  if ((outletSetting?.showLogo ?? true) && outletSetting?.localLogoPath != null) {
+  if (((outletSetting?['showLogo'] as bool?) ?? true) &&
+      outletSetting?['localLogoPath'] != null) {
     try {
-      final file = File(outletSetting!.localLogoPath!);
+      final file = File(outletSetting!['localLogoPath'].toString());
       if (await file.exists()) {
         logoBytes = await file.readAsBytes();
       }
@@ -78,6 +85,7 @@ Future<({bool success, String message})> printTransactionReceiptAction({
     }
   }
 
+
   final service = ref.read(printerServiceProvider);
   return await service.printTransactionReceipt(
     detail: detail,
@@ -85,9 +93,9 @@ Future<({bool success, String message})> printTransactionReceiptAction({
     outletSetting: outletSetting,
     logoBytes: logoBytes,
     cashierName: resolvedCashierName,
-    outletName: outletName,
-    outletAddress: outletAddress,
-    outletPhone: outletPhone,
+    outletName: outletName ?? profileOutletName,
+    outletAddress: outletAddress ?? profileOutletAddress,
+    outletPhone: outletPhone ?? profileOutletPhone,
   );
 }
 
@@ -134,17 +142,13 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
 
   Future<void> _syncToLocalDbAndBackend(PrinterConfig config) async {
     final paperSizeStr = config.paperSize == PrinterPaperSize.mm80 ? '80mm' : '58mm';
-    
-    // 1. Override local Drift OutletSettings
+    // 1. Override local SharedPreferences OutletSettings
     try {
-      final db = ref.read(databaseProvider);
-      final existing = await (db.select(db.outletSettings)..limit(1)).getSingleOrNull();
+      final service = ref.read(outletSettingsServiceProvider);
+      final existing = service.getOutletSettings();
       if (existing != null) {
-        await (db.update(db.outletSettings)..where((t) => t.id.equals(existing.id))).write(
-          OutletSettingsCompanion(
-            paperSize: drift.Value(paperSizeStr),
-          ),
-        );
+        existing['paperSize'] = paperSizeStr;
+        await service.saveOutletSettings(existing);
       }
     } catch (e) {
       debugPrint('Error updating local outlet settings paper size: $e');
@@ -166,6 +170,36 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
       debugPrint('Printer paper size successfully synced to central backend: $paperSizeStr');
     } catch (e) {
       debugPrint('Failed to sync printer settings to backend (offline or error): $e');
+    }
+  }
+
+
+  Future<void> updateAutoPrint(bool autoPrint) async {
+    // 1. Update SharedPreferences DB
+    try {
+      final service = ref.read(outletSettingsServiceProvider);
+      final existing = service.getOutletSettings();
+      if (existing != null) {
+        existing['autoPrint'] = autoPrint;
+        await service.saveOutletSettings(existing);
+      }
+    } catch (e) {
+      debugPrint('Error updating auto_print locally: $e');
+    }
+
+    // 2. Sync to Backend
+    if (state != null) {
+      await _syncToLocalDbAndBackend(state!);
+    } else {
+      try {
+        final dioClient = ref.read(dioClientProvider);
+        await dioClient.dio.put(
+          '/settings/printer',
+          data: {'auto_print': autoPrint},
+        );
+      } catch (e) {
+        debugPrint('Failed to sync auto_print to backend: $e');
+      }
     }
   }
 

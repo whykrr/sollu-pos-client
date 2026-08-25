@@ -146,7 +146,9 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Keranjang masih kosong, tidak ada pesanan untuk ditahan.'),
+          content: Text(
+            'Keranjang masih kosong, tidak ada pesanan untuk ditahan.',
+          ),
           backgroundColor: SolluColors.warning,
           duration: Duration(seconds: 2),
         ),
@@ -160,7 +162,9 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pesanan berhasil ditahan (${heldOrder.id}). Tekan F7 untuk memuat kembali.'),
+          content: Text(
+            'Pesanan berhasil ditahan (${heldOrder.id}). Tekan F7 untuk memuat kembali.',
+          ),
           backgroundColor: SolluColors.success,
           duration: const Duration(seconds: 3),
         ),
@@ -179,9 +183,17 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     final taxRate = ref.read(activeTaxRateProvider);
     final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
 
-    final double subtotal = cart.fold(0.0, (sum, item) => sum + item.calculatedSubtotal);
-    final double discountAmount = appliedDiscount != null ? appliedDiscount.calculateDiscount(subtotal) : 0.0;
-    final double taxableAmount = (subtotal - discountAmount).clamp(0.0, double.infinity);
+    final double subtotal = cart.fold(
+      0.0,
+      (sum, item) => sum + item.calculatedSubtotal,
+    );
+    final double discountAmount = appliedDiscount != null
+        ? appliedDiscount.calculateDiscount(subtotal)
+        : 0.0;
+    final double taxableAmount = (subtotal - discountAmount).clamp(
+      0.0,
+      double.infinity,
+    );
     final double tax = taxableAmount * (taxRate / 100.0);
     final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
     final int total = (taxableAmount + tax + serviceCharge).toInt();
@@ -191,7 +203,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
   @override
   Widget build(BuildContext context) {
     final activeShiftAsync = ref.watch(activeShiftProvider);
-    
+
     // Initialize auto-sync watcher
     ref.watch(autoSyncProvider);
 
@@ -251,328 +263,375 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       child: Scaffold(
         backgroundColor: SolluColors.background,
         appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        titleSpacing: 16,
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset('img/logo-colored.png', height: 32),
-            const SizedBox(width: 20),
-            Expanded(
-              child: SizedBox(
-                height: 40,
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  onChanged: (val) {
-                    ref.read(posSearchQueryProvider.notifier).setQuery(val);
-                  },
-                  onSubmitted: (val) async {
-                    final query = val.trim();
-                    if (query.isEmpty) return;
-                    
-                    final repository = ref.read(posRepositoryProvider);
-                    final matchedItem = await repository.findItemByBarcodeOrSku(query);
-                    
-                    if (matchedItem != null) {
-                      final cartItem = CartItem(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        productId: matchedItem.isProductMode ? matchedItem.id : matchedItem.inventory!.productId,
-                        inventoryItemId: matchedItem.isProductMode ? '' : matchedItem.id,
-                        name: matchedItem.name,
-                        price: matchedItem.price,
-                        qty: 1,
-                      );
-                      ref.read(cartProvider.notifier).addItem(cartItem);
-                      
-                      _searchController.clear();
-                      ref.read(posSearchQueryProvider.notifier).setQuery('');
-                      _searchFocusNode.requestFocus();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Barcode/SKU "$query" tidak ditemukan'),
-                          duration: const Duration(seconds: 2),
-                          backgroundColor: SolluColors.danger,
+          backgroundColor: Colors.white,
+          elevation: 1,
+          titleSpacing: 16,
+          title: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset('img/logo-colored.png', height: 32),
+              const SizedBox(width: 20),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: (val) {
+                      ref.read(posSearchQueryProvider.notifier).setQuery(val);
+                    },
+                    onSubmitted: (val) async {
+                      final query = val.trim();
+                      if (query.isEmpty) return;
+
+                      final repository = ref.read(posRepositoryProvider);
+                      final matchedItem = await repository
+                          .findItemByBarcodeOrSku(query);
+
+                      if (matchedItem != null) {
+                        final cartItem = CartItem(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          productId: matchedItem.isProductMode
+                              ? matchedItem.id
+                              : matchedItem.inventory!.productId,
+                          inventoryItemId: matchedItem.isProductMode
+                              ? ''
+                              : matchedItem.id,
+                          name: matchedItem.name,
+                          price: matchedItem.price,
+                          qty: 1,
+                        );
+                        ref.read(cartProvider.notifier).addItem(cartItem);
+
+                        _searchController.clear();
+                        ref.read(posSearchQueryProvider.notifier).setQuery('');
+                        _searchFocusNode.requestFocus();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Barcode/SKU "$query" tidak ditemukan',
+                            ),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: SolluColors.danger,
+                          ),
+                        );
+                        // Tetap kosongkan dan fokus kembali agar bisa scan ulang
+                        _searchController.clear();
+                        ref.read(posSearchQueryProvider.notifier).setQuery('');
+                        _searchFocusNode.requestFocus();
+                      }
+                    },
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Cari produk atau scan barcode... (F1)',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: SolluColors.textMuted,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 20,
+                        color: SolluColors.neutralMuted,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: SolluColors.neutral,
                         ),
-                      );
-                      // Tetap kosongkan dan fokus kembali agar bisa scan ulang
-                      _searchController.clear();
-                      ref.read(posSearchQueryProvider.notifier).setQuery('');
-                      _searchFocusNode.requestFocus();
-                    }
-                  },
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Cari produk atau scan barcode... (F1)',
-                    hintStyle: const TextStyle(fontSize: 13, color: SolluColors.textMuted),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      size: 20,
-                      color: SolluColors.neutralMuted,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: SolluColors.neutral),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: SolluColors.neutral),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: SolluColors.primary,
-                        width: 2,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: SolluColors.neutral,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: SolluColors.primary,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: SolluColors.background,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0,
+                        horizontal: 12,
                       ),
                     ),
-                    filled: true,
-                    fillColor: SolluColors.background,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          Center(
-            child: IconButton(
-              icon: const Icon(
-                Icons.keyboard_alt_outlined,
-                color: SolluColors.textDark,
+            ],
+          ),
+          actions: [
+            Center(
+              child: IconButton(
+                icon: const Icon(
+                  Icons.keyboard_alt_outlined,
+                  color: SolluColors.textDark,
+                ),
+                tooltip: 'Panduan Shortcut (F1-F12)',
+                onPressed: () => ShortcutHelpDialog.show(context),
               ),
-              tooltip: 'Panduan Shortcut (F1-F12)',
-              onPressed: () => ShortcutHelpDialog.show(context),
             ),
-          ),
-          const SizedBox(width: 8),
-          Center(
-            child: Consumer(
-              builder: (context, ref, child) {
-                final isOnline = ref.watch(connectivityProvider);
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isOnline 
-                        ? SolluColors.success.withValues(alpha: 0.1)
-                        : SolluColors.danger.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isOnline ? SolluColors.success : SolluColors.danger,
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isOnline ? Icons.wifi : Icons.wifi_off,
-                        size: 14,
-                        color: isOnline ? SolluColors.success : SolluColors.danger,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isOnline ? 'Online' : 'Offline',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isOnline ? SolluColors.success : SolluColors.danger,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Center(
-            child: activeShiftAsync.when(
-              data: (shift) {
-                final isShiftOpen = shift != null;
-                final cashierName = isShiftOpen
-                    ? ref.watch(cashierNameProvider(shift.userId)).when(
-                        data: (name) => name,
-                        loading: () => '...',
-                        error: (_, __) => 'Kasir',
-                      )
-                    : '';
-                final shiftText = isShiftOpen
-                    ? 'Shift #${shift.shiftNumber}  •  Kasir: $cashierName'
-                    : 'Shift: Belum Dibuka';
-
-                return InkWell(
-                  onTap: () {
-                    if (isShiftOpen) {
-                      CloseShiftDialog.show(context);
-                    } else {
-                      OpenShiftDialog.show(context);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
+            const SizedBox(width: 8),
+            Center(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final isOnline = ref.watch(connectivityProvider);
+                  return Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: isShiftOpen 
-                          ? SolluColors.primary.withValues(alpha: 0.08) 
-                          : SolluColors.warning.withValues(alpha: 0.1),
+                      color: isOnline
+                          ? SolluColors.success.withValues(alpha: 0.1)
+                          : SolluColors.danger.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isShiftOpen 
-                            ? SolluColors.primary.withValues(alpha: 0.3) 
-                            : SolluColors.warning,
+                        color: isOnline
+                            ? SolluColors.success
+                            : SolluColors.danger,
+                        width: 1,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isShiftOpen ? Icons.storefront : Icons.warning_amber_rounded,
-                          size: 16,
-                          color: isShiftOpen ? SolluColors.primary : SolluColors.warning,
+                          isOnline ? Icons.wifi : Icons.wifi_off,
+                          size: 14,
+                          color: isOnline
+                              ? SolluColors.success
+                              : SolluColors.danger,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
-                          shiftText,
+                          isOnline ? 'Online' : 'Offline',
                           style: TextStyle(
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: isShiftOpen ? SolluColors.primary : SolluColors.textDark,
+                            color: isOnline
+                                ? SolluColors.success
+                                : SolluColors.danger,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-              loading: () => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Center(
-            child: ElevatedButton.icon(
-              onPressed: _isSyncing ? null : () async {
-                setState(() {
-                  _isSyncing = true;
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Menyingkronkan Master Data...'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-
-                try {
-                  final employeeRepository = ref.read(employeeRepositoryProvider);
-                  await employeeRepository.syncEmployees();
-                  
-                  final syncRepository = ref.read(syncRepositoryProvider);
-                  await syncRepository.syncMasterData();
-                  
-                  ref.invalidate(employeeListProvider);
-                  ref.invalidate(posItemsProvider);
-                  ref.invalidate(posCategoriesProvider);
-                  
-                  // Simpan timestamp sinkronisasi terakhir
-                  ref.read(lastSyncProvider.notifier).updateTimestamp();
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Sinkronisasi selesai!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Gagal sinkronisasi: $e'),
-                        backgroundColor: SolluColors.danger,
-                      ),
-                    );
-                  }
-                } finally {
-                  if (mounted) {
-                    setState(() {
-                      _isSyncing = false;
-                    });
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: SolluColors.secondary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: _isSyncing 
-                  ? const SizedBox(
-                      width: 18, 
-                      height: 18, 
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-                    )
-                  : const Icon(Icons.sync, size: 18),
-              label: Text(_isSyncing ? 'Sinkronisasi...' : 'Sinkronisasi Data'),
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Row(
-            children: [
-          // Left Pane: Category Sidebar (2/10 of screen)
-          const Expanded(
-            flex: 2,
-            child: CategorySidebar(),
-          ),
-          // Middle Pane: Product Grid (5/10 of screen)
-          Expanded(
-            flex: 5,
-            child: Container(
-              color: const Color(0xFFF8FAFC),
-              child: ProductGrid(
-                searchFocusNode: _searchFocusNode,
-                focusNode: _productGridFocusNode,
-                selectedIndex: _selectedProductIndex,
-                onSelectedIndexChanged: (idx) {
-                  setState(() {
-                    _selectedProductIndex = idx;
-                  });
+                  );
                 },
               ),
             ),
-          ),
-          // Right Pane: Cart Panel (3/10 of screen)
-          Expanded(
-            flex: 3,
-            child: CartPanel(
-              focusNode: _cartFocusNode,
+            const SizedBox(width: 8),
+            Center(
+              child: activeShiftAsync.when(
+                data: (shift) {
+                  final isShiftOpen = shift != null;
+                  final cashierName = isShiftOpen
+                      ? ref
+                            .watch(cashierNameProvider(shift.userId))
+                            .when(
+                              data: (name) => name,
+                              loading: () => '...',
+                              error: (_, __) => 'Kasir',
+                            )
+                      : '';
+                  final shiftText = isShiftOpen
+                      ? 'Shift #${shift.shiftNumber}  •  Kasir: $cashierName'
+                      : 'Shift: Belum Dibuka';
+
+                  return InkWell(
+                    onTap: () {
+                      if (isShiftOpen) {
+                        CloseShiftDialog.show(context);
+                      } else {
+                        OpenShiftDialog.show(context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isShiftOpen
+                            ? SolluColors.primary.withValues(alpha: 0.08)
+                            : SolluColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isShiftOpen
+                              ? SolluColors.primary.withValues(alpha: 0.3)
+                              : SolluColors.warning,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isShiftOpen
+                                ? Icons.storefront
+                                : Icons.warning_amber_rounded,
+                            size: 16,
+                            color: isShiftOpen
+                                ? SolluColors.primary
+                                : SolluColors.warning,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            shiftText,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isShiftOpen
+                                  ? SolluColors.primary
+                                  : SolluColors.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
             ),
-          ),
-            ],
-          ),
-          
-          // Floating Sync Overlay
-          const SyncProgressOverlay(),
-        ],
-      ),
+            const SizedBox(width: 8),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _isSyncing
+                    ? null
+                    : () async {
+                        setState(() {
+                          _isSyncing = true;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Menyingkronkan Master Data...'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+
+                        try {
+                          final employeeRepository = ref.read(
+                            employeeRepositoryProvider,
+                          );
+                          await employeeRepository.syncEmployees();
+
+                          final syncRepository = ref.read(
+                            syncRepositoryProvider,
+                          );
+                          await syncRepository.syncMasterData();
+
+                          ref.invalidate(employeeListProvider);
+                          ref.invalidate(posItemsProvider);
+                          ref.invalidate(posCategoriesProvider);
+
+                          // Simpan timestamp sinkronisasi terakhir
+                          ref.read(lastSyncProvider.notifier).updateTimestamp();
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Sinkronisasi selesai!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal sinkronisasi: $e'),
+                                backgroundColor: SolluColors.danger,
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isSyncing = false;
+                            });
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SolluColors.secondary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: _isSyncing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.sync, size: 18),
+                label: Text(
+                  _isSyncing ? 'Sinkronisasi...' : 'Sinkronisasi Data',
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Row(
+              children: [
+                // Left Pane: Category Sidebar (2/10 of screen)
+                const Expanded(flex: 2, child: CategorySidebar()),
+                // Middle Pane: Product Grid (5/10 of screen)
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    color: const Color(0xFFF8FAFC),
+                    child: ProductGrid(
+                      searchFocusNode: _searchFocusNode,
+                      focusNode: _productGridFocusNode,
+                      selectedIndex: _selectedProductIndex,
+                      onSelectedIndexChanged: (idx) {
+                        setState(() {
+                          _selectedProductIndex = idx;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                // Right Pane: Cart Panel (3/10 of screen)
+                Expanded(flex: 3, child: CartPanel(focusNode: _cartFocusNode)),
+              ],
+            ),
+
+            // Floating Sync Overlay
+            const SyncProgressOverlay(),
+          ],
+        ),
       ),
     );
   }

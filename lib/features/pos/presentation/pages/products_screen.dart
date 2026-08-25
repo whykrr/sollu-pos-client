@@ -44,7 +44,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
             backgroundColor: SolluColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -93,7 +95,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     'Sync: ${LastSyncNotifier.formatRelative(lastSync)}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                      color: lastSync != null
+                          ? SolluColors.success
+                          : SolluColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -115,7 +119,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       ),
                     )
                   : const Icon(Icons.sync, size: 18),
-              label: Text(_isSyncing ? 'Menyinkronkan...' : 'Sinkronisasi Data'),
+              label: Text(
+                _isSyncing ? 'Menyinkronkan...' : 'Sinkronisasi Data',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: SolluColors.primary,
                 foregroundColor: Colors.white,
@@ -123,7 +129,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
             ),
           ),
@@ -226,9 +235,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              items.isEmpty ? Icons.cloud_download_outlined : Icons.search_off,
+                              items.isEmpty
+                                  ? Icons.cloud_download_outlined
+                                  : Icons.search_off,
                               size: 48,
-                              color: SolluColors.textMuted.withValues(alpha: 0.5),
+                              color: SolluColors.textMuted.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -399,7 +412,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                     value: isActive,
                                     activeTrackColor: SolluColors.success,
                                     onChanged: (bool value) async {
-                                      final messenger = ScaffoldMessenger.of(context);
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
                                       await ref
                                           .read(posRepositoryProvider)
                                           .toggleInventoryActiveStatus(

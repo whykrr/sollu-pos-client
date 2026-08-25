@@ -24,14 +24,9 @@ class SplashScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'img/logo-white.png',
-              width: 200,
-            ),
+            Image.asset('img/logo-white.png', width: 200),
             const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              color: Colors.white,
-            ),
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),

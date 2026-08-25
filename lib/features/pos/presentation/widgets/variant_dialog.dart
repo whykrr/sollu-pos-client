@@ -48,7 +48,10 @@ class VariantDialog extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (state.variantGroups.isNotEmpty) ...[
-                const Text('Pilih Varian', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Pilih Varian',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 ...state.variantGroups.map((group) {
                   final options = state.variantOptions[group.id] ?? [];
@@ -59,7 +62,13 @@ class VariantDialog extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600, color: SolluColors.textMuted)),
+                        Text(
+                          group.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: SolluColors.textMuted,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -69,10 +78,16 @@ class VariantDialog extends ConsumerWidget {
                             return ChoiceChip(
                               label: Text(opt.name),
                               selected: isSelected,
-                              selectedColor: SolluColors.primary.withValues(alpha: 0.2),
+                              selectedColor: SolluColors.primary.withValues(
+                                alpha: 0.2,
+                              ),
                               labelStyle: TextStyle(
-                                color: isSelected ? SolluColors.primary : SolluColors.textDark,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? SolluColors.primary
+                                    : SolluColors.textDark,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                               onSelected: (bool selected) {
                                 if (selected) {
@@ -90,13 +105,18 @@ class VariantDialog extends ConsumerWidget {
               ],
 
               if (state.modifierGroups.isNotEmpty) ...[
-                const Text('Tambahan (Modifier)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Tambahan (Modifier)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 ...state.modifierGroups.map((group) {
                   final options = state.modifierOptions[group.id] ?? [];
-                  final selectedOptIds = state.selectedModifiers[group.id] ?? [];
-                  
-                  final isRadio = group.type == 'radio' || group.maxSelected == 1;
+                  final selectedOptIds =
+                      state.selectedModifiers[group.id] ?? [];
+
+                  final isRadio =
+                      group.type == 'radio' || group.maxSelected == 1;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
@@ -106,17 +126,38 @@ class VariantDialog extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600, color: SolluColors.textMuted)),
+                            Text(
+                              group.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: SolluColors.textMuted,
+                              ),
+                            ),
                             if (group.minSelected > 0)
-                              const Text('*Wajib', style: TextStyle(color: SolluColors.danger, fontSize: 12, fontWeight: FontWeight.bold))
+                              const Text(
+                                '*Wajib',
+                                style: TextStyle(
+                                  color: SolluColors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
                             else if (group.maxSelected > 0)
-                              Text('Maks. ${group.maxSelected}', style: const TextStyle(color: SolluColors.textMuted, fontSize: 12)),
+                              Text(
+                                'Maks. ${group.maxSelected}',
+                                style: const TextStyle(
+                                  color: SolluColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         ...options.map((opt) {
                           final isSelected = selectedOptIds.contains(opt.id);
-                          final priceText = opt.price > 0 ? '+${CurrencyFormatter.format(opt.price.toInt())}' : '';
+                          final priceText = opt.price > 0
+                              ? '+${CurrencyFormatter.format(opt.price.toInt())}'
+                              : '';
 
                           return CheckboxListTile(
                             contentPadding: EdgeInsets.zero,
@@ -125,17 +166,29 @@ class VariantDialog extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(opt.name),
-                                Text(priceText, style: const TextStyle(color: SolluColors.primary, fontWeight: FontWeight.bold)),
+                                Text(
+                                  priceText,
+                                  style: const TextStyle(
+                                    color: SolluColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                             value: isSelected,
                             onChanged: (bool? value) {
                               if (value != null) {
-                                notifier.toggleModifier(group.id, opt.id, value);
+                                notifier.toggleModifier(
+                                  group.id,
+                                  opt.id,
+                                  value,
+                                );
                               }
                             },
                             // Visual cue if it acts like a radio button
-                            checkboxShape: isRadio ? const CircleBorder() : null,
+                            checkboxShape: isRadio
+                                ? const CircleBorder()
+                                : null,
                           );
                         }),
                       ],
@@ -157,10 +210,17 @@ class VariantDialog extends ConsumerWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Subtotal:', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                const Text(
+                  'Subtotal:',
+                  style: TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                ),
                 Text(
                   CurrencyFormatter.format(totalPrice.toInt() * state.qty),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.primary),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: SolluColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -173,11 +233,14 @@ class VariantDialog extends ConsumerWidget {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () {
-                    final selectedVariantOptionId = state.selectedVariants.values.firstOrNull;
+                    final selectedVariantOptionId =
+                        state.selectedVariants.values.firstOrNull;
 
                     final cartItem = CartItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      productId: posItem.isProductMode ? posItem.id : posItem.inventory!.productId,
+                      productId: posItem.isProductMode
+                          ? posItem.id
+                          : posItem.inventory!.productId,
                       inventoryItemId: posItem.isProductMode ? '' : posItem.id,
                       variantGroupOptionId: selectedVariantOptionId,
                       name: posItem.name,
@@ -188,7 +251,7 @@ class VariantDialog extends ConsumerWidget {
                       selectedVariants: state.selectedVariants,
                       selectedModifiers: state.selectedModifiers,
                     );
-                    
+
                     ref.read(cartProvider.notifier).addItem(cartItem);
                     Navigator.of(context).pop();
                   },

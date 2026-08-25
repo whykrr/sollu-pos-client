@@ -25,7 +25,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeEmployee = ref.watch(activeEmployeeProvider);
-    
+
     // Initialize auto-sync watcher
     ref.watch(autoSyncProvider);
 
@@ -222,16 +222,22 @@ class DashboardScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            lastSync != null ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                            lastSync != null
+                                ? Icons.cloud_done_outlined
+                                : Icons.cloud_off_outlined,
                             size: 16,
-                            color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
+                            color: lastSync != null
+                                ? SolluColors.success
+                                : SolluColors.textMuted,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Sinkronisasi terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: lastSync != null ? SolluColors.textDark : SolluColors.textMuted,
+                              color: lastSync != null
+                                  ? SolluColors.textDark
+                                  : SolluColors.textMuted,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -243,7 +249,7 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
           ),
-          
+
           // Floating Sync Overlay
           const SyncProgressOverlay(),
         ],

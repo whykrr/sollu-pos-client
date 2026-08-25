@@ -6,9 +6,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:printing/printing.dart';
-import 'package:sollu_pos_client/core/database/app_database.dart';
+
 import 'package:sollu_pos_client/core/models/printer_model.dart';
-import 'package:sollu_pos_client/core/services/receipt_pdf_builder.dart';
+import 'package:sollu_pos_client/core/services/desktop_raw_printer.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/data/transaction_repository.dart';
 import 'package:sollu_pos_client/features/shift/data/shift_repository.dart';
@@ -234,7 +234,7 @@ class PrinterService {
   Future<List<int>> generateTransactionReceiptBytes({
     required TransactionDetailData detail,
     required PrinterConfig config,
-    OutletSetting? outletSetting,
+    Map<String, dynamic>? outletSetting,
     Uint8List? logoBytes,
     String? cashierName,
     String? outletName,
@@ -249,7 +249,7 @@ class PrinterService {
     bytes += generator.reset();
 
     // 0. Logo Toko
-    if ((outletSetting?.showLogo ?? true) && logoBytes != null) {
+    if (((outletSetting?['showLogo'] as bool?) ?? true) && logoBytes != null) {
       try {
         final decoded = img.decodeImage(logoBytes);
         if (decoded != null) {
@@ -263,11 +263,10 @@ class PrinterService {
       }
     }
 
-    // 1. Header Toko
-    final displayName = (outletSetting?.customHeaderTitle != null && outletSetting!.customHeaderTitle!.isNotEmpty)
-        ? outletSetting.customHeaderTitle!
-        : (outletName ?? config.storeName ?? 'SOLLU POS');
+    final String customHeader = outletSetting?['customHeaderTitle']?.toString() ?? '';
+    final displayName = customHeader.isNotEmpty ? customHeader : (outletName ?? config.storeName ?? 'SOLLU POS');
     bytes += generator.text(
+
       displayName,
       styles: const PosStyles(
         align: PosAlign.center,
@@ -277,20 +276,20 @@ class PrinterService {
       ),
     );
 
-    if ((outletSetting?.showAddress ?? true) && outletAddress != null && outletAddress.isNotEmpty) {
+    if (((outletSetting?['showAddress'] as bool?) ?? true) && outletAddress != null && outletAddress.isNotEmpty) {
       bytes += generator.text(
         outletAddress,
         styles: const PosStyles(align: PosAlign.center),
       );
     }
-    if ((outletSetting?.showPhone ?? true) && outletPhone != null && outletPhone.isNotEmpty) {
+    if (((outletSetting?['showPhone'] as bool?) ?? true) && outletPhone != null && outletPhone.isNotEmpty) {
       bytes += generator.text(
         'Telp: $outletPhone',
         styles: const PosStyles(align: PosAlign.center),
       );
     }
 
-    final headerNote = outletSetting?.headerNotes ?? config.headerNote;
+    final headerNote = (outletSetting?['headerNotes']?.toString()) ?? config.headerNote;
     if (headerNote != null && headerNote.isNotEmpty) {
       bytes += generator.text(
         headerNote,
@@ -298,9 +297,9 @@ class PrinterService {
       );
     }
 
-    if (outletSetting?.wifiInfo != null && outletSetting!.wifiInfo!.isNotEmpty) {
+    if ((outletSetting?['wifiInfo']?.toString()) != null && (((outletSetting?['wifiInfo']?.toString().isNotEmpty) ?? false))) {
       bytes += generator.text(
-        'WiFi: ${outletSetting.wifiInfo}',
+        'WiFi: ${outletSetting?['wifiInfo']}',
         styles: const PosStyles(align: PosAlign.center),
       );
     }
@@ -318,11 +317,11 @@ class PrinterService {
       ),
     ]);
 
-    if ((outletSetting?.showCashierName ?? true) && cashierName != null && cashierName.isNotEmpty) {
+    if (((outletSetting?['showCashierName'] as bool?) ?? true) && cashierName != null && cashierName.isNotEmpty) {
       bytes += generator.text('Kasir: $cashierName');
     }
 
-    if ((outletSetting?.showCustomerName ?? true) && detail.customer != null) {
+    if (((outletSetting?['showCustomerName'] as bool?) ?? true) && detail.customer != null) {
       bytes += generator.text('Pelanggan: ${detail.customer!.name}');
     }
 
@@ -349,7 +348,7 @@ class PrinterService {
       ]);
 
       // Modifiers / Extra
-      if (outletSetting?.showModifiers ?? true) {
+      if ((outletSetting?['showModifiers'] as bool?) ?? true) {
         final modifiers = detail.modifiersByItemId[item.id] ?? [];
         for (final mod in modifiers) {
           final modPrice = mod.price > 0 ? ' (+${CurrencyFormatter.format(mod.price.toInt())})' : '';
@@ -358,7 +357,7 @@ class PrinterService {
       }
 
       // Catatan Item
-      if ((outletSetting?.showItemNotes ?? true) && item.notes != null && item.notes!.isNotEmpty) {
+      if (((outletSetting?['showItemNotes'] as bool?) ?? true) && item.notes != null && item.notes!.isNotEmpty) {
         bytes += generator.text('  * ${item.notes}');
       }
 
@@ -399,7 +398,7 @@ class PrinterService {
       ]);
     }
 
-    if ((outletSetting?.showTaxDetail ?? true) && tx.taxAmount > 0) {
+    if (((outletSetting?['showTaxDetail'] as bool?) ?? true) && tx.taxAmount > 0) {
       bytes += generator.row([
         PosColumn(text: 'Pajak (PB1/PPN)', width: 6),
         PosColumn(
@@ -410,7 +409,7 @@ class PrinterService {
       ]);
     }
 
-    if ((outletSetting?.showServiceCharge ?? true) && tx.serviceChargeAmount > 0) {
+    if (((outletSetting?['showServiceCharge'] as bool?) ?? true) && tx.serviceChargeAmount > 0) {
       bytes += generator.row([
         PosColumn(text: 'Service Charge', width: 6),
         PosColumn(
@@ -462,15 +461,15 @@ class PrinterService {
     bytes += generator.hr();
 
     // 6. Footer
-    final footer = outletSetting?.footerNotes ?? config.footerNote ?? 'Terima Kasih Telah Berbelanja!';
+    final footer = (outletSetting?['footerNotes']?.toString()) ?? config.footerNote ?? 'Terima Kasih Telah Berbelanja!';
     bytes += generator.text(
       footer,
       styles: const PosStyles(align: PosAlign.center, bold: true),
     );
 
-    if (outletSetting?.socialMediaInfo != null && outletSetting!.socialMediaInfo!.isNotEmpty) {
+    if ((outletSetting?['socialMediaInfo']?.toString()) != null && ((outletSetting?['socialMediaInfo']?.toString().isNotEmpty) ?? false)) {
       bytes += generator.text(
-        outletSetting.socialMediaInfo!,
+        outletSetting?['socialMediaInfo']?.toString() ?? '',
         styles: const PosStyles(align: PosAlign.center),
       );
     }
@@ -480,7 +479,7 @@ class PrinterService {
       styles: const PosStyles(align: PosAlign.center),
     );
 
-    if (outletSetting?.showQrCode ?? false) {
+    if ((outletSetting?['showQrCode'] as bool?) ?? false) {
       bytes += generator.qrcode(tx.transactionNumber, size: QRSize.size4);
     }
 
@@ -502,18 +501,12 @@ class PrinterService {
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
     if (config.connectionType == PrinterConnectionType.system) {
       try {
-        final pdfBytes = await ReceiptPdfBuilder.buildTestReceiptPdf(config);
-        final printer = Printer(url: config.address, name: config.name);
-        final bool printSuccess = await Printing.directPrintPdf(
-          printer: printer,
-          onLayout: (format) async => pdfBytes,
-          name: 'Test_Receipt_${config.name}',
+        final bytes = await generateTestReceiptBytes(config);
+        return await DesktopRawPrinter.printRawBytes(
+          printerName: config.name,
+          bytes: bytes,
+          docName: 'Test_Receipt_${config.name}',
         );
-        if (printSuccess) {
-          return (success: true, message: 'Uji cetak berhasil dikirim ke printer OS!');
-        } else {
-          return (success: false, message: 'Gagal mengirim tugas cetak ke printer OS!');
-        }
       } catch (e) {
         debugPrint('Error printing test on desktop OS: $e');
         return (success: false, message: 'Error cetak desktop: $e');
@@ -556,7 +549,7 @@ class PrinterService {
   Future<({bool success, String message})> printTransactionReceipt({
     required TransactionDetailData detail,
     required PrinterConfig config,
-    OutletSetting? outletSetting,
+    Map<String, dynamic>? outletSetting,
     Uint8List? logoBytes,
     String? cashierName,
     String? outletName,
@@ -570,7 +563,7 @@ class PrinterService {
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
     if (config.connectionType == PrinterConnectionType.system) {
       try {
-        final pdfBytes = await ReceiptPdfBuilder.buildTransactionReceiptPdf(
+        final bytes = await generateTransactionReceiptBytes(
           detail: detail,
           config: config,
           outletSetting: outletSetting,
@@ -580,17 +573,11 @@ class PrinterService {
           outletAddress: outletAddress,
           outletPhone: outletPhone,
         );
-        final printer = Printer(url: config.address, name: config.name);
-        final bool printSuccess = await Printing.directPrintPdf(
-          printer: printer,
-          onLayout: (format) async => pdfBytes,
-          name: 'Struk_${detail.transaction.transactionNumber}',
+        return await DesktopRawPrinter.printRawBytes(
+          printerName: config.name,
+          bytes: bytes,
+          docName: 'Struk_${detail.transaction.transactionNumber}',
         );
-        if (printSuccess) {
-          return (success: true, message: 'Struk berhasil dicetak!');
-        } else {
-          return (success: false, message: 'Gagal mencetak struk ke printer OS!');
-        }
       } catch (e) {
         debugPrint('Error printing transaction on desktop OS: $e');
         return (success: false, message: 'Error cetak struk: $e');
@@ -804,7 +791,7 @@ class PrinterService {
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
     if (config.connectionType == PrinterConnectionType.system) {
       try {
-        final pdfBytes = await ReceiptPdfBuilder.buildShiftReportPdf(
+        final bytes = await generateShiftReportBytes(
           summary: summary,
           config: config,
           cashierName: cashierName,
@@ -812,17 +799,11 @@ class PrinterService {
           outletAddress: outletAddress,
           outletPhone: outletPhone,
         );
-        final printer = Printer(url: config.address, name: config.name);
-        final bool printSuccess = await Printing.directPrintPdf(
-          printer: printer,
-          onLayout: (format) async => pdfBytes,
-          name: 'Shift_Report_${DateTime.now().millisecondsSinceEpoch}',
+        return await DesktopRawPrinter.printRawBytes(
+          printerName: config.name,
+          bytes: bytes,
+          docName: 'Shift_Report_${DateTime.now().millisecondsSinceEpoch}',
         );
-        if (printSuccess) {
-          return (success: true, message: 'Laporan shift berhasil dicetak!');
-        } else {
-          return (success: false, message: 'Gagal mencetak laporan ke printer OS!');
-        }
       } catch (e) {
         debugPrint('Error printing shift report on desktop OS: $e');
         return (success: false, message: 'Error cetak laporan: $e');
@@ -930,7 +911,14 @@ class PrinterService {
     }
 
     // C. Mode SYSTEM (Desktop Print Spooler)
-    // Sebagian besar spooler sistem operasi tidak mengizinkan pengiriman raw bytes secara langsung.
-    return (success: false, message: 'Printer mode sistem tidak mendukung fungsi drawer langsung. Harap gunakan koneksi Bluetooth/Network.');
+    if (config.connectionType == PrinterConnectionType.system) {
+      return await DesktopRawPrinter.printRawBytes(
+        printerName: config.name,
+        bytes: bytes,
+        docName: 'Drawer_Kick',
+      );
+    }
+
+    return (success: false, message: 'Tipe koneksi printer tidak dikenali.');
   }
 }

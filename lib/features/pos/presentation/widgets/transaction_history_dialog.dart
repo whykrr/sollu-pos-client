@@ -33,12 +33,20 @@ class TransactionHistoryDialog extends ConsumerWidget {
                   color: SolluColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.receipt_long, color: SolluColors.primary, size: 22),
+                child: const Icon(
+                  Icons.receipt_long,
+                  color: SolluColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
                 'Riwayat Transaksi (F9)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: SolluColors.textDark,
+                ),
               ),
             ],
           ),
@@ -51,7 +59,11 @@ class TransactionHistoryDialog extends ConsumerWidget {
             ),
             child: const Text(
               'Shift Saat Ini',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: SolluColors.textMuted),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: SolluColors.textMuted,
+              ),
             ),
           ),
         ],
@@ -66,11 +78,27 @@ class TransactionHistoryDialog extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.receipt_long_outlined, size: 48, color: SolluColors.neutralMuted.withValues(alpha: 0.5)),
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 48,
+                      color: SolluColors.neutralMuted.withValues(alpha: 0.5),
+                    ),
                     const SizedBox(height: 12),
-                    const Text('Belum ada transaksi di shift ini', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                    const Text(
+                      'Belum ada transaksi di shift ini',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: SolluColors.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    const Text('Transaksi yang diselesaikan kasir akan muncul di sini secara real-time.', style: TextStyle(color: SolluColors.textMuted, fontSize: 12)),
+                    const Text(
+                      'Transaksi yang diselesaikan kasir akan muncul di sini secara real-time.',
+                      style: TextStyle(
+                        color: SolluColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -101,13 +129,26 @@ class TransactionHistoryDialog extends ConsumerWidget {
                               children: [
                                 Text(
                                   tx.transactionNumber,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: SolluColors.textDark),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: SolluColors.textDark,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isPaid ? SolluColors.success.withValues(alpha: 0.15) : SolluColors.warning.withValues(alpha: 0.15),
+                                    color: isPaid
+                                        ? SolluColors.success.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : SolluColors.warning.withValues(
+                                            alpha: 0.15,
+                                          ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -115,21 +156,32 @@ class TransactionHistoryDialog extends ConsumerWidget {
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: isPaid ? SolluColors.success : SolluColors.warning,
+                                      color: isPaid
+                                          ? SolluColors.success
+                                          : SolluColors.warning,
                                     ),
                                   ),
                                 ),
                                 if (tx.isOffline) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: SolluColors.secondary.withValues(alpha: 0.15),
+                                      color: SolluColors.secondary.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: const Text(
                                       'Offline',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SolluColors.secondaryDark),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: SolluColors.secondaryDark,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -138,7 +190,10 @@ class TransactionHistoryDialog extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(
                               'Pukul $timeStr • ${tx.promoName != null ? "Promo: ${tx.promoName} • " : ""}${tx.channel.toUpperCase()}',
-                              style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: SolluColors.textMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -148,7 +203,11 @@ class TransactionHistoryDialog extends ConsumerWidget {
                         children: [
                           Text(
                             CurrencyFormatter.format(tx.total.toInt()),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: SolluColors.textDark),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: SolluColors.textDark,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           ElevatedButton.icon(
@@ -156,42 +215,62 @@ class TransactionHistoryDialog extends ConsumerWidget {
                               final messenger = ScaffoldMessenger.of(context);
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('Mencetak ulang struk ${tx.transactionNumber}...'),
+                                  content: Text(
+                                    'Mencetak ulang struk ${tx.transactionNumber}...',
+                                  ),
                                   duration: const Duration(seconds: 1),
                                   backgroundColor: SolluColors.secondary,
                                 ),
                               );
 
-                              final result = await printTransactionReceiptAction(
-                                ref: ref,
-                                transactionId: tx.id,
-                              );
+                              final result =
+                                  await printTransactionReceiptAction(
+                                    ref: ref,
+                                    transactionId: tx.id,
+                                  );
 
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Row(
                                     children: [
                                       Icon(
-                                        result.success ? Icons.check_circle : Icons.error_outline,
+                                        result.success
+                                            ? Icons.check_circle
+                                            : Icons.error_outline,
                                         color: Colors.white,
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(child: Text(result.message)),
                                     ],
                                   ),
-                                  backgroundColor: result.success ? SolluColors.success : SolluColors.danger,
+                                  backgroundColor: result.success
+                                      ? SolluColors.success
+                                      : SolluColors.danger,
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               );
                             },
                             icon: const Icon(Icons.print_outlined, size: 14),
-                            label: const Text('Cetak Struk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            label: const Text(
+                              'Cetak Struk',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: SolluColors.secondary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
                           ),
                         ],
@@ -209,7 +288,10 @@ class TransactionHistoryDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Tutup (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+          child: const Text(
+            'Tutup (Esc)',
+            style: TextStyle(color: SolluColors.textMuted),
+          ),
         ),
       ],
     );

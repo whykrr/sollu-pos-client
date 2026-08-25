@@ -149,7 +149,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(); // Tutup dialog bayar
-        _showSuccessDialog(tx, method, changeAmount);
+        _showSuccessDialog(tx.transaction, method, changeAmount);
 
         // Buka laci kasir otomatis jika tipe pembayaran tunai (Cash)
         if (isCash) {
@@ -161,7 +161,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         }
 
         // Otomatis cetak struk karena user menekan "Bayar & Cetak Struk"
-        printTransactionReceiptAction(ref: ref, transactionId: tx.id).then((result) {
+        printTransactionReceiptAction(ref: ref, transactionId: tx.transaction.id).then((result) {
           if (!result.success && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

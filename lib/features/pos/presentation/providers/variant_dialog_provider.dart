@@ -10,12 +10,13 @@ class VariantDialogState {
   final Map<String, List<VariantGroupOption>> variantOptions;
   final List<ModifierGroup> modifierGroups;
   final Map<String, List<ModifierOption>> modifierOptions;
-  
+
   // Selected state
   final Map<String, String> selectedVariants; // variantGroupId -> optionId
-  final Map<String, List<String>> selectedModifiers; // modifierGroupId -> list of optionId
+  final Map<String, List<String>>
+  selectedModifiers; // modifierGroupId -> list of optionId
   final double variantPrice; // specific price for selected variant combination
-  
+
   final int qty;
   final String? discountType;
   final double? discountValue;
@@ -76,36 +77,49 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
 
   Future<void> _init() async {
     final db = ref.watch(databaseProvider);
-    final productId = _posItem.isProductMode ? _posItem.id : _posItem.inventory!.productId;
-    
+    final productId = _posItem.isProductMode
+        ? _posItem.id
+        : _posItem.inventory!.productId;
+
     // Fetch variant groups if in product mode
     List<VariantGroup> vGroups = [];
     Map<String, List<VariantGroupOption>> vOptions = {};
     Map<String, String> initialSelectedVariants = {};
 
     if (_posItem.isProductMode) {
-      vGroups = await (db.select(db.variantGroups)..where((tbl) => tbl.productId.equals(productId))).get();
+      vGroups = await (db.select(
+        db.variantGroups,
+      )..where((tbl) => tbl.productId.equals(productId))).get();
       for (var group in vGroups) {
-        final options = await (db.select(db.variantGroupOptions)..where((tbl) => tbl.variantGroupId.equals(group.id))).get();
+        final options = await (db.select(
+          db.variantGroupOptions,
+        )..where((tbl) => tbl.variantGroupId.equals(group.id))).get();
         vOptions[group.id] = options;
         if (options.isNotEmpty) {
-          initialSelectedVariants[group.id] = options.first.id; // Auto select first
+          initialSelectedVariants[group.id] =
+              options.first.id; // Auto select first
         }
       }
     }
 
     // Fetch modifiers
-    final pmg = await (db.select(db.productModifierGroups)..where((tbl) => tbl.productId.equals(productId))).get();
+    final pmg = await (db.select(
+      db.productModifierGroups,
+    )..where((tbl) => tbl.productId.equals(productId))).get();
     final mGroupIds = pmg.map((e) => e.modifierGroupId).toList();
-    
+
     List<ModifierGroup> mGroups = [];
     Map<String, List<ModifierOption>> mOptions = {};
     Map<String, List<String>> initialSelectedModifiers = {};
 
     if (mGroupIds.isNotEmpty) {
-      mGroups = await (db.select(db.modifierGroups)..where((tbl) => tbl.id.isIn(mGroupIds))).get();
+      mGroups = await (db.select(
+        db.modifierGroups,
+      )..where((tbl) => tbl.id.isIn(mGroupIds))).get();
       for (var group in mGroups) {
-        final options = await (db.select(db.modifierOptions)..where((tbl) => tbl.modifierGroupId.equals(group.id))).get();
+        final options = await (db.select(
+          db.modifierOptions,
+        )..where((tbl) => tbl.modifierGroupId.equals(group.id))).get();
         mOptions[group.id] = options;
         initialSelectedModifiers[group.id] = []; // Empty selection initially
       }
@@ -121,22 +135,25 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
       selectedModifiers: initialSelectedModifiers,
       variantPrice: _posItem.price,
     );
-    
+
     if (_posItem.isProductMode && initialSelectedVariants.isNotEmpty) {
       _updateVariantPrice(initialSelectedVariants);
     }
   }
-  
+
   Future<void> _updateVariantPrice(Map<String, String> currentVariants) async {
     if (currentVariants.isEmpty) return;
 
     final db = ref.read(databaseProvider);
-    final productId = _posItem.isProductMode ? _posItem.id : _posItem.inventory!.productId;
+    final productId = _posItem.isProductMode
+        ? _posItem.id
+        : _posItem.inventory!.productId;
     final variantOptionId = currentVariants.values.firstOrNull;
 
     if (variantOptionId != null) {
-      final row = await db.customSelect(
-        '''
+      final row = await db
+          .customSelect(
+            '''
         SELECT COALESCE(
           (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
           (SELECT amount FROM product_prices WHERE product_id = ? AND inventory_item_id IS NULL LIMIT 1),
@@ -148,13 +165,14 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
         WHERE i.product_id = ? AND piv.variant_group_option_id = ?
         LIMIT 1
         ''',
-        variables: [
-          Variable.withString(productId),
-          Variable.withString(productId),
-          Variable.withString(productId),
-          Variable.withString(variantOptionId),
-        ],
-      ).getSingleOrNull();
+            variables: [
+              Variable.withString(productId),
+              Variable.withString(productId),
+              Variable.withString(productId),
+              Variable.withString(variantOptionId),
+            ],
+          )
+          .getSingleOrNull();
 
       if (row != null) {
         final price = row.read<double>('price');
@@ -172,8 +190,10 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
 
   void toggleModifier(String groupId, String optionId, bool isSelected) {
     final group = state.modifierGroups.firstWhere((g) => g.id == groupId);
-    final updatedList = List<String>.from(state.selectedModifiers[groupId] ?? []);
-    
+    final updatedList = List<String>.from(
+      state.selectedModifiers[groupId] ?? [],
+    );
+
     if (isSelected) {
       // Check max limit if radio type or limited checkbox
       if (group.type == 'radio' || group.maxSelected == 1) {
@@ -214,11 +234,12 @@ class VariantDialogNotifier extends Notifier<VariantDialogState> {
         total += opt.price;
       }
     }
-    
+
     return total;
   }
 }
 
-final variantDialogProvider = NotifierProvider.autoDispose.family<VariantDialogNotifier, VariantDialogState, PosItem>((posItem) {
-  return VariantDialogNotifier(posItem);
-});
+final variantDialogProvider = NotifierProvider.autoDispose
+    .family<VariantDialogNotifier, VariantDialogState, PosItem>((posItem) {
+      return VariantDialogNotifier(posItem);
+    });

@@ -12,7 +12,9 @@ class ErrorLoggingService {
   Future<void> logError(dynamic exception, StackTrace? stackTrace) async {
     // Only forward logs to Discord if running in release mode
     if (!kReleaseMode) {
-      debugPrint('ErrorLoggingService: Not in release mode, ignoring error log.');
+      debugPrint(
+        'ErrorLoggingService: Not in release mode, ignoring error log.',
+      );
       debugPrint('Exception: $exception');
       if (stackTrace != null) {
         debugPrint('StackTrace: $stackTrace');
@@ -23,9 +25,9 @@ class ErrorLoggingService {
     try {
       final PackageInfo packageInfo = await PackageInfo.fromPlatform();
       final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      
+
       Map<String, dynamic> deviceData = {};
-      
+
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
         deviceData = {
@@ -52,10 +54,7 @@ class ErrorLoggingService {
         'app_version': '${packageInfo.version} (${packageInfo.buildNumber})',
       };
 
-      await _dioClient.dio.post(
-        '/pos/logs/error',
-        data: payload,
-      );
+      await _dioClient.dio.post('/pos/logs/error', data: payload);
     } catch (e) {
       // Failed to send error log, avoid infinite loop
       debugPrint('Failed to send error log to backend: $e');

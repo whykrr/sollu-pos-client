@@ -24,7 +24,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final dioClient = ref.watch(dioClientProvider);
   final deviceInfoService = ref.watch(deviceInfoServiceProvider);
   final secureStorage = ref.watch(secureStorageProvider);
-  
+
   return AuthRepository(dioClient, deviceInfoService, secureStorage);
 });
 

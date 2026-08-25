@@ -12,13 +12,27 @@ class SolluSpacing {
   static const double xxxl = 32.0;
 
   // EdgeInsets Standar Nyaman
-  static const EdgeInsets containerPadding = EdgeInsets.all(xxl); // 24px untuk dialog & kontainer utama
+  static const EdgeInsets containerPadding = EdgeInsets.all(
+    xxl,
+  ); // 24px untuk dialog & kontainer utama
   static const EdgeInsets cardPadding = EdgeInsets.all(lg); // 16px untuk kartu
-  static const EdgeInsets buttonPadding = EdgeInsets.symmetric(horizontal: xl, vertical: md + 2); // 20px h, 14px v
-  static const EdgeInsets inputPadding = EdgeInsets.symmetric(horizontal: lg, vertical: md + 2); // 16px h, 14px v
-  static const EdgeInsets chipPadding = EdgeInsets.symmetric(horizontal: md, vertical: sm); // 12px h, 8px v
+  static const EdgeInsets buttonPadding = EdgeInsets.symmetric(
+    horizontal: xl,
+    vertical: md + 2,
+  ); // 20px h, 14px v
+  static const EdgeInsets inputPadding = EdgeInsets.symmetric(
+    horizontal: lg,
+    vertical: md + 2,
+  ); // 16px h, 14px v
+  static const EdgeInsets chipPadding = EdgeInsets.symmetric(
+    horizontal: md,
+    vertical: sm,
+  ); // 12px h, 8px v
   static const EdgeInsets dialogPadding = EdgeInsets.all(xxl); // 24px
-  static const EdgeInsets screenPadding = EdgeInsets.symmetric(horizontal: xxxl, vertical: xl); // 32px h, 20px v
+  static const EdgeInsets screenPadding = EdgeInsets.symmetric(
+    horizontal: xxxl,
+    vertical: xl,
+  ); // 32px h, 20px v
 
   // Radius Standar (Sollu Rules: 8px - 16px rounded corners)
   static final BorderRadius radiusSm = BorderRadius.circular(8);

@@ -12,15 +12,9 @@ class AutoSyncState {
   final AutoSyncStatus status;
   final String? message;
 
-  const AutoSyncState({
-    this.status = AutoSyncStatus.idle,
-    this.message,
-  });
+  const AutoSyncState({this.status = AutoSyncStatus.idle, this.message});
 
-  AutoSyncState copyWith({
-    AutoSyncStatus? status,
-    String? message,
-  }) {
+  AutoSyncState copyWith({AutoSyncStatus? status, String? message}) {
     return AutoSyncState(
       status: status ?? this.status,
       message: message ?? this.message,
@@ -75,7 +69,7 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
         final shiftRepo = ref.read(shiftRepositoryProvider);
         await shiftRepo.syncPendingShifts();
         await shiftRepo.syncPendingCashLogs();
-        
+
         final txRepo = ref.read(transactionRepositoryProvider);
         final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
         if (unsyncedCount > 10) {
@@ -88,15 +82,18 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
   Future<void> forceSync() async {
     if (state.status == AutoSyncStatus.syncing) return;
 
-    state = state.copyWith(status: AutoSyncStatus.syncing, message: 'Menyinkronkan data...');
+    state = state.copyWith(
+      status: AutoSyncStatus.syncing,
+      message: 'Menyinkronkan data...',
+    );
 
     try {
       final syncRepository = ref.read(syncRepositoryProvider);
       await syncRepository.syncMasterData();
-      
+
       // Update the timestamp so it knows when the last sync happened
       await ref.read(lastSyncProvider.notifier).updateTimestamp();
-      
+
       // Optionally sync employees as well
       try {
         final employeeRepository = ref.read(employeeRepositoryProvider);
@@ -105,8 +102,11 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
         // Ignore employee sync error as it's secondary
       }
 
-      state = state.copyWith(status: AutoSyncStatus.success, message: 'Sinkronisasi selesai.');
-      
+      state = state.copyWith(
+        status: AutoSyncStatus.success,
+        message: 'Sinkronisasi selesai.',
+      );
+
       // Auto dismiss success state after 3 seconds
       Timer(const Duration(seconds: 3), () {
         if (state.status == AutoSyncStatus.success) {
@@ -114,8 +114,11 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
         }
       });
     } catch (e) {
-      state = state.copyWith(status: AutoSyncStatus.error, message: 'Sinkronisasi gagal: $e');
-      
+      state = state.copyWith(
+        status: AutoSyncStatus.error,
+        message: 'Sinkronisasi gagal: $e',
+      );
+
       // Auto dismiss error state after 5 seconds
       Timer(const Duration(seconds: 5), () {
         if (state.status == AutoSyncStatus.error) {
@@ -124,10 +127,12 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
       });
     }
   }
-  
+
   void dismiss() {
     state = state.copyWith(status: AutoSyncStatus.idle);
   }
 }
 
-final autoSyncProvider = NotifierProvider<AutoSyncNotifier, AutoSyncState>(AutoSyncNotifier.new);
+final autoSyncProvider = NotifierProvider<AutoSyncNotifier, AutoSyncState>(
+  AutoSyncNotifier.new,
+);

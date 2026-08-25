@@ -21,10 +21,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/dashboard',
         pageBuilder: (context, state) => CustomTransitionPage(
@@ -65,18 +62,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'printer',
             pageBuilder: (context, state) => CustomTransitionPage(
               child: const PrinterSettingsScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
             ),
           ),
           GoRoute(
             path: 'payment-methods',
             pageBuilder: (context, state) => CustomTransitionPage(
               child: const PaymentMethodSettingsScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
             ),
           ),
         ],

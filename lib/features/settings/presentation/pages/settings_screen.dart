@@ -58,21 +58,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             content: Row(
               children: [
                 Icon(
-                  _showHiddenDeviceInfo ? Icons.visibility : Icons.visibility_off,
+                  _showHiddenDeviceInfo
+                      ? Icons.visibility
+                      : Icons.visibility_off,
                   color: Colors.white,
                 ),
                 const SizedBox(width: 12),
-                Text(_showHiddenDeviceInfo
-                    ? 'Mode Pengembang: Info Perangkat & Token ditampilkan!'
-                    : 'Info Perangkat & Token disembunyikan.'),
+                Text(
+                  _showHiddenDeviceInfo
+                      ? 'Mode Pengembang: Info Perangkat & Token ditampilkan!'
+                      : 'Info Perangkat & Token disembunyikan.',
+                ),
               ],
             ),
-            backgroundColor:
-                _showHiddenDeviceInfo ? SolluColors.success : SolluColors.info,
+            backgroundColor: _showHiddenDeviceInfo
+                ? SolluColors.success
+                : SolluColors.info,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -88,7 +94,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.space) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.space) {
           _onSpacePressed();
         }
         return KeyEventResult.ignored;
@@ -103,187 +110,78 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           backgroundColor: SolluColors.surface,
           elevation: 0,
         ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const Text(
-                'Pengaturan Umum & Perangkat',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: SolluColors.textDark,
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+              ],
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                const Text(
+                  'Pengaturan Umum & Perangkat',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
                   ),
-                  child: const Icon(Icons.sync, color: Colors.green),
                 ),
-                title: const Text(
-                  'Sinkronisasi Data',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Builder(
-                  builder: (context) {
-                    final lastSync = ref.watch(lastSyncProvider);
-                    return Text(
-                      'Terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
-                      style: TextStyle(
-                        color: lastSync != null ? SolluColors.success : SolluColors.textMuted,
-                        fontWeight: lastSync != null ? FontWeight.w500 : FontWeight.normal,
-                      ),
-                    );
-                  },
-                ),
-                trailing: _isSyncing 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right),
-                onTap: _isSyncing ? null : _syncData,
-              ),
-              const Divider(height: 24),
-              Builder(
-                builder: (context) {
-                  final printerConfig = ref.watch(selectedPrinterProvider);
-                  return ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: SolluColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.print, color: SolluColors.primary),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    title: const Text(
-                      'Pengaturan Printer',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      printerConfig != null
-                          ? '${printerConfig.name} (${printerConfig.paperSize.label.split(' ').first})'
-                          : 'Kelola koneksi printer Bluetooth & Thermal',
-                      style: TextStyle(
-                        color: printerConfig != null ? SolluColors.primary : null,
-                        fontWeight: printerConfig != null ? FontWeight.w500 : null,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/settings/printer'),
-                  );
-                },
-              ),
-              const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    child: const Icon(Icons.sync, color: Colors.green),
                   ),
-                  child: const Icon(Icons.payments_outlined, color: Colors.teal),
-                ),
-                title: const Text(
-                  'Metode Pembayaran',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('Atur urutan tombol pembayaran kasir di perangkat ini'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/payment-methods'),
-              ),
-              const Divider(height: 24),
-              Builder(
-                builder: (context) {
-                  final activeEmployee = ref.watch(activeEmployeeProvider);
-                  return ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.password, color: Colors.orange),
-                    ),
-                    title: const Text(
-                      'Ubah PIN',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      activeEmployee != null
-                          ? 'PIN Pengguna: ${activeEmployee['name']} (${activeEmployee['role']})'
-                          : 'Masuk untuk mengubah PIN akun Anda',
-                      style: TextStyle(
-                        color: activeEmployee != null ? SolluColors.primary : null,
-                        fontWeight: activeEmployee != null ? FontWeight.w500 : null,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      if (activeEmployee == null) {
-                        EmployeeLoginDialog.show(context);
-                      } else {
-                        ChangePinDialog.show(context);
-                      }
+                  title: const Text(
+                    'Sinkronisasi Data',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Builder(
+                    builder: (context) {
+                      final lastSync = ref.watch(lastSyncProvider);
+                      return Text(
+                        'Terakhir: ${LastSyncNotifier.formatRelative(lastSync)}',
+                        style: TextStyle(
+                          color: lastSync != null
+                              ? SolluColors.success
+                              : SolluColors.textMuted,
+                          fontWeight: lastSync != null
+                              ? FontWeight.w500
+                              : FontWeight.normal,
+                        ),
+                      );
                     },
-                  );
-                },
-              ),
-              const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.dashboard_customize, color: Colors.purple),
+                  trailing: _isSyncing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: _isSyncing ? null : _syncData,
                 ),
-                title: const Text(
-                  'Mode Tampilan Kasir',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('Pilih cara menampilkan produk di layar kasir'),
-                trailing: DropdownButton<String>(
-                  value: ref.watch(posDisplayModeProvider),
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 'product', child: Text('Berbasis Produk')),
-                    DropdownMenuItem(value: 'variant', child: Text('Berbasis Varian')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      ref.read(posDisplayModeProvider.notifier).setMode(val);
-                    }
-                  },
-                ),
-              ),
-              if (!kIsWeb && Platform.isWindows) ...[
                 const Divider(height: 24),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final isKiosk = ref.watch(fullscreenKioskProvider);
+                Builder(
+                  builder: (context) {
+                    final printerConfig = ref.watch(selectedPrinterProvider);
                     return ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(10),
@@ -291,86 +189,242 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           color: SolluColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.fullscreen, color: SolluColors.primary),
+                        child: const Icon(
+                          Icons.print,
+                          color: SolluColors.primary,
+                        ),
                       ),
                       title: const Text(
-                        'Mode Layar Penuh Kiosk (Windows)',
+                        'Pengaturan Printer',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      subtitle: const Text(
-                        'Kunci aplikasi kasir dalam layar penuh tanpa jendela OS (Shortcut: F11)',
+                      subtitle: Text(
+                        printerConfig != null
+                            ? '${printerConfig.name} (${printerConfig.paperSize.label.split(' ').first})'
+                            : 'Kelola koneksi printer Bluetooth & Thermal',
+                        style: TextStyle(
+                          color: printerConfig != null
+                              ? SolluColors.primary
+                              : null,
+                          fontWeight: printerConfig != null
+                              ? FontWeight.w500
+                              : null,
+                        ),
                       ),
-                      trailing: Switch.adaptive(
-                        value: isKiosk,
-                        activeTrackColor: SolluColors.primary,
-                        activeThumbColor: Colors.white,
-                        onChanged: (val) async {
-                          await ref.read(fullscreenKioskProvider.notifier).toggleKiosk(val);
-                          await WindowService.setKioskMode(val);
-                        },
-                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/settings/printer'),
                     );
                   },
                 ),
-              ],
-              if (showDeviceInfo) ...[
                 const Divider(height: 24),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Colors.teal.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.info_outline, color: Colors.blue),
+                    child: const Icon(
+                      Icons.payments_outlined,
+                      color: Colors.teal,
+                    ),
                   ),
                   title: const Text(
-                    'Info Perangkat & Token',
+                    'Metode Pembayaran',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: const Text('Lihat token Sanctum, Device UUID, & Hardware Signature'),
+                  subtitle: const Text(
+                    'Atur urutan tombol pembayaran kasir di perangkat ini',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showDeviceInfoDialog(context),
+                  onTap: () => context.push('/settings/payment-methods'),
                 ),
-              ],
-              const Divider(height: 24),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                const Divider(height: 24),
+                Builder(
+                  builder: (context) {
+                    final activeEmployee = ref.watch(activeEmployeeProvider);
+                    return ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.password, color: Colors.orange),
+                      ),
+                      title: const Text(
+                        'Ubah PIN',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        activeEmployee != null
+                            ? 'PIN Pengguna: ${activeEmployee['name']} (${activeEmployee['role']})'
+                            : 'Masuk untuk mengubah PIN akun Anda',
+                        style: TextStyle(
+                          color: activeEmployee != null
+                              ? SolluColors.primary
+                              : null,
+                          fontWeight: activeEmployee != null
+                              ? FontWeight.w500
+                              : null,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        if (activeEmployee == null) {
+                          EmployeeLoginDialog.show(context);
+                        } else {
+                          ChangePinDialog.show(context);
+                        }
+                      },
+                    );
+                  },
+                ),
+                const Divider(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.dashboard_customize,
+                      color: Colors.purple,
+                    ),
                   ),
-                  child: const Icon(Icons.verified, color: Colors.blueGrey),
-                ),
-                title: const Text(
-                  'Versi Aplikasi',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text('${AppConfig.appName} • ${AppConfig.fullVersionString} (${AppConfig.appEnv})'),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: SolluColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
+                  title: const Text(
+                    'Mode Tampilan Kasir',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  child: Text(
-                    'v${AppConfig.appVersion}',
-                    style: const TextStyle(
-                      color: SolluColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  subtitle: const Text(
+                    'Pilih cara menampilkan produk di layar kasir',
+                  ),
+                  trailing: DropdownButton<String>(
+                    value: ref.watch(posDisplayModeProvider),
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'product',
+                        child: Text('Berbasis Produk'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'variant',
+                        child: Text('Berbasis Varian'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(posDisplayModeProvider.notifier).setMode(val);
+                      }
+                    },
+                  ),
+                ),
+                if (!kIsWeb && Platform.isWindows) ...[
+                  const Divider(height: 24),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final isKiosk = ref.watch(fullscreenKioskProvider);
+                      return ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: SolluColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.fullscreen,
+                            color: SolluColors.primary,
+                          ),
+                        ),
+                        title: const Text(
+                          'Mode Layar Penuh Kiosk (Windows)',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: const Text(
+                          'Kunci aplikasi kasir dalam layar penuh tanpa jendela OS (Shortcut: F11)',
+                        ),
+                        trailing: Switch.adaptive(
+                          value: isKiosk,
+                          activeTrackColor: SolluColors.primary,
+                          activeThumbColor: Colors.white,
+                          onChanged: (val) async {
+                            await ref
+                                .read(fullscreenKioskProvider.notifier)
+                                .toggleKiosk(val);
+                            await WindowService.setKioskMode(val);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                if (showDeviceInfo) ...[
+                  const Divider(height: 24),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.info_outline, color: Colors.blue),
+                    ),
+                    title: const Text(
+                      'Info Perangkat & Token',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Lihat token Sanctum, Device UUID, & Hardware Signature',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showDeviceInfoDialog(context),
+                  ),
+                ],
+                const Divider(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.verified, color: Colors.blueGrey),
+                  ),
+                  title: const Text(
+                    'Versi Aplikasi',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${AppConfig.appName} • ${AppConfig.fullVersionString} (${AppConfig.appEnv})',
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SolluColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'v${AppConfig.appVersion}',
+                      style: const TextStyle(
+                        color: SolluColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _syncData() async {
     setState(() {
@@ -381,17 +435,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // Sinkronisasi data karyawan
       final employeeRepository = ref.read(employeeRepositoryProvider);
       await employeeRepository.syncEmployees();
-      
+
       // Sinkronisasi data master (Produk, Inventory, dll)
       final syncRepository = ref.read(syncRepositoryProvider);
       await syncRepository.syncMasterData();
-      
+
       // Refresh state yang diperlukan
       ref.invalidate(employeeListProvider);
-      
+
       // Simpan timestamp sinkronisasi terakhir
       ref.read(lastSyncProvider.notifier).updateTimestamp();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -439,11 +493,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoItem('Bearer Token (Sanctum)', token ?? 'Belum ada token'),
+              _buildInfoItem(
+                'Bearer Token (Sanctum)',
+                token ?? 'Belum ada token',
+              ),
               const SizedBox(height: 12),
               _buildInfoItem('Device UUID', uuid ?? 'Belum tergenerasi'),
               const SizedBox(height: 12),
-              _buildInfoItem('Hardware Signature (SHA-256)', signature ?? 'Belum tergenerasi'),
+              _buildInfoItem(
+                'Hardware Signature (SHA-256)',
+                signature ?? 'Belum tergenerasi',
+              ),
             ],
           ),
         ),
@@ -463,7 +523,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            color: Colors.grey,
+          ),
         ),
         const SizedBox(height: 4),
         Container(

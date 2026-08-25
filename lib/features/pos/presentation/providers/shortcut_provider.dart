@@ -10,4 +10,6 @@ class ShortcutNotifier extends Notifier<String?> {
   }
 }
 
-final shortcutProvider = NotifierProvider<ShortcutNotifier, String?>(ShortcutNotifier.new);
+final shortcutProvider = NotifierProvider<ShortcutNotifier, String?>(
+  ShortcutNotifier.new,
+);

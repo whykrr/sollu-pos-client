@@ -14,7 +14,8 @@ class AuthRepository {
   Future<bool> connectDevice(String otp) async {
     try {
       final deviceUuid = await _deviceInfoService.getOrCreateDeviceUuid();
-      final hardwareSignature = await _deviceInfoService.getOrCreateHardwareSignature();
+      final hardwareSignature = await _deviceInfoService
+          .getOrCreateHardwareSignature();
       final appVersion = await _deviceInfoService.getAppVersion();
       final platformType = _deviceInfoService.getPlatformType();
 
@@ -39,7 +40,9 @@ class AuthRepository {
       }
       return false;
     } on DioException catch (e) {
-      throw Exception('Failed to connect device: ${e.response?.data['message'] ?? e.message}');
+      throw Exception(
+        'Failed to connect device: ${e.response?.data['message'] ?? e.message}',
+      );
     } catch (e) {
       throw Exception('An unexpected error occurred: $e');
     }
@@ -50,7 +53,7 @@ class AuthRepository {
     try {
       final appVersion = await _deviceInfoService.getAppVersion();
       final platformType = _deviceInfoService.getPlatformType();
-      
+
       final response = await _dioClient.dio.get(
         '/device/status',
         queryParameters: {
@@ -63,7 +66,7 @@ class AuthRepository {
       return false;
     }
   }
-  
+
   /// Disconnect/Logout device
   Future<void> disconnect() async {
     await _secureStorage.clearAll();

@@ -38,7 +38,8 @@ class DeviceInfoService {
     try {
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
-        hardwareData = '${androidInfo.board}-${androidInfo.model}-${androidInfo.id}';
+        hardwareData =
+            '${androidInfo.board}-${androidInfo.model}-${androidInfo.id}';
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfoPlugin.iosInfo;
         hardwareData = iosInfo.identifierForVendor ?? '';
@@ -52,7 +53,8 @@ class DeviceInfoService {
         final linuxInfo = await _deviceInfoPlugin.linuxInfo;
         hardwareData = linuxInfo.machineId ?? '';
       } else {
-        hardwareData = 'unknown-device-${DateTime.now().millisecondsSinceEpoch}';
+        hardwareData =
+            'unknown-device-${DateTime.now().millisecondsSinceEpoch}';
       }
     } catch (e) {
       hardwareData = 'fallback-device-${DateTime.now().millisecondsSinceEpoch}';
@@ -60,12 +62,12 @@ class DeviceInfoService {
 
     // Fallback if hardware data is somehow empty
     if (hardwareData.isEmpty || hardwareData == 'null-null-null') {
-       hardwareData = 'fallback-device-${DateTime.now().millisecondsSinceEpoch}';
+      hardwareData = 'fallback-device-${DateTime.now().millisecondsSinceEpoch}';
     }
 
     final bytes = utf8.encode(hardwareData);
     final digest = sha256.convert(bytes);
-    
+
     return digest.toString();
   }
 

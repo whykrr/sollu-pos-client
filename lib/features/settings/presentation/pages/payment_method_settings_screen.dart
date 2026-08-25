@@ -70,8 +70,9 @@ class _PaymentMethodSettingsScreenState
           backgroundColor: SolluColors.info,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -100,9 +101,7 @@ class _PaymentMethodSettingsScreenState
             TextButton.icon(
               icon: const Icon(Icons.restart_alt, size: 18),
               label: const Text('Reset Urutan'),
-              style: TextButton.styleFrom(
-                foregroundColor: SolluColors.danger,
-              ),
+              style: TextButton.styleFrom(foregroundColor: SolluColors.danger),
               onPressed: _handleReset,
             ),
           const SizedBox(width: 8),
@@ -110,9 +109,8 @@ class _PaymentMethodSettingsScreenState
       ),
       body: methodsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text('Gagal memuat metode pembayaran: $err'),
-        ),
+        error: (err, stack) =>
+            Center(child: Text('Gagal memuat metode pembayaran: $err')),
         data: (methods) {
           if (methods.isEmpty) {
             return const Center(
@@ -138,8 +136,11 @@ class _PaymentMethodSettingsScreenState
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline,
-                        color: SolluColors.primary, size: 20),
+                    const Icon(
+                      Icons.info_outline,
+                      color: SolluColors.primary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -176,7 +177,9 @@ class _PaymentMethodSettingsScreenState
                 child: ReorderableListView.builder(
                   buildDefaultDragHandles: false,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   itemCount: _currentList!.length,
                   onReorder: _handleReorder,
                   itemBuilder: (context, index) {
@@ -191,7 +194,9 @@ class _PaymentMethodSettingsScreenState
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         child: Row(
                           children: [
                             // Nomor Urut
@@ -199,7 +204,9 @@ class _PaymentMethodSettingsScreenState
                               width: 26,
                               height: 26,
                               decoration: BoxDecoration(
-                                color: SolluColors.primary.withValues(alpha: 0.1),
+                                color: SolluColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -259,7 +266,9 @@ class _PaymentMethodSettingsScreenState
                               index: index,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 6),
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: SolluColors.background,
                                   borderRadius: BorderRadius.circular(8),

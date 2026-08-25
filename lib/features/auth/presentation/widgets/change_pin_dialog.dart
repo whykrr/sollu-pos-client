@@ -70,7 +70,9 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
             ),
             backgroundColor: SolluColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -96,7 +98,11 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_outline, size: 48, color: SolluColors.warning),
+              const Icon(
+                Icons.lock_outline,
+                size: 48,
+                color: SolluColors.warning,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Belum Ada Karyawan Masuk',
@@ -114,7 +120,9 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: SolluColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: const Text('Tutup'),
               ),
@@ -147,7 +155,11 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                       color: SolluColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.password, color: SolluColors.primary, size: 24),
+                    child: const Icon(
+                      Icons.password,
+                      color: SolluColors.primary,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -175,7 +187,9 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: SolluColors.textMuted),
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -185,20 +199,33 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
 
               if (_errorMessage != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: SolluColors.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: SolluColors.danger.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: SolluColors.danger.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: SolluColors.danger, size: 18),
+                      const Icon(
+                        Icons.error_outline,
+                        color: SolluColors.danger,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(fontSize: 12, color: SolluColors.danger, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: SolluColors.danger,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -220,14 +247,24 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   counterText: '',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureCurrent ? Icons.visibility_off : Icons.visibility, size: 20),
-                    onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                    icon: Icon(
+                      _obscureCurrent ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscureCurrent = !_obscureCurrent),
                   ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'PIN saat ini wajib diisi';
+                  if (val == null || val.isEmpty)
+                    return 'PIN saat ini wajib diisi';
                   if (val.length != 6) return 'PIN harus 6 digit angka';
                   return null;
                 },
@@ -247,11 +284,19 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   counterText: '',
                   prefixIcon: const Icon(Icons.vpn_key_outlined),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility, size: 20),
+                    icon: Icon(
+                      _obscureNew ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
                     onPressed: () => setState(() => _obscureNew = !_obscureNew),
                   ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
                 validator: (val) {
                   if (val == null || val.isEmpty) return 'PIN baru wajib diisi';
@@ -274,15 +319,26 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   counterText: '',
                   prefixIcon: const Icon(Icons.check_circle_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, size: 20),
-                    onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    icon: Icon(
+                      _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Konfirmasi PIN baru wajib diisi';
-                  if (val != _newPinController.text) return 'Konfirmasi PIN tidak cocok dengan PIN baru';
+                  if (val == null || val.isEmpty)
+                    return 'Konfirmasi PIN baru wajib diisi';
+                  if (val != _newPinController.text)
+                    return 'Konfirmasi PIN tidak cocok dengan PIN baru';
                   return null;
                 },
               ),
@@ -293,8 +349,13 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                    child: const Text('Batal', style: TextStyle(color: SolluColors.textMuted)),
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(color: SolluColors.textMuted),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
@@ -302,17 +363,27 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: SolluColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     icon: _isLoading
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.save, size: 18),
-                    label: Text(_isLoading ? 'Menyimpan...' : 'Simpan PIN Baru'),
+                    label: Text(
+                      _isLoading ? 'Menyimpan...' : 'Simpan PIN Baru',
+                    ),
                   ),
                 ],
               ),

@@ -1,11 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/outlet_settings_service.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferencesProvider must be overridden in main.dart');
+  throw UnimplementedError(
+    'sharedPreferencesProvider must be overridden in main.dart',
+  );
 });
 
-final posDisplayModeProvider = NotifierProvider<PosDisplayModeNotifier, String>(PosDisplayModeNotifier.new);
+final outletSettingsServiceProvider = Provider<OutletSettingsService>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return OutletSettingsService(prefs);
+});
+
+final posDisplayModeProvider = NotifierProvider<PosDisplayModeNotifier, String>(
+  PosDisplayModeNotifier.new,
+);
 
 class PosDisplayModeNotifier extends Notifier<String> {
   static const _key = 'pos_display_mode';
@@ -25,7 +35,9 @@ class PosDisplayModeNotifier extends Notifier<String> {
   }
 }
 
-final lastSyncProvider = NotifierProvider<LastSyncNotifier, DateTime?>(LastSyncNotifier.new);
+final lastSyncProvider = NotifierProvider<LastSyncNotifier, DateTime?>(
+  LastSyncNotifier.new,
+);
 
 class LastSyncNotifier extends Notifier<DateTime?> {
   static const _key = 'last_sync_at';
@@ -70,7 +82,9 @@ class LastSyncNotifier extends Notifier<DateTime?> {
   }
 }
 
-final fullscreenKioskProvider = NotifierProvider<FullscreenKioskNotifier, bool>(FullscreenKioskNotifier.new);
+final fullscreenKioskProvider = NotifierProvider<FullscreenKioskNotifier, bool>(
+  FullscreenKioskNotifier.new,
+);
 
 class FullscreenKioskNotifier extends Notifier<bool> {
   static const _key = 'is_fullscreen_kiosk';

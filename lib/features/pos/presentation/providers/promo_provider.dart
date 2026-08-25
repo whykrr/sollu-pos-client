@@ -20,7 +20,7 @@ class AppliedDiscount {
 
   double calculateDiscount(double subtotal) {
     if (subtotal <= 0) return 0.0;
-    
+
     double disc = 0.0;
     if (type == 'percentage') {
       disc = (subtotal * value) / 100.0;
@@ -60,7 +60,8 @@ class AppliedDiscountNotifier extends Notifier<AppliedDiscount?> {
   }) {
     state = AppliedDiscount(
       promoId: null,
-      name: name ?? (type == 'percentage' ? 'Diskon $value%' : 'Potongan Harga'),
+      name:
+          name ?? (type == 'percentage' ? 'Diskon $value%' : 'Potongan Harga'),
       type: type,
       value: value,
       isManual: true,
@@ -72,4 +73,7 @@ class AppliedDiscountNotifier extends Notifier<AppliedDiscount?> {
   }
 }
 
-final appliedDiscountProvider = NotifierProvider<AppliedDiscountNotifier, AppliedDiscount?>(AppliedDiscountNotifier.new);
+final appliedDiscountProvider =
+    NotifierProvider<AppliedDiscountNotifier, AppliedDiscount?>(
+      AppliedDiscountNotifier.new,
+    );

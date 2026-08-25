@@ -41,24 +41,26 @@ class LocalPaymentMethodOrderNotifier extends Notifier<List<String>> {
 
 final localPaymentMethodOrderProvider =
     NotifierProvider<LocalPaymentMethodOrderNotifier, List<String>>(
-  LocalPaymentMethodOrderNotifier.new,
-);
+      LocalPaymentMethodOrderNotifier.new,
+    );
 
 /// Provider metode pembayaran terurut:
 /// Menggunakan kolom localSortOrder jika dikustomisasi per device, fallback ke sortOrder pusat.
-final orderedActivePaymentMethodsProvider = StreamProvider<List<PaymentMethod>>((ref) {
-  final repository = ref.watch(transactionRepositoryProvider);
+final orderedActivePaymentMethodsProvider = StreamProvider<List<PaymentMethod>>(
+  (ref) {
+    final repository = ref.watch(transactionRepositoryProvider);
 
-  return repository.watchActivePaymentMethods().map((methods) {
-    final sorted = List<PaymentMethod>.from(methods);
-    sorted.sort((a, b) {
-      final orderA = a.localSortOrder ?? a.sortOrder;
-      final orderB = b.localSortOrder ?? b.sortOrder;
-      final compareOrder = orderA.compareTo(orderB);
-      if (compareOrder != 0) return compareOrder;
-      return a.name.compareTo(b.name);
+    return repository.watchActivePaymentMethods().map((methods) {
+      final sorted = List<PaymentMethod>.from(methods);
+      sorted.sort((a, b) {
+        final orderA = a.localSortOrder ?? a.sortOrder;
+        final orderB = b.localSortOrder ?? b.sortOrder;
+        final compareOrder = orderA.compareTo(orderB);
+        if (compareOrder != 0) return compareOrder;
+        return a.name.compareTo(b.name);
+      });
+
+      return sorted;
     });
-
-    return sorted;
-  });
-});
+  },
+);

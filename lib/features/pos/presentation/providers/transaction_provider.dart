@@ -41,7 +41,9 @@ final customersProvider = StreamProvider<List<Customer>>((ref) {
 });
 
 /// Stream transaksi untuk shift yang sedang aktif
-final currentShiftTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
+final currentShiftTransactionsProvider = StreamProvider<List<Transaction>>((
+  ref,
+) {
   final repository = ref.watch(transactionRepositoryProvider);
   final activeShiftAsync = ref.watch(activeShiftProvider);
 
@@ -103,7 +105,10 @@ class TransactionFilterNotifier extends Notifier<TransactionFilterState> {
   }
 }
 
-final transactionFilterProvider = NotifierProvider<TransactionFilterNotifier, TransactionFilterState>(TransactionFilterNotifier.new);
+final transactionFilterProvider =
+    NotifierProvider<TransactionFilterNotifier, TransactionFilterState>(
+      TransactionFilterNotifier.new,
+    );
 
 /// Stream seluruh transaksi dengan filter pencarian dan tanggal
 final allTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
@@ -117,19 +122,22 @@ final allTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
   );
 });
 
-final paymentMethodSummaryProvider = StreamProvider<List<PaymentMethodSummary>>((ref) {
-  final repository = ref.watch(transactionRepositoryProvider);
-  final filter = ref.watch(transactionFilterProvider);
-  
-  return repository.watchPaymentMethodSummary(
-    searchQuery: filter.query.trim().isEmpty ? null : filter.query.trim(),
-    date: filter.date,
-    channel: filter.channel,
-  );
-});
+final paymentMethodSummaryProvider = StreamProvider<List<PaymentMethodSummary>>(
+  (ref) {
+    final repository = ref.watch(transactionRepositoryProvider);
+    final filter = ref.watch(transactionFilterProvider);
+
+    return repository.watchPaymentMethodSummary(
+      searchQuery: filter.query.trim().isEmpty ? null : filter.query.trim(),
+      date: filter.date,
+      channel: filter.channel,
+    );
+  },
+);
 
 /// Future provider untuk rincian 1 transaksi
-final transactionDetailProvider = FutureProvider.family<TransactionDetailData?, String>((ref, transactionId) {
-  final repository = ref.watch(transactionRepositoryProvider);
-  return repository.getTransactionDetails(transactionId);
-});
+final transactionDetailProvider =
+    FutureProvider.family<TransactionDetailData?, String>((ref, transactionId) {
+      final repository = ref.watch(transactionRepositoryProvider);
+      return repository.getTransactionDetails(transactionId);
+    });

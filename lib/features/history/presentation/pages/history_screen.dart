@@ -27,21 +27,29 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       context: context,
       builder: (ctx) => Consumer(
         builder: (context, ref, _) {
-          final detailAsync = ref.watch(transactionDetailProvider(transactionId));
+          final detailAsync = ref.watch(
+            transactionDetailProvider(transactionId),
+          );
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             contentPadding: const EdgeInsets.all(24),
             content: SizedBox(
               width: 500,
               child: detailAsync.when(
                 data: (detail) {
                   if (detail == null) {
-                    return const Center(child: Text('Data transaksi tidak ditemukan.'));
+                    return const Center(
+                      child: Text('Data transaksi tidak ditemukan.'),
+                    );
                   }
 
                   final tx = detail.transaction;
-                  final timeStr = DateFormat('dd MMM yyyy, HH:mm:ss').format(tx.createdAt);
+                  final timeStr = DateFormat(
+                    'dd MMM yyyy, HH:mm:ss',
+                  ).format(tx.createdAt);
 
                   return SingleChildScrollView(
                     child: Column(
@@ -56,21 +64,40 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               children: [
                                 Text(
                                   tx.transactionNumber,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: SolluColors.textDark,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(timeStr, style: const TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                                Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: SolluColors.textMuted,
+                                  ),
+                                ),
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: SolluColors.success.withValues(alpha: 0.15),
+                                color: SolluColors.success.withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 tx.paymentStatus.toUpperCase(),
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: SolluColors.success),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: SolluColors.success,
+                                ),
                               ),
                             ),
                           ],
@@ -78,7 +105,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         const SizedBox(height: 16),
                         const Divider(color: SolluColors.neutral),
                         const SizedBox(height: 12),
-                        const Text('Daftar Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark)),
+                        const Text(
+                          'Daftar Produk',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         ...detail.items.map((item) {
                           final mods = detail.modifiersByItemId[item.id] ?? [];
@@ -88,26 +122,43 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         '${item.qty.toInt()}x ${item.productName}',
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: SolluColors.textDark),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          color: SolluColors.textDark,
+                                        ),
                                       ),
                                     ),
                                     Text(
-                                      CurrencyFormatter.format(item.subtotal.toInt()),
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark),
+                                      CurrencyFormatter.format(
+                                        item.subtotal.toInt(),
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: SolluColors.textDark,
+                                      ),
                                     ),
                                   ],
                                 ),
                                 if (mods.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(left: 14, top: 2),
+                                    padding: const EdgeInsets.only(
+                                      left: 14,
+                                      top: 2,
+                                    ),
                                     child: Text(
                                       'Modifier: ${mods.map((m) => m.modifierName).join(", ")}',
-                                      style: const TextStyle(fontSize: 11, color: SolluColors.textMuted),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: SolluColors.textMuted,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -118,7 +169,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         const Divider(color: SolluColors.neutral),
                         const SizedBox(height: 12),
                         // Financial Summary
-                        _buildDetailRow('Subtotal', CurrencyFormatter.format(tx.subtotal.toInt())),
+                        _buildDetailRow(
+                          'Subtotal',
+                          CurrencyFormatter.format(tx.subtotal.toInt()),
+                        ),
                         if (tx.discountAmount > 0)
                           _buildDetailRow(
                             'Diskon ${tx.promoName != null ? "(${tx.promoName})" : ""}',
@@ -126,19 +180,38 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             isGreen: true,
                           ),
                         if (tx.serviceChargeAmount > 0)
-                          _buildDetailRow('Service Charge', CurrencyFormatter.format(tx.serviceChargeAmount.toInt())),
+                          _buildDetailRow(
+                            'Service Charge',
+                            CurrencyFormatter.format(
+                              tx.serviceChargeAmount.toInt(),
+                            ),
+                          ),
                         if (tx.taxAmount > 0)
-                          _buildDetailRow('Pajak', CurrencyFormatter.format(tx.taxAmount.toInt())),
+                          _buildDetailRow(
+                            'Pajak',
+                            CurrencyFormatter.format(tx.taxAmount.toInt()),
+                          ),
                         const SizedBox(height: 8),
                         const Divider(color: SolluColors.neutral),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Total Pembayaran', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: SolluColors.textDark)),
+                            const Text(
+                              'Total Pembayaran',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: SolluColors.textDark,
+                              ),
+                            ),
                             Text(
                               CurrencyFormatter.format(tx.total.toInt()),
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: SolluColors.primary),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                                color: SolluColors.primary,
+                              ),
                             ),
                           ],
                         ),
@@ -155,20 +228,45 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Metode: ${detail.paymentMethod?.name ?? "Tunai"}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Metode: ${detail.paymentMethod?.name ?? "Tunai"}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                     if (tx.isOffline)
-                                      const Text('Status: Tersimpan Lokal (Offline)', style: TextStyle(fontSize: 11, color: SolluColors.secondaryDark, fontWeight: FontWeight.bold))
+                                      const Text(
+                                        'Status: Tersimpan Lokal (Offline)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: SolluColors.secondaryDark,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
                                     else
-                                      const Text('Status: Tersinkronisasi', style: TextStyle(fontSize: 11, color: SolluColors.success, fontWeight: FontWeight.bold)),
+                                      const Text(
+                                        'Status: Tersinkronisasi',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: SolluColors.success,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                   ],
                                 ),
                                 if (detail.payments.first.changeAmount > 0) ...[
                                   const SizedBox(height: 4),
                                   Text(
                                     'Kembalian: ${CurrencyFormatter.format(detail.payments.first.changeAmount.toInt())}',
-                                    style: const TextStyle(fontSize: 12, color: SolluColors.success, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: SolluColors.success,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -180,7 +278,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text('Gagal memuat detail: $err')),
+                error: (err, _) =>
+                    Center(child: Text('Gagal memuat detail: $err')),
               ),
             ),
             actions: [
@@ -206,16 +305,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       content: Row(
                         children: [
                           Icon(
-                            result.success ? Icons.check_circle : Icons.error_outline,
+                            result.success
+                                ? Icons.check_circle
+                                : Icons.error_outline,
                             color: Colors.white,
                           ),
                           const SizedBox(width: 12),
                           Expanded(child: Text(result.message)),
                         ],
                       ),
-                      backgroundColor: result.success ? SolluColors.success : SolluColors.danger,
+                      backgroundColor: result.success
+                          ? SolluColors.success
+                          : SolluColors.danger,
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   );
                 },
@@ -243,7 +348,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+          ),
           Text(
             value,
             style: TextStyle(
@@ -265,7 +373,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Scaffold(
       backgroundColor: SolluColors.background,
       appBar: AppBar(
-        title: const Text('Riwayat Transaksi Penjualan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'Riwayat Transaksi Penjualan',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
       ),
@@ -277,7 +388,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             // Top Summary Cards
             transactionsAsync.when(
               data: (txList) {
-                final double totalSales = txList.fold(0.0, (sum, tx) => sum + tx.total);
+                final double totalSales = txList.fold(
+                  0.0,
+                  (sum, tx) => sum + tx.total,
+                );
                 final int totalCount = txList.length;
 
                 return Row(
@@ -302,7 +416,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   ],
                 );
               },
-              loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
+              loading: () => const SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              ),
               error: (_, _) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 20),
@@ -321,7 +438,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         runSpacing: 12,
                         children: summaries.map((s) {
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -331,11 +451,23 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(s.methodName, style: const TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                                Text(
+                                  s.methodName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: SolluColors.textMuted,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  CurrencyFormatter.format(s.totalAmount.toInt()),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: SolluColors.textDark),
+                                  CurrencyFormatter.format(
+                                    s.totalAmount.toInt(),
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: SolluColors.textDark,
+                                  ),
                                 ),
                               ],
                             ),
@@ -365,13 +497,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     child: TextField(
                       controller: _searchController,
                       onChanged: (val) {
-                        ref.read(transactionFilterProvider.notifier).setQuery(val);
+                        ref
+                            .read(transactionFilterProvider.notifier)
+                            .setQuery(val);
                       },
                       decoration: InputDecoration(
                         hintText: 'Cari nomor transaksi / invoice...',
                         prefixIcon: const Icon(Icons.search, size: 20),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -386,27 +525,50 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         lastDate: DateTime(2030),
                       );
                       if (picked != null) {
-                        ref.read(transactionFilterProvider.notifier).setDate(picked);
+                        ref
+                            .read(transactionFilterProvider.notifier)
+                            .setDate(picked);
                       }
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: filter.date != null ? SolluColors.primary : SolluColors.neutral),
+                        border: Border.all(
+                          color: filter.date != null
+                              ? SolluColors.primary
+                              : SolluColors.neutral,
+                        ),
                         borderRadius: BorderRadius.circular(10),
-                        color: filter.date != null ? SolluColors.primary.withValues(alpha: 0.08) : Colors.white,
+                        color: filter.date != null
+                            ? SolluColors.primary.withValues(alpha: 0.08)
+                            : Colors.white,
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 16, color: filter.date != null ? SolluColors.primary : SolluColors.textMuted),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: filter.date != null
+                                ? SolluColors.primary
+                                : SolluColors.textMuted,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            filter.date != null ? DateFormat('dd MMM yyyy').format(filter.date!) : 'Semua Tanggal',
+                            filter.date != null
+                                ? DateFormat('dd MMM yyyy').format(filter.date!)
+                                : 'Semua Tanggal',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: filter.date != null ? FontWeight.bold : FontWeight.normal,
-                              color: filter.date != null ? SolluColors.primary : SolluColors.textDark,
+                              fontWeight: filter.date != null
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: filter.date != null
+                                  ? SolluColors.primary
+                                  : SolluColors.textDark,
                             ),
                           ),
                         ],
@@ -418,43 +580,94 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     height: 44,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: filter.channel != null ? SolluColors.primary : SolluColors.neutral),
+                      border: Border.all(
+                        color: filter.channel != null
+                            ? SolluColors.primary
+                            : SolluColors.neutral,
+                      ),
                       borderRadius: BorderRadius.circular(10),
-                      color: filter.channel != null ? SolluColors.primary.withValues(alpha: 0.08) : Colors.white,
+                      color: filter.channel != null
+                          ? SolluColors.primary.withValues(alpha: 0.08)
+                          : Colors.white,
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: filter.channel,
-                        hint: const Text('Semua Metode', style: TextStyle(fontSize: 13, color: SolluColors.textDark)),
-                        icon: const Icon(Icons.arrow_drop_down, color: SolluColors.textMuted),
+                        hint: const Text(
+                          'Semua Metode',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: SolluColors.textMuted,
+                        ),
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: filter.channel != null ? FontWeight.bold : FontWeight.normal,
-                          color: filter.channel != null ? SolluColors.primary : SolluColors.textDark,
+                          fontWeight: filter.channel != null
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: filter.channel != null
+                              ? SolluColors.primary
+                              : SolluColors.textDark,
                         ),
                         items: const [
-                          DropdownMenuItem(value: null, child: Text('Semua Metode')),
-                          DropdownMenuItem(value: 'pos', child: Text('POS Kasir')),
-                          DropdownMenuItem(value: 'direct', child: Text('Penjualan Langsung')),
-                          DropdownMenuItem(value: 'invoice', child: Text('Invoice / PO')),
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('Semua Metode'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'pos',
+                            child: Text('POS Kasir'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'direct',
+                            child: Text('Penjualan Langsung'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'invoice',
+                            child: Text('Invoice / PO'),
+                          ),
                         ],
                         onChanged: (val) {
-                          ref.read(transactionFilterProvider.notifier).setChannel(val);
+                          ref
+                              .read(transactionFilterProvider.notifier)
+                              .setChannel(val);
                         },
                       ),
                     ),
                   ),
-                  if (filter.date != null || filter.query.isNotEmpty || filter.channel != null) ...[
+                  if (filter.date != null ||
+                      filter.query.isNotEmpty ||
+                      filter.channel != null) ...[
                     const SizedBox(width: 12),
                     TextButton.icon(
                       onPressed: () {
                         _searchController.clear();
-                        ref.read(transactionFilterProvider.notifier).setQuery('');
-                        ref.read(transactionFilterProvider.notifier).clearDate();
-                        ref.read(transactionFilterProvider.notifier).setChannel(null);
+                        ref
+                            .read(transactionFilterProvider.notifier)
+                            .setQuery('');
+                        ref
+                            .read(transactionFilterProvider.notifier)
+                            .clearDate();
+                        ref
+                            .read(transactionFilterProvider.notifier)
+                            .setChannel(null);
                       },
-                      icon: const Icon(Icons.clear, size: 16, color: SolluColors.danger),
-                      label: const Text('Reset Filter', style: TextStyle(color: SolluColors.danger, fontSize: 13)),
+                      icon: const Icon(
+                        Icons.clear,
+                        size: 16,
+                        color: SolluColors.danger,
+                      ),
+                      label: const Text(
+                        'Reset Filter',
+                        style: TextStyle(
+                          color: SolluColors.danger,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -483,11 +696,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.receipt_long_outlined, size: 56, color: SolluColors.neutralMuted.withValues(alpha: 0.4)),
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 56,
+                              color: SolluColors.neutralMuted.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
                             const SizedBox(height: 12),
-                            const Text('Tidak ada transaksi yang cocok', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: SolluColors.textDark)),
+                            const Text(
+                              'Tidak ada transaksi yang cocok',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: SolluColors.textDark,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            const Text('Coba ubah kata kunci pencarian atau filter tanggal.', style: TextStyle(color: SolluColors.textMuted, fontSize: 13)),
+                            const Text(
+                              'Coba ubah kata kunci pencarian atau filter tanggal.',
+                              style: TextStyle(
+                                color: SolluColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       );
@@ -496,33 +728,56 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     return ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: transactions.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1, color: SolluColors.neutral),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1, color: SolluColors.neutral),
                       itemBuilder: (context, index) {
                         final tx = transactions[index];
-                        final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(tx.createdAt);
+                        final dateStr = DateFormat(
+                          'dd/MM/yyyy HH:mm',
+                        ).format(tx.createdAt);
                         final isPaid = tx.paymentStatus == 'paid';
 
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: SolluColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.receipt, color: SolluColors.primary, size: 22),
+                            child: const Icon(
+                              Icons.receipt,
+                              color: SolluColors.primary,
+                              size: 22,
+                            ),
                           ),
                           title: Row(
                             children: [
                               Text(
                                 tx.transactionNumber,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: SolluColors.textDark),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: SolluColors.textDark,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isPaid ? SolluColors.success.withValues(alpha: 0.15) : SolluColors.warning.withValues(alpha: 0.15),
+                                  color: isPaid
+                                      ? SolluColors.success.withValues(
+                                          alpha: 0.15,
+                                        )
+                                      : SolluColors.warning.withValues(
+                                          alpha: 0.15,
+                                        ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -530,21 +785,32 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isPaid ? SolluColors.success : SolluColors.warning,
+                                    color: isPaid
+                                        ? SolluColors.success
+                                        : SolluColors.warning,
                                   ),
                                 ),
                               ),
                               if (tx.isOffline) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: SolluColors.secondary.withValues(alpha: 0.15),
+                                    color: SolluColors.secondary.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
                                     'Lokal Offline',
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SolluColors.secondaryDark),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: SolluColors.secondaryDark,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -554,7 +820,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               '$dateStr • ${tx.promoName != null ? "Promo: ${tx.promoName} • " : ""}${tx.channel.toUpperCase()}',
-                              style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: SolluColors.textMuted,
+                              ),
                             ),
                           ),
                           trailing: Row(
@@ -562,19 +831,36 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             children: [
                               Text(
                                 CurrencyFormatter.format(tx.total.toInt()),
-                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: SolluColors.textDark),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  color: SolluColors.textDark,
+                                ),
                               ),
                               const SizedBox(width: 16),
                               ElevatedButton(
-                                onPressed: () => _showTransactionDetails(context, tx.id),
+                                onPressed: () =>
+                                    _showTransactionDetails(context, tx.id),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: SolluColors.primary.withValues(alpha: 0.1),
+                                  backgroundColor: SolluColors.primary
+                                      .withValues(alpha: 0.1),
                                   foregroundColor: SolluColors.primary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                   elevation: 0,
                                 ),
-                                child: const Text('Detail', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                child: const Text(
+                                  'Detail',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -582,34 +868,48 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Gagal memuat transaksi: $err')),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) =>
+                      Center(child: Text('Gagal memuat transaksi: $err')),
                 ),
               ),
             ),
-            
+
             // Footer Info Offline Sync
             transactionsAsync.when(
               data: (txList) {
                 final offlineCount = txList.where((t) => t.isOffline).length;
                 if (offlineCount == 0) return const SizedBox.shrink();
-                
+
                 return Container(
                   margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: SolluColors.warning.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: SolluColors.warning.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: SolluColors.warning.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.cloud_off, color: SolluColors.warning, size: 20),
+                      const Icon(
+                        Icons.cloud_off,
+                        color: SolluColors.warning,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Terdapat $offlineCount transaksi yang belum tersinkronisasi ke server (tersimpan offline).',
-                          style: const TextStyle(fontSize: 13, color: SolluColors.textDark),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
                         ),
                       ),
                     ],
@@ -654,11 +954,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 12, color: SolluColors.textMuted, fontWeight: FontWeight.w500)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SolluColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: SolluColors.textDark,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

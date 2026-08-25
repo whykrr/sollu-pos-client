@@ -15,28 +15,32 @@ class EmployeeRepository {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
-        
+
         await _database.transaction(() async {
           // Clear old employees
           await _database.delete(_database.employees).go();
-          
+
           // Insert new employees
           for (final item in data) {
-            await _database.into(_database.employees).insert(
-              EmployeesCompanion.insert(
-                id: item['id'],
-                name: item['name'],
-                email: Value(item['email']),
-                pin: Value(item['pin']),
-                photo: Value(item['photo']),
-                role: Value(item['role']),
-              ),
-            );
+            await _database
+                .into(_database.employees)
+                .insert(
+                  EmployeesCompanion.insert(
+                    id: item['id'],
+                    name: item['name'],
+                    email: Value(item['email']),
+                    pin: Value(item['pin']),
+                    photo: Value(item['photo']),
+                    role: Value(item['role']),
+                  ),
+                );
           }
         });
       }
     } on DioException catch (e) {
-      throw Exception('Failed to fetch employees: ${e.response?.data['message'] ?? e.message}');
+      throw Exception(
+        'Failed to fetch employees: ${e.response?.data['message'] ?? e.message}',
+      );
     } catch (e) {
       throw Exception('An unexpected error occurred: $e');
     }
@@ -75,7 +79,8 @@ class EmployeeRepository {
         }
       }
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? e.message ?? 'Gagal mengubah PIN.';
+      final message =
+          e.response?.data?['message'] ?? e.message ?? 'Gagal mengubah PIN.';
       throw Exception(message);
     } catch (e) {
       throw Exception('Terjadi kesalahan: $e');

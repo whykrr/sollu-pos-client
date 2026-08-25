@@ -24,7 +24,8 @@ class DiscountDialog extends ConsumerStatefulWidget {
   ConsumerState<DiscountDialog> createState() => _DiscountDialogState();
 }
 
-class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTickerProviderStateMixin {
+class _DiscountDialogState extends ConsumerState<DiscountDialog>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _manualValController = TextEditingController();
   final TextEditingController _manualNameController = TextEditingController();
@@ -47,7 +48,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
   void _applyManualDiscount() {
     final val = _manualType == 'fixed'
         ? CurrencyInputFormatter.parse(_manualValController.text)
-        : (double.tryParse(_manualValController.text.trim().replaceAll(',', '.')) ?? 0.0);
+        : (double.tryParse(
+                _manualValController.text.trim().replaceAll(',', '.'),
+              ) ??
+              0.0);
     if (val <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -60,13 +64,13 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
 
     final customName = _manualNameController.text.trim().isNotEmpty
         ? _manualNameController.text.trim()
-        : (_manualType == 'percentage' ? 'Diskon $val%' : 'Potongan ${CurrencyFormatter.format(val.toInt())}');
+        : (_manualType == 'percentage'
+              ? 'Diskon $val%'
+              : 'Potongan ${CurrencyFormatter.format(val.toInt())}');
 
-    ref.read(appliedDiscountProvider.notifier).applyManualDiscount(
-      type: _manualType,
-      value: val,
-      name: customName,
-    );
+    ref
+        .read(appliedDiscountProvider.notifier)
+        .applyManualDiscount(type: _manualType, value: val, name: customName);
 
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -100,7 +104,11 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                     color: SolluColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.discount_outlined, color: SolluColors.primary, size: 24),
+                  child: const Icon(
+                    Icons.discount_outlined,
+                    color: SolluColors.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -109,17 +117,28 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                     children: [
                       const Text(
                         'Promo & Diskon (F4)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: SolluColors.textDark,
+                        ),
                       ),
                       if (appliedDiscount != null)
                         Text(
                           'Aktif: ${appliedDiscount.name}',
-                          style: const TextStyle(fontSize: 12, color: SolluColors.success, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: SolluColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
                         )
                       else
                         const Text(
                           'Pilih promo master atau atur diskon manual',
-                          style: TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: SolluColors.textMuted,
+                          ),
                         ),
                     ],
                   ),
@@ -127,11 +146,20 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                 if (appliedDiscount != null)
                   TextButton.icon(
                     onPressed: () {
-                      ref.read(appliedDiscountProvider.notifier).clearDiscount();
+                      ref
+                          .read(appliedDiscountProvider.notifier)
+                          .clearDiscount();
                       Navigator.of(context).pop();
                     },
-                    icon: const Icon(Icons.delete_outline, size: 16, color: SolluColors.danger),
-                    label: const Text('Hapus Promo', style: TextStyle(color: SolluColors.danger, fontSize: 12)),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 16,
+                      color: SolluColors.danger,
+                    ),
+                    label: const Text(
+                      'Hapus Promo',
+                      style: TextStyle(color: SolluColors.danger, fontSize: 12),
+                    ),
                   ),
               ],
             ),
@@ -152,7 +180,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                 ),
                 labelColor: Colors.white,
                 unselectedLabelColor: SolluColors.textMuted,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
                 tabs: const [
                   Tab(text: 'Pilih Promo Master'),
                   Tab(text: 'Diskon Manual'),
@@ -173,11 +204,30 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.local_offer_outlined, size: 48, color: SolluColors.neutralMuted.withValues(alpha: 0.5)),
+                              Icon(
+                                Icons.local_offer_outlined,
+                                size: 48,
+                                color: SolluColors.neutralMuted.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
                               const SizedBox(height: 12),
-                              const Text('Belum ada promo aktif', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                              const Text(
+                                'Belum ada promo aktif',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: SolluColors.textDark,
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              const Text('Promo master data dapat disinkronkan dari web backoffice.', textAlign: TextAlign.center, style: TextStyle(color: SolluColors.textMuted, fontSize: 12)),
+                              const Text(
+                                'Promo master data dapat disinkronkan dari web backoffice.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: SolluColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         );
@@ -185,12 +235,15 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
 
                       return ListView.separated(
                         itemCount: promos.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final promo = promos[index];
-                          final isSelected = appliedDiscount?.promoId == promo.id;
+                          final isSelected =
+                              appliedDiscount?.promoId == promo.id;
 
-                          final String discountTag = promo.promoType == 'percentage'
+                          final String discountTag =
+                              promo.promoType == 'percentage'
                               ? '${promo.discountValue.toInt()}% OFF'
                               : 'Potongan ${CurrencyFormatter.format(promo.discountValue.toInt())}';
 
@@ -201,19 +254,30 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                           return Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: isSelected ? SolluColors.primary.withValues(alpha: 0.06) : Colors.white,
+                              color: isSelected
+                                  ? SolluColors.primary.withValues(alpha: 0.06)
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isSelected ? SolluColors.primary : SolluColors.neutral,
+                                color: isSelected
+                                    ? SolluColors.primary
+                                    : SolluColors.neutral,
                                 width: isSelected ? 1.5 : 1,
                               ),
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? SolluColors.primary : SolluColors.secondary.withValues(alpha: 0.15),
+                                    color: isSelected
+                                        ? SolluColors.primary
+                                        : SolluColors.secondary.withValues(
+                                            alpha: 0.15,
+                                          ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -221,23 +285,33 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
-                                      color: isSelected ? Colors.white : SolluColors.secondaryDark,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : SolluColors.secondaryDark,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         promo.name,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: SolluColors.textDark),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: SolluColors.textDark,
+                                        ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         'Target: ${promo.targetType == "product" ? "Per Produk" : "Per Bill"} • $dateStr',
-                                        style: const TextStyle(fontSize: 11, color: SolluColors.textMuted),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: SolluColors.textMuted,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -245,25 +319,39 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                 const SizedBox(width: 10),
                                 ElevatedButton(
                                   onPressed: () {
-                                    ref.read(appliedDiscountProvider.notifier).applyPromo(promo);
+                                    ref
+                                        .read(appliedDiscountProvider.notifier)
+                                        .applyPromo(promo);
                                     Navigator.of(context).pop();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Promo "${promo.name}" berhasil diterapkan!'),
+                                        content: Text(
+                                          'Promo "${promo.name}" berhasil diterapkan!',
+                                        ),
                                         backgroundColor: SolluColors.success,
                                       ),
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: isSelected ? SolluColors.success : SolluColors.primary,
+                                    backgroundColor: isSelected
+                                        ? SolluColors.success
+                                        : SolluColors.primary,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                     elevation: 0,
                                   ),
                                   child: Text(
                                     isSelected ? 'Terpasang' : 'Terapkan',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -272,8 +360,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                         },
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Center(child: Text('Gagal memuat promo: $err')),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) =>
+                        Center(child: Text('Gagal memuat promo: $err')),
                   ),
 
                   // Tab 2: Manual Discount
@@ -281,7 +371,14 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Tipe Diskon', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark)),
+                        const Text(
+                          'Tipe Diskon',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -293,13 +390,23 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                 }),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _manualType == 'percentage' ? SolluColors.primary.withValues(alpha: 0.1) : Colors.white,
+                                    color: _manualType == 'percentage'
+                                        ? SolluColors.primary.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: _manualType == 'percentage' ? SolluColors.primary : SolluColors.neutral,
-                                      width: _manualType == 'percentage' ? 1.5 : 1,
+                                      color: _manualType == 'percentage'
+                                          ? SolluColors.primary
+                                          : SolluColors.neutral,
+                                      width: _manualType == 'percentage'
+                                          ? 1.5
+                                          : 1,
                                     ),
                                   ),
                                   child: Center(
@@ -307,7 +414,9 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                       'Persentase (%)',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: _manualType == 'percentage' ? SolluColors.primary : SolluColors.textDark,
+                                        color: _manualType == 'percentage'
+                                            ? SolluColors.primary
+                                            : SolluColors.textDark,
                                       ),
                                     ),
                                   ),
@@ -323,12 +432,20 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                 }),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _manualType == 'fixed' ? SolluColors.primary.withValues(alpha: 0.1) : Colors.white,
+                                    color: _manualType == 'fixed'
+                                        ? SolluColors.primary.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: _manualType == 'fixed' ? SolluColors.primary : SolluColors.neutral,
+                                      color: _manualType == 'fixed'
+                                          ? SolluColors.primary
+                                          : SolluColors.neutral,
                                       width: _manualType == 'fixed' ? 1.5 : 1,
                                     ),
                                   ),
@@ -337,7 +454,9 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                                       'Nominal Tetap (Rp)',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: _manualType == 'fixed' ? SolluColors.primary : SolluColors.textDark,
+                                        color: _manualType == 'fixed'
+                                            ? SolluColors.primary
+                                            : SolluColors.textDark,
                                       ),
                                     ),
                                   ),
@@ -348,33 +467,66 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _manualType == 'percentage' ? 'Persentase Diskon (%)' : 'Jumlah Potongan (Rp)',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark),
+                          _manualType == 'percentage'
+                              ? 'Persentase Diskon (%)'
+                              : 'Jumlah Potongan (Rp)',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _manualValController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: _manualType == 'fixed' ? [CurrencyInputFormatter()] : [],
+                          inputFormatters: _manualType == 'fixed'
+                              ? [CurrencyInputFormatter()]
+                              : [],
                           autofocus: true,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.primary),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: SolluColors.primary,
+                          ),
                           decoration: InputDecoration(
-                            hintText: _manualType == 'percentage' ? 'Contoh: 10' : 'Contoh: 15000',
+                            hintText: _manualType == 'percentage'
+                                ? 'Contoh: 10'
+                                : 'Contoh: 15000',
                             prefixText: _manualType == 'fixed' ? 'Rp ' : null,
-                            suffixText: _manualType == 'percentage' ? '%' : null,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            suffixText: _manualType == 'percentage'
+                                ? '%'
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Catatan / Keterangan (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: SolluColors.textDark)),
+                        const Text(
+                          'Catatan / Keterangan (Opsional)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: SolluColors.textDark,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _manualNameController,
                           decoration: InputDecoration(
                             hintText: 'Cth: Diskon Khusus Karyawan / Kerabat',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -386,10 +538,18 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
                               backgroundColor: SolluColors.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               elevation: 0,
                             ),
-                            child: const Text('Terapkan Diskon Manual', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            child: const Text(
+                              'Terapkan Diskon Manual',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -403,7 +563,10 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog> with SingleTick
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Tutup (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+                child: const Text(
+                  'Tutup (Esc)',
+                  style: TextStyle(color: SolluColors.textMuted),
+                ),
               ),
             ),
           ],
@@ -442,7 +605,13 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
     final customersAsync = ref.watch(customersProvider);
 
     return AlertDialog(
-      title: const Text('Pilih Pelanggan (F5)', style: TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+      title: const Text(
+        'Pilih Pelanggan (F5)',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: SolluColors.textDark,
+        ),
+      ),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -451,7 +620,8 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
             TextField(
               controller: _searchController,
               autofocus: true,
-              onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+              onChanged: (v) =>
+                  setState(() => _searchQuery = v.trim().toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Cari nama atau no HP pelanggan...',
                 prefixIcon: const Icon(Icons.person_search),
@@ -472,14 +642,30 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
 
                   return ListView.separated(
                     itemCount: filtered.length + 1,
-                    separatorBuilder: (context, index) => const Divider(height: 1, color: SolluColors.neutral),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1, color: SolluColors.neutral),
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          leading: const Icon(Icons.people_outline, color: SolluColors.primary),
-                          title: const Text('Pelanggan Umum (Walk-in)', style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: const Text('Tanpa data member khusus', style: TextStyle(fontSize: 11, color: SolluColors.textMuted)),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          leading: const Icon(
+                            Icons.people_outline,
+                            color: SolluColors.primary,
+                          ),
+                          title: const Text(
+                            'Pelanggan Umum (Walk-in)',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: const Text(
+                            'Tanpa data member khusus',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: SolluColors.textMuted,
+                            ),
+                          ),
                           onTap: () {
                             Navigator.of(context).pop();
                           },
@@ -488,10 +674,25 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
 
                       final cust = filtered[index - 1];
                       return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        leading: const Icon(Icons.person, color: SolluColors.primary),
-                        title: Text(cust.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(cust.phone ?? cust.code ?? 'Member', style: const TextStyle(fontSize: 11, color: SolluColors.textMuted)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        leading: const Icon(
+                          Icons.person,
+                          color: SolluColors.primary,
+                        ),
+                        title: Text(
+                          cust.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          cust.phone ?? cust.code ?? 'Member',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: SolluColors.textMuted,
+                          ),
+                        ),
                         onTap: () {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -515,7 +716,10 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+          child: const Text(
+            'Batal (Esc)',
+            style: TextStyle(color: SolluColors.textMuted),
+          ),
         ),
       ],
     );
@@ -524,7 +728,13 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
 
 class EditCartItemDialog extends StatefulWidget {
   final CartItem item;
-  final void Function(int qty, String? discountType, double? discountValue, String? notes) onSaved;
+  final void Function(
+    int qty,
+    String? discountType,
+    double? discountValue,
+    String? notes,
+  )
+  onSaved;
 
   const EditCartItemDialog({
     super.key,
@@ -535,14 +745,17 @@ class EditCartItemDialog extends StatefulWidget {
   static Future<void> show({
     required BuildContext context,
     required CartItem item,
-    required void Function(int qty, String? discountType, double? discountValue, String? notes) onSaved,
+    required void Function(
+      int qty,
+      String? discountType,
+      double? discountValue,
+      String? notes,
+    )
+    onSaved,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => EditCartItemDialog(
-        item: item,
-        onSaved: onSaved,
-      ),
+      builder: (context) => EditCartItemDialog(item: item, onSaved: onSaved),
     );
   }
 
@@ -560,13 +773,17 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
   void initState() {
     super.initState();
     _qtyController = TextEditingController(text: widget.item.qty.toString());
-    _qtyController.selection = TextSelection(baseOffset: 0, extentOffset: _qtyController.text.length);
-    
+    _qtyController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _qtyController.text.length,
+    );
+
     _discountType = widget.item.discountType ?? 'fixed';
     _discountController = TextEditingController(
-        text: widget.item.discountValue != null && widget.item.discountValue! > 0
-            ? widget.item.discountValue!.toInt().toString()
-            : '');
+      text: widget.item.discountValue != null && widget.item.discountValue! > 0
+          ? widget.item.discountValue!.toInt().toString()
+          : '',
+    );
     _notesController = TextEditingController(text: widget.item.notes ?? '');
   }
 
@@ -586,12 +803,14 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
       if (discText.isNotEmpty) {
         discVal = double.tryParse(discText);
       }
-      
+
       widget.onSaved(
         newQty,
         discVal != null && discVal > 0 ? _discountType : null,
         discVal != null && discVal > 0 ? discVal : null,
-        _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
       );
     }
     Navigator.of(context).pop();
@@ -602,7 +821,8 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
     return Focus(
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent || event is KeyRepeatEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
             _submit();
             return KeyEventResult.handled;
           }
@@ -618,7 +838,11 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                 color: SolluColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.edit_note, color: SolluColors.primary, size: 22),
+              child: const Icon(
+                Icons.edit_note,
+                color: SolluColors.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -627,11 +851,19 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                 children: [
                   const Text(
                     'Ubah Detail Item',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: SolluColors.textDark),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: SolluColors.textDark,
+                    ),
                   ),
                   Text(
                     widget.item.name,
-                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted, fontWeight: FontWeight.normal),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SolluColors.textMuted,
+                      fontWeight: FontWeight.normal,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -648,24 +880,44 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // QTY
-                const Text('Kuantitas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const Text(
+                  'Kuantitas',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _qtyController,
                   keyboardType: TextInputType.number,
                   autofocus: true,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.primary,
+                  ),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // DISCOUNT
-                const Text('Diskon Per Item', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const Text(
+                  'Diskon Per Item',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -681,10 +933,14 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                           value: _discountType,
                           items: const [
                             DropdownMenuItem(value: 'fixed', child: Text('Rp')),
-                            DropdownMenuItem(value: 'percentage', child: Text('%')),
+                            DropdownMenuItem(
+                              value: 'percentage',
+                              child: Text('%'),
+                            ),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _discountType = val);
+                            if (val != null)
+                              setState(() => _discountType = val);
                           },
                         ),
                       ),
@@ -696,8 +952,13 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           hintText: 'Nilai Diskon',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         onSubmitted: (_) => _submit(),
                       ),
@@ -707,7 +968,14 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                 const SizedBox(height: 16),
 
                 // NOTES
-                const Text('Catatan Tambahan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark)),
+                const Text(
+                  'Catatan Tambahan',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _notesController,
@@ -715,8 +983,13 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                   onSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
                     hintText: 'Misal: Jangan pakai bawang...',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   maxLines: 1,
                 ),
@@ -727,7 +1000,10 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Batal (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+            child: const Text(
+              'Batal (Esc)',
+              style: TextStyle(color: SolluColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: _submit,
@@ -777,7 +1053,14 @@ class ShortcutHelpDialog extends StatelessWidget {
         children: [
           Icon(Icons.keyboard, color: SolluColors.primary),
           SizedBox(width: SolluSpacing.md),
-          Text('Panduan Keyboard Shortcut', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark)),
+          Text(
+            'Panduan Keyboard Shortcut',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: SolluColors.textDark,
+            ),
+          ),
         ],
       ),
       content: SizedBox(
@@ -795,7 +1078,8 @@ class ShortcutHelpDialog extends StatelessWidget {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: shortcuts.length,
-                separatorBuilder: (context, index) => const Divider(height: 1, color: SolluColors.neutral),
+                separatorBuilder: (context, index) =>
+                    const Divider(height: 1, color: SolluColors.neutral),
                 itemBuilder: (context, index) {
                   final s = shortcuts[index];
                   return Padding(
@@ -803,20 +1087,37 @@ class ShortcutHelpDialog extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: SolluColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: SolluColors.primaryLight.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: SolluColors.primaryLight.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
                           ),
                           child: Text(
                             s['key']!,
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.primary),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: SolluColors.primary,
+                            ),
                           ),
                         ),
                         const SizedBox(width: SolluSpacing.lg),
                         Expanded(
-                          child: Text(s['desc']!, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: SolluColors.textDark)),
+                          child: Text(
+                            s['desc']!,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              color: SolluColors.textDark,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -903,10 +1204,15 @@ class EmptyCartDialog extends StatelessWidget {
                   backgroundColor: SolluColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Mengerti (Esc)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                child: const Text(
+                  'Mengerti (Esc)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
             ),
           ],
@@ -915,4 +1221,3 @@ class EmptyCartDialog extends StatelessWidget {
     );
   }
 }
-

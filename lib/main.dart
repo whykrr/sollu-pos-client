@@ -19,11 +19,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.initialize();
   final sharedPreferences = await SharedPreferences.getInstance();
-  
+
   final container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-    ],
+    overrides: [sharedPreferencesProvider.overrideWithValue(sharedPreferences)],
   );
 
   // Inisialisasi Window Manager pada Desktop (Windows/macOS/Linux)
@@ -32,7 +30,9 @@ void main() async {
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    container.read(errorLoggingServiceProvider).logError(details.exception, details.stack);
+    container
+        .read(errorLoggingServiceProvider)
+        .logError(details.exception, details.stack);
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
@@ -41,10 +41,7 @@ void main() async {
   };
 
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const SolluPosApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const SolluPosApp()),
   );
 }
 
@@ -72,26 +69,41 @@ class SolluPosApp extends ConsumerWidget {
             color: Colors.white,
             elevation: 0,
             margin: const EdgeInsets.all(8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
           ),
           inputDecorationTheme: InputDecorationTheme(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -99,14 +111,19 @@ class SolluPosApp extends ConsumerWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+              borderSide: const BorderSide(
+                color: SolluColors.primary,
+                width: 2,
+              ),
             ),
             fillColor: Colors.white,
             filled: true,
           ),
           dialogTheme: DialogThemeData(
             backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             elevation: 0,
             actionsPadding: const EdgeInsets.all(24),
           ),
@@ -136,14 +153,15 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
       onKeyEvent: (FocusNode node, KeyEvent event) {
         if (event is KeyDownEvent || event is KeyRepeatEvent) {
           final primaryFocus = FocusManager.instance.primaryFocus;
-          final isTextFieldFocused = primaryFocus?.context?.widget is EditableText;
-          
+          final isTextFieldFocused =
+              primaryFocus?.context?.widget is EditableText;
+
           if (isTextFieldFocused) {
             return KeyEventResult.ignored;
           }
 
           final logicalKey = event.logicalKey;
-          
+
           if (logicalKey == LogicalKeyboardKey.f1) {
             ref.read(shortcutProvider.notifier).trigger('F1');
             return KeyEventResult.handled;
@@ -177,7 +195,9 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
           } else if (logicalKey == LogicalKeyboardKey.f11) {
             if (WindowService.isDesktop) {
               WindowService.toggleFullScreen().then((isFullScreen) {
-                ref.read(fullscreenKioskProvider.notifier).toggleKiosk(isFullScreen);
+                ref
+                    .read(fullscreenKioskProvider.notifier)
+                    .toggleKiosk(isFullScreen);
               });
               return KeyEventResult.handled;
             }
@@ -186,7 +206,8 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
             return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.escape) {
             ref.read(shortcutProvider.notifier).trigger('ESC');
-            return KeyEventResult.ignored; // Let dialogs handle escape naturally
+            return KeyEventResult
+                .ignored; // Let dialogs handle escape naturally
           }
         }
         return KeyEventResult.ignored;

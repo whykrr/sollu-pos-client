@@ -12,7 +12,7 @@ class CartItem {
   final String? discountType;
   final double? discountValue;
   final String? notes;
-  
+
   // Storing this for reference/display
   final Map<String, String> selectedVariants;
   final Map<String, List<String>> selectedModifiers;
@@ -79,17 +79,27 @@ class CartNotifier extends Notifier<List<CartItem>> {
   void addItem(CartItem item) {
     // Check if an identical item exists (same inventory/product and same modifiers/variants)
     final existingIndex = state.indexWhere((element) {
-      final sameInventory = element.inventoryItemId == item.inventoryItemId && element.productId == item.productId;
-      final sameVariants = const DeepCollectionEquality().equals(element.selectedVariants, item.selectedVariants);
-      final sameModifiers = const DeepCollectionEquality().equals(element.selectedModifiers, item.selectedModifiers);
+      final sameInventory =
+          element.inventoryItemId == item.inventoryItemId &&
+          element.productId == item.productId;
+      final sameVariants = const DeepCollectionEquality().equals(
+        element.selectedVariants,
+        item.selectedVariants,
+      );
+      final sameModifiers = const DeepCollectionEquality().equals(
+        element.selectedModifiers,
+        item.selectedModifiers,
+      );
       return sameInventory && sameVariants && sameModifiers;
     });
 
     if (existingIndex != -1) {
       // Increase qty of existing item
       final existingItem = state[existingIndex];
-      final updatedItem = existingItem.copyWith(qty: existingItem.qty + item.qty);
-      
+      final updatedItem = existingItem.copyWith(
+        qty: existingItem.qty + item.qty,
+      );
+
       final newState = List<CartItem>.from(state);
       newState[existingIndex] = updatedItem;
       state = newState;
@@ -124,20 +134,22 @@ class CartNotifier extends Notifier<List<CartItem>> {
     final newState = <CartItem>[];
     for (final item in state) {
       if (item.id == id) {
-        newState.add(CartItem(
-          id: item.id,
-          productId: item.productId,
-          inventoryItemId: item.inventoryItemId,
-          variantGroupOptionId: item.variantGroupOptionId,
-          name: item.name,
-          price: item.price,
-          qty: qty,
-          discountType: discountType,
-          discountValue: discountValue,
-          notes: notes,
-          selectedVariants: item.selectedVariants,
-          selectedModifiers: item.selectedModifiers,
-        ));
+        newState.add(
+          CartItem(
+            id: item.id,
+            productId: item.productId,
+            inventoryItemId: item.inventoryItemId,
+            variantGroupOptionId: item.variantGroupOptionId,
+            name: item.name,
+            price: item.price,
+            qty: qty,
+            discountType: discountType,
+            discountValue: discountValue,
+            notes: notes,
+            selectedVariants: item.selectedVariants,
+            selectedModifiers: item.selectedModifiers,
+          ),
+        );
       } else {
         newState.add(item);
       }
@@ -154,4 +166,6 @@ class CartNotifier extends Notifier<List<CartItem>> {
   }
 }
 
-final cartProvider = NotifierProvider<CartNotifier, List<CartItem>>(CartNotifier.new);
+final cartProvider = NotifierProvider<CartNotifier, List<CartItem>>(
+  CartNotifier.new,
+);

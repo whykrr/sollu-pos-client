@@ -15,6 +15,7 @@ class ActiveEmployeeNotifier extends Notifier<Map<String, dynamic>?> {
   }
 }
 
-final activeEmployeeProvider = NotifierProvider<ActiveEmployeeNotifier, Map<String, dynamic>?>(
-  ActiveEmployeeNotifier.new,
-);
+final activeEmployeeProvider =
+    NotifierProvider<ActiveEmployeeNotifier, Map<String, dynamic>?>(
+      ActiveEmployeeNotifier.new,
+    );

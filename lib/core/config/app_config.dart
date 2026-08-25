@@ -12,13 +12,17 @@ class AppConfig {
     try {
       await dotenv.load(fileName: ".env");
     } catch (e) {
-      debugPrint("Info: .env file not found or could not be loaded ($e). Using default environment values.");
+      debugPrint(
+        "Info: .env file not found or could not be loaded ($e). Using default environment values.",
+      );
     }
 
     try {
       _packageInfo = await PackageInfo.fromPlatform();
     } catch (e) {
-      debugPrint("Info: Could not load PackageInfo ($e). Using fallback version info.");
+      debugPrint(
+        "Info: Could not load PackageInfo ($e). Using fallback version info.",
+      );
     }
   }
 
@@ -32,11 +36,15 @@ class AppConfig {
     if (_packageInfo != null && _packageInfo!.appName.isNotEmpty) {
       return _packageInfo!.appName;
     }
-    return const String.fromEnvironment('APP_NAME', defaultValue: 'Sollu POS Client');
+    return const String.fromEnvironment(
+      'APP_NAME',
+      defaultValue: 'Sollu POS Client',
+    );
   }
 
   /// Package Name / Bundle ID (misal: com.sollu.pos)
-  static String get packageName => _packageInfo?.packageName ?? 'com.sollu.pos_client';
+  static String get packageName =>
+      _packageInfo?.packageName ?? 'com.sollu.pos_client';
 
   /// Semantic Version Name (misal: 1.0.0)
   static String get appVersion {

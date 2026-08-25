@@ -55,20 +55,29 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
 
   void _scrollToIndex(int index) {
     if (!_scrollController.hasClients) return;
-    
+
     final row = index ~/ 4;
     // Lowered the estimation slightly to ensure the targetTop triggers the scroll up earlier
-    const double estimatedRowHeight = 180.0; 
+    const double estimatedRowHeight = 180.0;
     final targetTop = (row * estimatedRowHeight) - 40; // Buffer for top padding
-    final targetBottom = targetTop + estimatedRowHeight + 80; // Buffer for bottom padding
-    
+    final targetBottom =
+        targetTop + estimatedRowHeight + 80; // Buffer for bottom padding
+
     final currentOffset = _scrollController.offset;
     final viewportHeight = _scrollController.position.viewportDimension;
-    
+
     if (targetTop < currentOffset) {
-       _scrollController.animateTo((targetTop < 0 ? 0 : targetTop), duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+      _scrollController.animateTo(
+        (targetTop < 0 ? 0 : targetTop),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
     } else if (targetBottom > currentOffset + viewportHeight) {
-       _scrollController.animateTo(targetBottom - viewportHeight, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+      _scrollController.animateTo(
+        targetBottom - viewportHeight,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -92,14 +101,16 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
     } else {
       final cartItem = CartItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        productId: product.isProductMode ? product.id : product.inventory!.productId,
+        productId: product.isProductMode
+            ? product.id
+            : product.inventory!.productId,
         inventoryItemId: product.isProductMode ? '' : product.id,
         name: product.name,
         price: product.price,
         qty: 1,
       );
       ref.read(cartProvider.notifier).addItem(cartItem);
-      
+
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -121,7 +132,6 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Error: $error')),
         data: (filteredItems) {
-
           if (filteredItems.isEmpty) {
             return const Center(child: Text('Tidak ada item yang sesuai'));
           }
@@ -134,7 +144,7 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
               if (event is KeyDownEvent || event is KeyRepeatEvent) {
                 final key = event.logicalKey;
                 const columns = 4;
-                
+
                 if (key == LogicalKeyboardKey.arrowRight) {
                   _setIndex(_currentIndex + 1, filteredItems.length);
                   return KeyEventResult.handled;
@@ -147,8 +157,10 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
                 } else if (key == LogicalKeyboardKey.arrowUp) {
                   _setIndex(_currentIndex - columns, filteredItems.length);
                   return KeyEventResult.handled;
-                } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
-                  if (_currentIndex >= 0 && _currentIndex < filteredItems.length) {
+                } else if (key == LogicalKeyboardKey.enter ||
+                    key == LogicalKeyboardKey.numpadEnter) {
+                  if (_currentIndex >= 0 &&
+                      _currentIndex < filteredItems.length) {
                     _handleSelectItem(filteredItems[_currentIndex]);
                     return KeyEventResult.handled;
                   }
@@ -199,7 +211,8 @@ class _ProductCard extends StatelessWidget {
     final bool isActive = posItem.isActive;
     final String itemName = posItem.name;
     final double itemPrice = posItem.price;
-    final bool hasVariantsOrModifiers = posItem.hasVariants || posItem.hasModifiers;
+    final bool hasVariantsOrModifiers =
+        posItem.hasVariants || posItem.hasModifiers;
 
     return Container(
       decoration: BoxDecoration(
@@ -211,7 +224,9 @@ class _ProductCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: isSelected ? SolluColors.primary.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.03),
+            color: isSelected
+                ? SolluColors.primary.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: isSelected ? 18 : 15,
             offset: const Offset(0, 5),
           ),
@@ -238,13 +253,18 @@ class _ProductCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: SolluColors.background,
                             shape: BoxShape.circle,
-                            border: Border.all(color: SolluColors.neutral, width: 1),
+                            border: Border.all(
+                              color: SolluColors.neutral,
+                              width: 1,
+                            ),
                           ),
                           child: Center(
                             child: Icon(
                               Icons.ramen_dining,
                               size: 60,
-                              color: SolluColors.textMuted.withValues(alpha: 0.3),
+                              color: SolluColors.textMuted.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                           ),
                         ),
@@ -282,7 +302,10 @@ class _ProductCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: SolluColors.danger,
                           borderRadius: BorderRadius.circular(12),
@@ -304,7 +327,10 @@ class _ProductCard extends StatelessWidget {
                   top: 12,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFC107), // Yellow badge
                       borderRadius: BorderRadius.circular(6),

@@ -5,11 +5,10 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
   bool _isStorageReady = false;
 
-  SecureStorageService() : _storage = const FlutterSecureStorage(
-    mOptions: MacOsOptions(
-      usesDataProtectionKeychain: false,
-    ),
-  );
+  SecureStorageService()
+    : _storage = const FlutterSecureStorage(
+        mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+      );
 
   static const String _keyToken = 'auth_token';
   static const String _keyDeviceUuid = 'device_uuid';
@@ -71,7 +70,7 @@ class SecureStorageService {
     await _ensureReady();
     return await _storage.read(key: _keyHardwareSignature);
   }
-  
+
   // Clear all
   Future<void> clearAll() async {
     await _ensureReady();

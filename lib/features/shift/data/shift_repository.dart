@@ -36,7 +36,10 @@ class ShiftRepository {
   Stream<Shift?> watchActiveShift() {
     return (_database.select(_database.shifts)
           ..where((tbl) => tbl.status.equals('open'))
-          ..orderBy([(tbl) => OrderingTerm(expression: tbl.openedAt, mode: OrderingMode.desc)])
+          ..orderBy([
+            (tbl) =>
+                OrderingTerm(expression: tbl.openedAt, mode: OrderingMode.desc),
+          ])
           ..limit(1))
         .watchSingleOrNull();
   }
@@ -45,7 +48,10 @@ class ShiftRepository {
   Future<Shift?> getActiveShift() async {
     return await (_database.select(_database.shifts)
           ..where((tbl) => tbl.status.equals('open'))
-          ..orderBy([(tbl) => OrderingTerm(expression: tbl.openedAt, mode: OrderingMode.desc)])
+          ..orderBy([
+            (tbl) =>
+                OrderingTerm(expression: tbl.openedAt, mode: OrderingMode.desc),
+          ])
           ..limit(1))
         .getSingleOrNull();
   }
@@ -75,16 +81,19 @@ class ShiftRepository {
 
     // Kirim event buka shift ke backend di background jika online
     try {
-      final response = await _dioClient.dio.post('/shifts/open', data: {
-        'shift_id': shiftId,
-        'user_id': userId,
-        'opening_cash': openingCash,
-        'opened_at': now.toIso8601String(),
-      });
+      final response = await _dioClient.dio.post(
+        '/shifts/open',
+        data: {
+          'shift_id': shiftId,
+          'user_id': userId,
+          'opening_cash': openingCash,
+          'opened_at': now.toIso8601String(),
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
-          const ShiftsCompanion(isOffline: Value(false)),
-        );
+        await (_database.update(_database.shifts)
+              ..where((t) => t.id.equals(shiftId)))
+            .write(const ShiftsCompanion(isOffline: Value(false)));
       }
     } catch (_) {
       // Abaikan error jaringan agar shift offline tetap berjalan mulus
@@ -95,13 +104,17 @@ class ShiftRepository {
 
   /// Menghitung ringkasan kalkulasi shift dari SQLite lokal
   Future<ShiftSummary> calculateShiftSummary(String shiftId) async {
-    final shift = await (_database.select(_database.shifts)..where((t) => t.id.equals(shiftId))).getSingleOrNull();
+    final shift = await (_database.select(
+      _database.shifts,
+    )..where((t) => t.id.equals(shiftId))).getSingleOrNull();
     final openingCash = shift?.openingCash ?? 0.0;
 
     // Ambil transaksi pada shift ini yang completed
-    final transactions = await (_database.select(_database.transactions)
-          ..where((t) => t.shiftId.equals(shiftId) & t.status.equals('completed')))
-        .get();
+    final transactions =
+        await (_database.select(_database.transactions)..where(
+              (t) => t.shiftId.equals(shiftId) & t.status.equals('completed'),
+            ))
+            .get();
 
     double totalSales = 0.0;
     double cashSales = 0.0;
@@ -112,37 +125,45 @@ class ShiftRepository {
       totalSales += tx.total;
 
       // Cek pembayaran transaksi
-      final payments = await (_database.select(_database.transactionPayments)
-            ..where((p) => p.transactionId.equals(tx.id)))
-          .get();
+      final payments = await (_database.select(
+        _database.transactionPayments,
+      )..where((p) => p.transactionId.equals(tx.id))).get();
 
       if (payments.isEmpty) {
         // Default jika tanpa payment detail
         cashSales += tx.total;
-        salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + tx.total;
+        salesByPaymentMethod['Tunai'] =
+            (salesByPaymentMethod['Tunai'] ?? 0) + tx.total;
       } else {
         for (final p in payments) {
           // Ambil tipe payment method
           if (p.paymentMethodId != null) {
-            final pm = await (_database.select(_database.paymentMethods)..where((m) => m.id.equals(p.paymentMethodId!))).getSingleOrNull();
+            final pm = await (_database.select(
+              _database.paymentMethods,
+            )..where((m) => m.id.equals(p.paymentMethodId!))).getSingleOrNull();
             final methodName = pm?.name ?? 'Lainnya';
-            salesByPaymentMethod[methodName] = (salesByPaymentMethod[methodName] ?? 0) + p.amount;
-            
-            if (pm?.type == 'cash' || pm?.name.toLowerCase().contains('tunai') == true) {
+            salesByPaymentMethod[methodName] =
+                (salesByPaymentMethod[methodName] ?? 0) + p.amount;
+
+            if (pm?.type == 'cash' ||
+                pm?.name.toLowerCase().contains('tunai') == true) {
               cashSales += p.amount;
             } else {
               nonCashSales += p.amount;
             }
           } else {
             cashSales += p.amount;
-            salesByPaymentMethod['Tunai'] = (salesByPaymentMethod['Tunai'] ?? 0) + p.amount;
+            salesByPaymentMethod['Tunai'] =
+                (salesByPaymentMethod['Tunai'] ?? 0) + p.amount;
           }
         }
       }
     }
 
     // Ambil kas masuk / keluar
-    final cashLogs = await (_database.select(_database.shiftCashLogs)..where((l) => l.shiftId.equals(shiftId))).get();
+    final cashLogs = await (_database.select(
+      _database.shiftCashLogs,
+    )..where((l) => l.shiftId.equals(shiftId))).get();
     double cashIn = 0.0;
     double cashOut = 0.0;
 
@@ -177,7 +198,9 @@ class ShiftRepository {
   }) async {
     final now = DateTime.now();
 
-    await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
+    await (_database.update(
+      _database.shifts,
+    )..where((t) => t.id.equals(shiftId))).write(
       ShiftsCompanion(
         status: const Value('closed'),
         closingCash: Value(closingCash),
@@ -190,17 +213,20 @@ class ShiftRepository {
 
     // Kirim penutupan shift ke backend jika online
     try {
-      final response = await _dioClient.dio.post('/shifts/close', data: {
-        'shift_id': shiftId,
-        'closing_cash': closingCash,
-        'expected_cash': expectedCash,
-        'total_sales': totalSales,
-        'closed_at': now.toIso8601String(),
-      });
+      final response = await _dioClient.dio.post(
+        '/shifts/close',
+        data: {
+          'shift_id': shiftId,
+          'closing_cash': closingCash,
+          'expected_cash': expectedCash,
+          'total_sales': totalSales,
+          'closed_at': now.toIso8601String(),
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
-          const ShiftsCompanion(isOffline: Value(false)),
-        );
+        await (_database.update(_database.shifts)
+              ..where((t) => t.id.equals(shiftId)))
+            .write(const ShiftsCompanion(isOffline: Value(false)));
       }
     } catch (_) {
       // Offline fallback
@@ -217,31 +243,36 @@ class ShiftRepository {
     final logId = _uuid.v4();
     final now = DateTime.now();
 
-    await _database.into(_database.shiftCashLogs).insert(
-      ShiftCashLogsCompanion.insert(
-        id: logId,
-        shiftId: shiftId,
-        type: type,
-        amount: amount,
-        note: Value(note),
-        createdAt: Value(now),
-        isOffline: const Value(true),
-      ),
-    );
+    await _database
+        .into(_database.shiftCashLogs)
+        .insert(
+          ShiftCashLogsCompanion.insert(
+            id: logId,
+            shiftId: shiftId,
+            type: type,
+            amount: amount,
+            note: Value(note),
+            createdAt: Value(now),
+            isOffline: const Value(true),
+          ),
+        );
 
     try {
-      final response = await _dioClient.dio.post('/shifts/cash-log', data: {
-        'id': logId,
-        'shift_id': shiftId,
-        'type': type,
-        'amount': amount,
-        'note': note,
-        'created_at': now.toIso8601String(),
-      });
+      final response = await _dioClient.dio.post(
+        '/shifts/cash-log',
+        data: {
+          'id': logId,
+          'shift_id': shiftId,
+          'type': type,
+          'amount': amount,
+          'note': note,
+          'created_at': now.toIso8601String(),
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        await (_database.update(_database.shiftCashLogs)..where((t) => t.id.equals(logId))).write(
-          const ShiftCashLogsCompanion(isOffline: Value(false)),
-        );
+        await (_database.update(_database.shiftCashLogs)
+              ..where((t) => t.id.equals(logId)))
+            .write(const ShiftCashLogsCompanion(isOffline: Value(false)));
       }
     } catch (_) {
       // Offline fallback
@@ -250,8 +281,12 @@ class ShiftRepository {
 
   /// Sinkronisasi shift dan cash log yang pending secara massal (bulk)
   Future<void> syncPendingShifts() async {
-    final unsyncedShifts = await (_database.select(_database.shifts)..where((t) => t.isOffline.equals(true))).get();
-    final unsyncedLogs = await (_database.select(_database.shiftCashLogs)..where((t) => t.isOffline.equals(true))).get();
+    final unsyncedShifts = await (_database.select(
+      _database.shifts,
+    )..where((t) => t.isOffline.equals(true))).get();
+    final unsyncedLogs = await (_database.select(
+      _database.shiftCashLogs,
+    )..where((t) => t.isOffline.equals(true))).get();
 
     if (unsyncedShifts.isEmpty && unsyncedLogs.isEmpty) return;
 
@@ -267,21 +302,29 @@ class ShiftRepository {
     final List<Map<String, dynamic>> payloadShifts = [];
 
     for (final shiftId in relevantShiftIds) {
-      final shift = await (_database.select(_database.shifts)..where((t) => t.id.equals(shiftId))).getSingleOrNull();
+      final shift = await (_database.select(
+        _database.shifts,
+      )..where((t) => t.id.equals(shiftId))).getSingleOrNull();
       if (shift == null) continue;
 
       // Ambil semua cash log untuk shift ini yang belum sinkron
-      final logs = await (_database.select(_database.shiftCashLogs)
-            ..where((t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true)))
-          .get();
+      final logs =
+          await (_database.select(_database.shiftCashLogs)..where(
+                (t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true),
+              ))
+              .get();
 
-      final logsPayload = logs.map((l) => {
-        'id': l.id,
-        'type': l.type,
-        'amount': l.amount,
-        'note': l.note,
-        'created_at': l.createdAt.toIso8601String(),
-      }).toList();
+      final logsPayload = logs
+          .map(
+            (l) => {
+              'id': l.id,
+              'type': l.type,
+              'amount': l.amount,
+              'note': l.note,
+              'created_at': l.createdAt.toIso8601String(),
+            },
+          )
+          .toList();
 
       payloadShifts.add({
         'id': shift.id,
@@ -301,20 +344,22 @@ class ShiftRepository {
     if (payloadShifts.isEmpty) return;
 
     try {
-      final response = await _dioClient.dio.post('/shifts/sync', data: {
-        'shifts': payloadShifts,
-      });
+      final response = await _dioClient.dio.post(
+        '/shifts/sync',
+        data: {'shifts': payloadShifts},
+      );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Update semua shift yang tersinkronisasi
         for (final shiftId in relevantShiftIds) {
-          await (_database.update(_database.shifts)..where((t) => t.id.equals(shiftId))).write(
-            const ShiftsCompanion(isOffline: Value(false)),
-          );
-          
-          await (_database.update(_database.shiftCashLogs)..where((t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true))).write(
-            const ShiftCashLogsCompanion(isOffline: Value(false)),
-          );
+          await (_database.update(_database.shifts)
+                ..where((t) => t.id.equals(shiftId)))
+              .write(const ShiftsCompanion(isOffline: Value(false)));
+
+          await (_database.update(_database.shiftCashLogs)..where(
+                (t) => t.shiftId.equals(shiftId) & t.isOffline.equals(true),
+              ))
+              .write(const ShiftCashLogsCompanion(isOffline: Value(false)));
         }
       }
     } catch (_) {

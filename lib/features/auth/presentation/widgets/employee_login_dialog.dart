@@ -99,7 +99,9 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
                           _isSyncing = true;
                         });
                         try {
-                          await ref.read(employeeRepositoryProvider).syncEmployees();
+                          await ref
+                              .read(employeeRepositoryProvider)
+                              .syncEmployees();
                           ref.invalidate(employeeListProvider);
                         } catch (e) {
                           if (context.mounted) {
@@ -132,7 +134,9 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
             decoration: InputDecoration(
               hintText: 'Cari nama karyawan...',
               prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 0,
                 horizontal: 16,
@@ -146,7 +150,9 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
           child: employeesAsync.when(
             data: (employees) {
               if (employees.isEmpty) {
-                return const Center(child: Text('Tidak ada data karyawan. Klik Load Karyawan.'));
+                return const Center(
+                  child: Text('Tidak ada data karyawan. Klik Load Karyawan.'),
+                );
               }
               return ListView.separated(
                 itemCount: employees.length,

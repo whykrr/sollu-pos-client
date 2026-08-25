@@ -11,7 +11,7 @@ final posRepositoryProvider = Provider<PosRepository>((ref) {
 final posItemsProvider = StreamProvider<List<PosItem>>((ref) {
   final repository = ref.watch(posRepositoryProvider);
   final mode = ref.watch(posDisplayModeProvider);
-  
+
   if (mode == 'product') {
     return repository.watchProductModeItems();
   } else {
@@ -28,7 +28,9 @@ class PosSearchQueryNotifier extends Notifier<String> {
   }
 }
 
-final posSearchQueryProvider = NotifierProvider<PosSearchQueryNotifier, String>(PosSearchQueryNotifier.new);
+final posSearchQueryProvider = NotifierProvider<PosSearchQueryNotifier, String>(
+  PosSearchQueryNotifier.new,
+);
 
 final posCategoriesProvider = StreamProvider((ref) {
   final repository = ref.watch(posRepositoryProvider);
@@ -44,7 +46,10 @@ class PosSelectedCategoryNotifier extends Notifier<String?> {
   }
 }
 
-final posSelectedCategoryProvider = NotifierProvider<PosSelectedCategoryNotifier, String?>(PosSelectedCategoryNotifier.new);
+final posSelectedCategoryProvider =
+    NotifierProvider<PosSelectedCategoryNotifier, String?>(
+      PosSelectedCategoryNotifier.new,
+    );
 
 /// Provider yang menggabungkan filtering kategori + search query secara terpusat.
 /// Menggantikan logika filtering yang sebelumnya ada di widget ProductGrid.
@@ -70,17 +75,23 @@ final filteredPosItemsProvider = Provider<AsyncValue<List<PosItem>>>((ref) {
               addChildIds(child.id); // Recursive untuk nested categories
             }
           }
+
           addChildIds(selectedCategory);
         });
       }
 
       final filteredItems = items.where((item) {
-        final matchesCategory = selectedCategory == null ||
-            (item.categoryId != null && matchingCategoryIds.contains(item.categoryId));
-        final matchesSearch = searchQuery.isEmpty ||
+        final matchesCategory =
+            selectedCategory == null ||
+            (item.categoryId != null &&
+                matchingCategoryIds.contains(item.categoryId));
+        final matchesSearch =
+            searchQuery.isEmpty ||
             item.name.toLowerCase().contains(searchQuery) ||
-            (item.product?.barcode?.toLowerCase().contains(searchQuery) ?? false) ||
-            (item.inventory?.barcode?.toLowerCase().contains(searchQuery) ?? false);
+            (item.product?.barcode?.toLowerCase().contains(searchQuery) ??
+                false) ||
+            (item.inventory?.barcode?.toLowerCase().contains(searchQuery) ??
+                false);
 
         return matchesCategory && matchesSearch;
       }).toList();

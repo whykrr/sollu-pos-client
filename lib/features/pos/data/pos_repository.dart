@@ -11,7 +11,7 @@ class PosItem {
   final bool hasVariants;
   final bool hasModifiers;
   final bool isProductMode;
-  
+
   final Product? product;
   final Inventory? inventory;
 
@@ -36,8 +36,9 @@ class PosRepository {
   PosRepository(this._database);
 
   Stream<List<PosItem>> watchVariantModeItems() {
-    return _database.customSelect(
-      '''
+    return _database
+        .customSelect(
+          '''
       SELECT 
         i.*,
         p.category_id,
@@ -54,59 +55,62 @@ class PosRepository {
       FROM inventories i
       INNER JOIN products p ON i.product_id = p.id
       ''',
-      readsFrom: {
-        _database.inventories,
-        _database.products,
-        _database.variantGroups,
-        _database.productModifierGroups,
-        _database.productPrices,
-      },
-    ).watch().map((rows) {
-      return rows.map((row) {
-        final inventoryId = row.read<String>('id');
-        final productId = row.read<String>('product_id');
-        final name = row.read<String>('name');
-        final sku = row.read<String?>('sku');
-        final barcode = row.read<String?>('barcode');
-        final trackInventory = row.read<bool>('track_inventory');
-        final isInventoryActive = row.read<bool>('is_active');
-        final isProductAvailable = row.read<bool>('product_is_available');
-        final isActive = isInventoryActive && isProductAvailable;
-        final stock = row.read<double>('stock');
-        final categoryId = row.read<String?>('category_id');
-        final variantCount = row.read<int>('variant_count');
-        final modifierCount = row.read<int>('modifier_count');
-        final itemPrice = row.read<double>('item_price');
+          readsFrom: {
+            _database.inventories,
+            _database.products,
+            _database.variantGroups,
+            _database.productModifierGroups,
+            _database.productPrices,
+          },
+        )
+        .watch()
+        .map((rows) {
+          return rows.map((row) {
+            final inventoryId = row.read<String>('id');
+            final productId = row.read<String>('product_id');
+            final name = row.read<String>('name');
+            final sku = row.read<String?>('sku');
+            final barcode = row.read<String?>('barcode');
+            final trackInventory = row.read<bool>('track_inventory');
+            final isInventoryActive = row.read<bool>('is_active');
+            final isProductAvailable = row.read<bool>('product_is_available');
+            final isActive = isInventoryActive && isProductAvailable;
+            final stock = row.read<double>('stock');
+            final categoryId = row.read<String?>('category_id');
+            final variantCount = row.read<int>('variant_count');
+            final modifierCount = row.read<int>('modifier_count');
+            final itemPrice = row.read<double>('item_price');
 
-        return PosItem(
-          id: inventoryId,
-          name: name,
-          categoryId: categoryId,
-          price: itemPrice,
-          stock: stock,
-          isActive: isActive,
-          hasVariants: variantCount > 0,
-          hasModifiers: modifierCount > 0,
-          isProductMode: false,
-          inventory: Inventory(
-            id: inventoryId,
-            productId: productId,
-            name: name,
-            sku: sku,
-            barcode: barcode,
-            trackInventory: trackInventory,
-            isActive: isActive,
-            stock: stock,
-          ),
-          product: null,
-        );
-      }).toList();
-    });
+            return PosItem(
+              id: inventoryId,
+              name: name,
+              categoryId: categoryId,
+              price: itemPrice,
+              stock: stock,
+              isActive: isActive,
+              hasVariants: variantCount > 0,
+              hasModifiers: modifierCount > 0,
+              isProductMode: false,
+              inventory: Inventory(
+                id: inventoryId,
+                productId: productId,
+                name: name,
+                sku: sku,
+                barcode: barcode,
+                trackInventory: trackInventory,
+                isActive: isActive,
+                stock: stock,
+              ),
+              product: null,
+            );
+          }).toList();
+        });
   }
 
   Stream<List<PosItem>> watchProductModeItems() {
-    return _database.customSelect(
-      '''
+    return _database
+        .customSelect(
+          '''
       SELECT 
         p.*,
         (SELECT SUM(stock) FROM inventories WHERE product_id = p.id) as total_stock,
@@ -120,54 +124,60 @@ class PosRepository {
         ) as base_price
       FROM products p
       ''',
-      readsFrom: {
-        _database.products,
-        _database.inventories,
-        _database.variantGroups,
-        _database.productModifierGroups,
-        _database.productPrices,
-      },
-    ).watch().map((rows) {
-      return rows.map((row) {
-        final productId = row.read<String>('id');
-        final name = row.read<String>('name');
-        final categoryId = row.read<String?>('category_id');
-        final sku = row.read<String?>('sku');
-        final barcode = row.read<String?>('barcode');
-        final fallbackPrice = row.read<double>('price');
-        final isActive = row.read<bool>('is_available');
-        
-        final totalStock = row.read<double?>('total_stock') ?? 0.0;
-        final variantCount = row.read<int>('variant_count');
-        final modifierCount = row.read<int>('modifier_count');
-        final basePrice = row.read<double>('base_price');
+          readsFrom: {
+            _database.products,
+            _database.inventories,
+            _database.variantGroups,
+            _database.productModifierGroups,
+            _database.productPrices,
+          },
+        )
+        .watch()
+        .map((rows) {
+          return rows.map((row) {
+            final productId = row.read<String>('id');
+            final name = row.read<String>('name');
+            final categoryId = row.read<String?>('category_id');
+            final sku = row.read<String?>('sku');
+            final barcode = row.read<String?>('barcode');
+            final fallbackPrice = row.read<double>('price');
+            final isActive = row.read<bool>('is_available');
 
-        return PosItem(
-          id: productId,
-          name: name,
-          categoryId: categoryId,
-          price: basePrice,
-          stock: totalStock,
-          isActive: isActive,
-          hasVariants: variantCount > 0,
-          hasModifiers: modifierCount > 0,
-          isProductMode: true,
-          product: Product(
-            id: productId,
-            name: name,
-            categoryId: categoryId,
-            sku: sku,
-            barcode: barcode,
-            price: fallbackPrice,
-            isAvailable: isActive,
-          ),
-          inventory: null,
-        );
-      }).toList();
-    });
+            final totalStock = row.read<double?>('total_stock') ?? 0.0;
+            final variantCount = row.read<int>('variant_count');
+            final modifierCount = row.read<int>('modifier_count');
+            final basePrice = row.read<double>('base_price');
+
+            return PosItem(
+              id: productId,
+              name: name,
+              categoryId: categoryId,
+              price: basePrice,
+              stock: totalStock,
+              isActive: isActive,
+              hasVariants: variantCount > 0,
+              hasModifiers: modifierCount > 0,
+              isProductMode: true,
+              product: Product(
+                id: productId,
+                name: name,
+                categoryId: categoryId,
+                sku: sku,
+                barcode: barcode,
+                price: fallbackPrice,
+                isAvailable: isActive,
+              ),
+              inventory: null,
+            );
+          }).toList();
+        });
   }
 
-  Future<void> toggleInventoryActiveStatus(String id, bool isActive, bool isProductMode) async {
+  Future<void> toggleInventoryActiveStatus(
+    String id,
+    bool isActive,
+    bool isProductMode,
+  ) async {
     if (isProductMode) {
       await (_database.update(_database.products)
             ..where((t) => t.id.equals(id)))
@@ -180,17 +190,17 @@ class PosRepository {
   }
 
   Stream<List<ProductCategory>> watchCategories() {
-    return (_database.select(_database.productCategories)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.sortOrder, mode: OrderingMode.asc),
-            (t) => OrderingTerm(expression: t.name, mode: OrderingMode.asc),
-          ]))
+    return (_database.select(_database.productCategories)..orderBy([
+          (t) => OrderingTerm(expression: t.sortOrder, mode: OrderingMode.asc),
+          (t) => OrderingTerm(expression: t.name, mode: OrderingMode.asc),
+        ]))
         .watch();
   }
 
   Future<PosItem?> findItemByBarcodeOrSku(String query) async {
-    final invRows = await _database.customSelect(
-      '''
+    final invRows = await _database
+        .customSelect(
+          '''
       SELECT 
         i.*,
         p.category_id,
@@ -209,8 +219,9 @@ class PosRepository {
       WHERE i.barcode = ? OR i.sku = ?
       LIMIT 1
       ''',
-      variables: [Variable.withString(query), Variable.withString(query)],
-    ).get();
+          variables: [Variable.withString(query), Variable.withString(query)],
+        )
+        .get();
 
     if (invRows.isNotEmpty) {
       final row = invRows.first;
@@ -245,28 +256,33 @@ class PosRepository {
   }
 
   /// Resolves the inventory_item_id for a given product and variant option
-  Future<String?> findInventoryItemIdForVariant(String productId, String variantGroupOptionId) async {
-    final row = await _database.customSelect(
-      '''
+  Future<String?> findInventoryItemIdForVariant(
+    String productId,
+    String variantGroupOptionId,
+  ) async {
+    final row = await _database
+        .customSelect(
+          '''
       SELECT i.id FROM inventories i
       INNER JOIN inventory_item_variant_group_options piv ON piv.inventory_item_id = i.id
       WHERE i.product_id = ? AND piv.variant_group_option_id = ?
       LIMIT 1
       ''',
-      variables: [
-        Variable.withString(productId),
-        Variable.withString(variantGroupOptionId),
-      ],
-    ).getSingleOrNull();
+          variables: [
+            Variable.withString(productId),
+            Variable.withString(variantGroupOptionId),
+          ],
+        )
+        .getSingleOrNull();
 
     return row?.read<String>('id');
   }
 
   /// Resolves the standalone inventory_item_id for a product without variants
   Future<String?> findStandaloneInventoryItemId(String productId) async {
-    final inv = await (_database.select(_database.inventories)
-          ..where((i) => i.productId.equals(productId)))
-        .getSingleOrNull();
+    final inv = await (_database.select(
+      _database.inventories,
+    )..where((i) => i.productId.equals(productId))).getSingleOrNull();
     return inv?.id;
   }
 }

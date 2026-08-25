@@ -45,78 +45,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: SolluColors.background,
       body: Stack(
-          children: [
-            Center(
-              child: Container(
-                width: 520,
-                padding: const EdgeInsets.all(40),
-                decoration: BoxDecoration(
-                  color: SolluColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+        children: [
+          Center(
+            child: Container(
+              width: 520,
+              padding: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: SolluColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('img/logo-colored.png', width: 180),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Hubungkan Perangkat',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: SolluColors.textDark,
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('img/logo-colored.png', width: 180),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Hubungkan Perangkat',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Masukkan 8-digit OTP dari Dashboard Outlet Anda',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: SolluColors.textMuted,
+                      fontSize: 14,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Masukkan 8-digit OTP dari Dashboard Outlet Anda',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: SolluColors.textMuted, fontSize: 14),
-                    ),
-                    const SizedBox(height: 36),
-                    
-                    // Single Character OTP Form ____-____
-                    _OtpSingleCharForm(
-                      onCompleted: (otp) {
-                        if (!isLoading) {
-                          _verifyOtp(otp);
-                        }
-                      },
-                    ),
+                  ),
+                  const SizedBox(height: 36),
 
-                    const SizedBox(height: 36),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: (_otpCode.length == 8 && !isLoading) ? () => _verifyOtp(_otpCode) : null,
-                        style: ElevatedButton.styleFrom(
-                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: SolluColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: isLoading
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Hubungkan Perangkat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  // Single Character OTP Form ____-____
+                  _OtpSingleCharForm(
+                    onCompleted: (otp) {
+                      if (!isLoading) {
+                        _verifyOtp(otp);
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 36),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (_otpCode.length == 8 && !isLoading)
+                          ? () => _verifyOtp(_otpCode)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: SolluColors.primary,
+                        foregroundColor: Colors.white,
                       ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Hubungkan Perangkat',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '${AppConfig.appName} ${AppConfig.fullVersionString}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: SolluColors.textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    '${AppConfig.appName} ${AppConfig.fullVersionString}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SolluColors.textMuted,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -131,7 +153,10 @@ class _OtpSingleCharForm extends StatefulWidget {
 }
 
 class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
-  final List<TextEditingController> _controllers = List.generate(8, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    8,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(8, (_) => FocusNode());
 
   @override
@@ -152,7 +177,7 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
       for (int i = 0; i < pasteText.length && index + i < 8; i++) {
         _controllers[index + i].text = pasteText[i];
       }
-      
+
       final nextFocus = index + pasteText.length;
       if (nextFocus < 8) {
         _focusNodes[nextFocus].requestFocus();
@@ -166,7 +191,7 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
         _focusNodes[index].unfocus();
       }
     }
-    
+
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length == 8) {
       widget.onCompleted(otp);
@@ -180,7 +205,8 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
       child: KeyboardListener(
         focusNode: FocusNode(),
         onKeyEvent: (event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.backspace) {
             if (_controllers[index].text.isEmpty && index > 0) {
               _focusNodes[index - 1].requestFocus();
             }
@@ -191,7 +217,11 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
           focusNode: _focusNodes[index],
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: SolluColors.primary),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: SolluColors.primary,
+          ),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             counterText: '',
@@ -200,11 +230,17 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
             fillColor: Colors.white,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SolluColors.neutral, width: 1.5),
+              borderSide: const BorderSide(
+                color: SolluColors.neutral,
+                width: 1.5,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+              borderSide: const BorderSide(
+                color: SolluColors.primary,
+                width: 2,
+              ),
             ),
           ),
           onChanged: (val) => _onChanged(index, val),
@@ -224,7 +260,14 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
         ],
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 10.0),
-          child: Text('-', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: SolluColors.neutralDark)),
+          child: Text(
+            '-',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: SolluColors.neutralDark,
+            ),
+          ),
         ),
         for (int i = 4; i < 8; i++) ...[
           _buildSingleBox(i),

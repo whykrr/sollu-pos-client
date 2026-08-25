@@ -24,10 +24,17 @@ class HoldCartNotifier extends Notifier<List<HoldOrder>> {
   List<HoldOrder> build() => [];
 
   /// Menahan pesanan keranjang saat ini
-  HoldOrder? holdCurrentCart(List<CartItem> items, {String? customerName, String? note}) {
+  HoldOrder? holdCurrentCart(
+    List<CartItem> items, {
+    String? customerName,
+    String? note,
+  }) {
     if (items.isEmpty) return null;
 
-    final subtotal = items.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+    final subtotal = items.fold(
+      0.0,
+      (sum, item) => sum + (item.price * item.qty),
+    );
     final newHoldOrder = HoldOrder(
       id: 'HOLD-${DateTime.now().millisecondsSinceEpoch}',
       customerName: customerName,
@@ -48,10 +55,15 @@ class HoldCartNotifier extends Notifier<List<HoldOrder>> {
 
   /// Mengambil transaksi yang ditahan untuk dimuat kembali ke keranjang
   HoldOrder? restoreHoldOrder(String id) {
-    final order = state.firstWhere((element) => element.id == id, orElse: () => throw Exception('Order not found'));
+    final order = state.firstWhere(
+      (element) => element.id == id,
+      orElse: () => throw Exception('Order not found'),
+    );
     removeHoldOrder(id);
     return order;
   }
 }
 
-final holdCartProvider = NotifierProvider<HoldCartNotifier, List<HoldOrder>>(HoldCartNotifier.new);
+final holdCartProvider = NotifierProvider<HoldCartNotifier, List<HoldOrder>>(
+  HoldCartNotifier.new,
+);

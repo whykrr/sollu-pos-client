@@ -112,7 +112,6 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
           // 3. Tab Pilihan: Perangkat Terpasang vs Printer Jaringan (LAN)
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -122,9 +121,13 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                   child: Column(
@@ -195,18 +198,17 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
               ],
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
   }
 
   Widget _buildActivePrinterCard(PrinterConfig? selected) {
     final hasPrinter = selected != null;
 
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -216,9 +218,15 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -373,14 +381,14 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
           ],
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildPrinterPreferencesCard(PrinterConfig selected) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -390,72 +398,80 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Konfigurasi Kertas & Struk',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: SolluColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Ukuran Kertas Thermal',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: SolluColors.textDark),
-          ),
-          const SizedBox(height: 10),
-          Row(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildPaperOption(
-                  title: '58 mm',
-                  subtitle: 'Standar Mobile (32 Chars)',
-                  isSelected: selected.paperSize == PrinterPaperSize.mm58,
-                  onTap: () {
-                    ref.read(selectedPrinterProvider.notifier).updatePaperSize(PrinterPaperSize.mm58);
-                  },
+              const Text(
+                'Konfigurasi Kertas & Struk',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildPaperOption(
-                  title: '80 mm',
-                  subtitle: 'Standar Desktop (48 Chars)',
-                  isSelected: selected.paperSize == PrinterPaperSize.mm80,
-                  onTap: () {
-                    ref.read(selectedPrinterProvider.notifier).updatePaperSize(PrinterPaperSize.mm80);
-                  },
-                ),
+              const SizedBox(height: 16),
+              const Text(
+                'Ukuran Kertas Thermal',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: SolluColors.textDark),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPaperOption(
+                      title: '58 mm',
+                      subtitle: 'Standar Mobile (32 Chars)',
+                      isSelected: selected.paperSize == PrinterPaperSize.mm58,
+                      onTap: () {
+                        ref.read(selectedPrinterProvider.notifier).updatePaperSize(PrinterPaperSize.mm58);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPaperOption(
+                      title: '80 mm',
+                      subtitle: 'Standar Desktop (48 Chars)',
+                      isSelected: selected.paperSize == PrinterPaperSize.mm80,
+                      onTap: () {
+                        ref.read(selectedPrinterProvider.notifier).updatePaperSize(PrinterPaperSize.mm80);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Potong Kertas Otomatis (Auto-Cut)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Kirim perintah pemotong kertas jika didukung printer', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                value: selected.autoCut,
+                activeTrackColor: SolluColors.primary,
+                onChanged: (val) {
+                  ref.read(selectedPrinterProvider.notifier).updateAutoCut(val);
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Buka Laci Kasir (Cash Drawer)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Buka laci kasir otomatis saat mencetak struk', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                value: selected.openCashDrawer,
+                activeTrackColor: SolluColors.primary,
+                onChanged: (val) {
+                  ref.read(selectedPrinterProvider.notifier).updateCashDrawer(val);
+                },
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Potong Kertas Otomatis (Auto-Cut)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: const Text('Kirim perintah pemotong kertas jika didukung printer', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
-            value: selected.autoCut,
-            activeTrackColor: SolluColors.primary,
-            onChanged: (val) {
-              ref.read(selectedPrinterProvider.notifier).updateAutoCut(val);
-            },
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Buka Laci Kasir (Cash Drawer)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: const Text('Buka laci kasir otomatis saat mencetak struk', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
-            value: selected.openCashDrawer,
-            activeTrackColor: SolluColors.primary,
-            onChanged: (val) {
-              ref.read(selectedPrinterProvider.notifier).updateCashDrawer(val);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }

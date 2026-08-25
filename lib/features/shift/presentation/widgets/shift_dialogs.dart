@@ -303,23 +303,29 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
       // --- Cetak otomatis laporan shift jika printer diset ---
       final printerConfig = ref.read(selectedPrinterProvider);
       if (printerConfig != null) {
-        final cashierName = await ref.read(cashierNameProvider(shift.userId).future);
+        final cashierName = await ref.read(
+          cashierNameProvider(shift.userId).future,
+        );
         final printerService = ref.read(printerServiceProvider);
-        printerService.printShiftReport(
-          summary: summary,
-          config: printerConfig,
-          cashierName: cashierName,
-        ).then((result) {
-          if (!result.success && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Gagal mencetak laporan otomatis: ${result.message}'),
-                backgroundColor: SolluColors.warning,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        });
+        printerService
+            .printShiftReport(
+              summary: summary,
+              config: printerConfig,
+              cashierName: cashierName,
+            )
+            .then((result) {
+              if (!result.success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Gagal mencetak laporan otomatis: ${result.message}',
+                    ),
+                    backgroundColor: SolluColors.warning,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
       }
       // --------------------------------------------------------
 
@@ -359,10 +365,10 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
 
     try {
       final txRepo = ref.read(transactionRepositoryProvider);
-      
+
       // Paksa sinkronisasi sebelum menutup shift
       await txRepo.syncPendingTransactions(force: true);
-      
+
       // Pastikan semua transaksi sudah tersinkronisasi
       final unsyncedCount = await txRepo.getUnsyncedTransactionsCount();
       if (unsyncedCount > 0) {
@@ -373,12 +379,20 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('Koneksi Internet Diperlukan', style: TextStyle(color: SolluColors.danger)),
-              content: Text('Terdapat $unsyncedCount transaksi offline yang belum tersinkronisasi.\n\nHarap hubungkan perangkat ke internet agar data dapat dikirim ke server sebelum shift ditutup.\n\nAtau abaikan jika ini adalah kesalahan sistem/jaringan dan Anda harus mengakhiri shift.'),
+              title: const Text(
+                'Koneksi Internet Diperlukan',
+                style: TextStyle(color: SolluColors.danger),
+              ),
+              content: Text(
+                'Terdapat $unsyncedCount transaksi offline yang belum tersinkronisasi.\n\nHarap hubungkan perangkat ke internet agar data dapat dikirim ke server sebelum shift ditutup.\n\nAtau abaikan jika ini adalah kesalahan sistem/jaringan dan Anda harus mengakhiri shift.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Batal', style: TextStyle(color: SolluColors.textMuted)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: SolluColors.textMuted),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -388,8 +402,13 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                     });
                     _processCloseShift(shift, summary);
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: SolluColors.danger),
-                  child: const Text('Tutup Paksa Shift', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SolluColors.danger,
+                  ),
+                  child: const Text(
+                    'Tutup Paksa Shift',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -485,13 +504,15 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      ...summary.salesByPaymentMethod.entries.map((e) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: _SummaryRow(
-                              '- ${e.key}',
-                              CurrencyFormatter.format(e.value.toInt()),
-                            ),
-                          )),
+                      ...summary.salesByPaymentMethod.entries.map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: _SummaryRow(
+                            '- ${e.key}',
+                            CurrencyFormatter.format(e.value.toInt()),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       _SummaryRow(
                         'Kas Masuk/Keluar',
@@ -588,20 +609,24 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                     );
                     return;
                   }
-                  
-                  final cashierName = await ref.read(cashierNameProvider(shift.userId).future);
+
+                  final cashierName = await ref.read(
+                    cashierNameProvider(shift.userId).future,
+                  );
                   final printerService = ref.read(printerServiceProvider);
                   final result = await printerService.printShiftReport(
                     summary: summary,
                     config: printerConfig,
                     cashierName: cashierName,
                   );
-                  
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(result.message),
-                        backgroundColor: result.success ? SolluColors.success : SolluColors.danger,
+                        backgroundColor: result.success
+                            ? SolluColors.success
+                            : SolluColors.danger,
                       ),
                     );
                   }

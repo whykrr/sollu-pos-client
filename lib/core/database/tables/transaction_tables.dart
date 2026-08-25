@@ -14,10 +14,10 @@ class Shifts extends Table {
   TextColumn get status => text()(); // 'open', 'closed'
   DateTimeColumn get openedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get closedAt => dateTime().nullable()();
-  
+
   // Offline Sync
   BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -30,10 +30,10 @@ class ShiftCashLogs extends Table {
   RealColumn get amount => real()();
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  
+
   // Offline Sync
   BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -44,9 +44,10 @@ class Transactions extends Table {
   TextColumn get outletId => text()();
   TextColumn get shiftId => text().nullable().references(Shifts, #id)();
   TextColumn get customerId => text().nullable()();
-  TextColumn get channel => text().withDefault(const Constant('pos'))(); // 'pos', 'direct', 'invoice'
+  TextColumn get channel =>
+      text().withDefault(const Constant('pos'))(); // 'pos', 'direct', 'invoice'
   TextColumn get transactionNumber => text()();
-  
+
   // Financials
   RealColumn get subtotal => real()();
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
@@ -54,22 +55,25 @@ class Transactions extends Table {
   RealColumn get discountValue => real().nullable()();
   TextColumn get promoName => text().nullable()();
   RealColumn get taxAmount => real().withDefault(const Constant(0.0))();
-  RealColumn get serviceChargeAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get serviceChargeAmount =>
+      real().withDefault(const Constant(0.0))();
   RealColumn get shippingFee => real().withDefault(const Constant(0.0))();
   RealColumn get total => real()();
-  
+
   // Statuses
-  TextColumn get paymentStatus => text()(); // 'unpaid', 'paid', 'partial', 'draft'
-  TextColumn get status => text()(); // 'completed', 'hold', 'void', 'paid', 'cancel'
+  TextColumn get paymentStatus =>
+      text()(); // 'unpaid', 'paid', 'partial', 'draft'
+  TextColumn get status =>
+      text()(); // 'completed', 'hold', 'void', 'paid', 'cancel'
   TextColumn get notes => text().nullable()();
-  
+
   // Offline Sync
   BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
   TextColumn get offlineId => text().nullable()();
   DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().nullable()();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -91,7 +95,7 @@ class TransactionItems extends Table {
   RealColumn get subtotal => real()();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -99,12 +103,13 @@ class TransactionItems extends Table {
 @DataClassName('TransactionItemModifier')
 class TransactionItemModifiers extends Table {
   TextColumn get id => text()(); // UUID
-  TextColumn get transactionItemId => text().references(TransactionItems, #id)();
+  TextColumn get transactionItemId =>
+      text().references(TransactionItems, #id)();
   TextColumn get modifierOptionId => text().nullable()();
   TextColumn get modifierName => text()();
   RealColumn get price => real().withDefault(const Constant(0.0))();
   RealColumn get qty => real().withDefault(const Constant(1.0))();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -113,12 +118,13 @@ class TransactionItemModifiers extends Table {
 class TransactionPayments extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get transactionId => text().references(Transactions, #id)();
-  TextColumn get paymentMethodId => text().nullable().references(PaymentMethods, #id)();
+  TextColumn get paymentMethodId =>
+      text().nullable().references(PaymentMethods, #id)();
   RealColumn get amount => real()();
   RealColumn get changeAmount => real().withDefault(const Constant(0.0))();
   TextColumn get paymentReference => text().nullable()();
   DateTimeColumn get paidAt => dateTime().withDefault(currentDateAndTime)();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -134,7 +140,7 @@ class TransactionPromos extends Table {
   RealColumn get discountValue => real().withDefault(const Constant(0.0))();
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  
+
   @override
   Set<Column> get primaryKey => {id};
 }

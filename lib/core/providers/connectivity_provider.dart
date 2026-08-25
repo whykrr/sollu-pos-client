@@ -24,9 +24,11 @@ class ConnectivityNotifier extends Notifier<bool> {
     if (result.contains(ConnectivityResult.none)) {
       state = false; // Offline
     } else {
-      state = true;  // Online (WiFi, Mobile, etc)
+      state = true; // Online (WiFi, Mobile, etc)
     }
   }
 }
 
-final connectivityProvider = NotifierProvider<ConnectivityNotifier, bool>(ConnectivityNotifier.new);
+final connectivityProvider = NotifierProvider<ConnectivityNotifier, bool>(
+  ConnectivityNotifier.new,
+);

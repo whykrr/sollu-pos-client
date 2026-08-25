@@ -31,12 +31,20 @@ class HoldOrdersDialog extends ConsumerWidget {
                   color: SolluColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.pause_circle_outline, color: SolluColors.warning, size: 22),
+                child: const Icon(
+                  Icons.pause_circle_outline,
+                  color: SolluColors.warning,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
                 'Transaksi Ditahan (F7)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: SolluColors.textDark),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: SolluColors.textDark,
+                ),
               ),
             ],
           ),
@@ -49,7 +57,11 @@ class HoldOrdersDialog extends ConsumerWidget {
             ),
             child: Text(
               '${holdOrders.length} Pesanan',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: SolluColors.textMuted),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: SolluColors.textMuted,
+              ),
             ),
           ),
         ],
@@ -62,22 +74,32 @@ class HoldOrdersDialog extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.inbox_outlined, size: 48, color: SolluColors.textMuted.withValues(alpha: 0.5)),
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 48,
+                      color: SolluColors.textMuted.withValues(alpha: 0.5),
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'Tidak ada transaksi yang sedang ditahan',
-                      style: TextStyle(color: SolluColors.textMuted, fontSize: 14, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: SolluColors.textMuted,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               )
             : ListView.separated(
                 itemCount: holdOrders.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final order = holdOrders[index];
                   final totalQty = order.items.fold(0, (sum, i) => sum + i.qty);
-                  final timeStr = "${order.heldAt.hour.toString().padLeft(2, '0')}:${order.heldAt.minute.toString().padLeft(2, '0')}";
+                  final timeStr =
+                      "${order.heldAt.hour.toString().padLeft(2, '0')}:${order.heldAt.minute.toString().padLeft(2, '0')}";
 
                   return Container(
                     padding: const EdgeInsets.all(14),
@@ -105,14 +127,23 @@ class HoldOrdersDialog extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: SolluColors.primary.withValues(alpha: 0.1),
+                                      color: SolluColors.primary.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       timeStr,
-                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: SolluColors.primary),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: SolluColors.primary,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -120,13 +151,24 @@ class HoldOrdersDialog extends ConsumerWidget {
                               const SizedBox(height: 6),
                               Text(
                                 '$totalQty item • ${CurrencyFormatter.format(order.subtotal.toInt())}',
-                                style: const TextStyle(fontSize: 13, color: SolluColors.textMuted, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: SolluColors.textMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              if (order.note != null && order.note!.isNotEmpty) ...[
+                              if (order.note != null &&
+                                  order.note!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   'Catatan: ${order.note}',
-                                  style: TextStyle(fontSize: 12, color: SolluColors.textDark.withValues(alpha: 0.7), fontStyle: FontStyle.italic),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: SolluColors.textDark.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
                               ],
                             ],
@@ -135,10 +177,16 @@ class HoldOrdersDialog extends ConsumerWidget {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: SolluColors.danger, size: 20),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: SolluColors.danger,
+                                size: 20,
+                              ),
                               tooltip: 'Hapus Pesanan Ditahan',
                               onPressed: () {
-                                ref.read(holdCartProvider.notifier).removeHoldOrder(order.id);
+                                ref
+                                    .read(holdCartProvider.notifier)
+                                    .removeHoldOrder(order.id);
                               },
                             ),
                             const SizedBox(width: 6),
@@ -150,7 +198,9 @@ class HoldOrdersDialog extends ConsumerWidget {
                                   // Ask or auto hold current cart / merge
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Mengganti keranjang saat ini dengan transaksi tertahan...'),
+                                      content: Text(
+                                        'Mengganti keranjang saat ini dengan transaksi tertahan...',
+                                      ),
                                       duration: Duration(seconds: 1),
                                     ),
                                   );
@@ -159,12 +209,16 @@ class HoldOrdersDialog extends ConsumerWidget {
                                 for (final item in order.items) {
                                   ref.read(cartProvider.notifier).addItem(item);
                                 }
-                                ref.read(holdCartProvider.notifier).removeHoldOrder(order.id);
+                                ref
+                                    .read(holdCartProvider.notifier)
+                                    .removeHoldOrder(order.id);
                                 Navigator.of(context).pop();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Transaksi ${order.id} berhasil dimuat kembali!'),
+                                    content: Text(
+                                      'Transaksi ${order.id} berhasil dimuat kembali!',
+                                    ),
                                     backgroundColor: SolluColors.success,
                                     duration: const Duration(seconds: 2),
                                   ),
@@ -173,10 +227,21 @@ class HoldOrdersDialog extends ConsumerWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: SolluColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
-                              child: const Text('Muat Transaksi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'Muat Transaksi',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -189,7 +254,10 @@ class HoldOrdersDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Tutup (Esc)', style: TextStyle(color: SolluColors.textMuted)),
+          child: const Text(
+            'Tutup (Esc)',
+            style: TextStyle(color: SolluColors.textMuted),
+          ),
         ),
       ],
     );
