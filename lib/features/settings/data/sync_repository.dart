@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
@@ -310,26 +311,42 @@ class SyncRepository {
 
           if (logoUrl != null && logoUrl.isNotEmpty) {
             try {
+              String fullLogoUrl = logoUrl;
+              if (!fullLogoUrl.startsWith('http://') &&
+                  !fullLogoUrl.startsWith('https://')) {
+                final baseUrl = _dioClient.dio.options.baseUrl;
+                if (baseUrl.isNotEmpty) {
+                  final baseUri = Uri.parse(baseUrl);
+                  final origin =
+                      '${baseUri.scheme}://${baseUri.host}${baseUri.hasPort ? ':${baseUri.port}' : ''}';
+                  fullLogoUrl = fullLogoUrl.startsWith('/')
+                      ? '$origin$fullLogoUrl'
+                      : '$origin/$fullLogoUrl';
+                }
+              }
+
               final appDir = await getApplicationDocumentsDirectory();
               final logoFile = File(p.join(appDir.path, 'outlet_logo.png'));
 
               final imgRes = await _dioClient.dio.get<List<int>>(
-                logoUrl,
+                fullLogoUrl,
                 options: Options(responseType: ResponseType.bytes),
               );
               if (imgRes.statusCode == 200 && imgRes.data != null) {
                 await logoFile.writeAsBytes(imgRes.data!);
                 localLogoPath = logoFile.path;
               }
-            } catch (_) {
+            } catch (e) {
+              debugPrint('Error downloading logo: $e');
               localLogoPath = existingLocalLogoPath;
             }
           }
 
-          
-          final outletData = data['outlet'] ?? {};
-          outletData['local_logo_path'] = localLogoPath;
-          await _outletSettingsService.saveOutletProfile(Map<String, dynamic>.from(outletData));
+          final outletData = Map<String, dynamic>.from(data['outlet'] ?? {});
+          if (localLogoPath != null) {
+            outletData['local_logo_path'] = localLogoPath;
+          }
+          await _outletSettingsService.saveOutletProfile(outletData);
           
           final settingsToSave = {
             'taxPercentage': parsedTax,

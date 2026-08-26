@@ -377,9 +377,9 @@ class TransactionRepository {
 
       Customer? resolvedCustomer;
       if (customerId != null) {
-        resolvedCustomer = await (_database.select(_database.customers)
-              ..where((c) => c.id.equals(customerId)))
-            .getSingleOrNull();
+        resolvedCustomer = await (_database.select(
+          _database.customers,
+        )..where((c) => c.id.equals(customerId))).getSingleOrNull();
       }
 
       final detailData = TransactionDetailData(
@@ -494,6 +494,20 @@ class TransactionRepository {
   }
 
   /// Mendapatkan jumlah transaksi yang belum tersinkron
+  Future<String?> getLastTransactionId() async {
+    final tx =
+        await (_database.select(_database.transactions)
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
+    return tx?.id;
+  }
+
   Future<int> getUnsyncedTransactionsCount() async {
     final countRows = await (_database.select(
       _database.transactions,

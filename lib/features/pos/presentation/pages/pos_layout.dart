@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/payment/presentation/widgets/payment_dialog.dart';
@@ -127,12 +129,42 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         TransactionHistoryDialog.show(context);
         break;
       case 'F10':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mencetak ulang struk transaksi terakhir... (F10)'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        final repo = ref.read(transactionRepositoryProvider);
+        repo.getLastTransactionId().then((txId) {
+          if (txId != null) {
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('Mencetak ulang struk transaksi terakhir...'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+            printTransactionReceiptAction(ref: ref, transactionId: txId).then((
+              res,
+            ) {
+              if (mounted) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      res.success
+                          ? 'Struk berhasil dicetak'
+                          : 'Gagal: ${res.message}',
+                    ),
+                    backgroundColor: res.success
+                        ? SolluColors.success
+                        : SolluColors.danger,
+                  ),
+                );
+              }
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Belum ada transaksi untuk dicetak.'),
+              ),
+            );
+          }
+        });
         break;
       case 'F12':
         CloseShiftDialog.show(context);

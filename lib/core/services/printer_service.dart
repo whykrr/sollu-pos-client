@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
@@ -9,11 +8,48 @@ import 'package:printing/printing.dart';
 
 import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/services/desktop_raw_printer.dart';
+import 'package:sollu_pos_client/core/services/printer_image_utils.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/data/transaction_repository.dart';
 import 'package:sollu_pos_client/features/shift/data/shift_repository.dart';
 
 class PrinterService {
+  // Image cache
+  String? _lastLogoHash;
+  int? _lastLogoWidth;
+  List<int>? _cachedLogoRasterBytes;
+
+  Future<List<int>?> _getLogoRasterBytes(
+    Uint8List bytes,
+    int width,
+    Generator generator,
+  ) async {
+    final hash =
+        '${bytes.length}_${bytes.isNotEmpty ? bytes[0] : 0}_${bytes.length > 50 ? bytes[50] : 0}_${bytes.length > 100 ? bytes[100] : 0}_${bytes.last}';
+    if (_lastLogoHash == hash &&
+        _lastLogoWidth == width &&
+        _cachedLogoRasterBytes != null) {
+      return _cachedLogoRasterBytes;
+    }
+
+    final resized = await compute(processReceiptLogo, {
+      'bytes': bytes,
+      'paperWidthDots': width,
+      'width': width,
+    });
+
+    if (resized != null) {
+      // Use ESC * bit-image mode (generator.image) for 100% universal thermal printer hardware compatibility
+      final rasterBytes = generator.image(resized);
+
+      _lastLogoHash = hash;
+      _lastLogoWidth = width;
+      _cachedLogoRasterBytes = rasterBytes;
+      return rasterBytes;
+    }
+    return null;
+  }
+
   CapabilityProfile? _profile;
 
   Future<CapabilityProfile> _getProfile() async {
@@ -22,7 +58,8 @@ class PrinterService {
   }
 
   /// Memeriksa apakah platform saat ini adalah platform Desktop
-  bool get isDesktopPlatform => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  bool get isDesktopPlatform =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   /// Memeriksa apakah platform saat ini adalah Mobile (Android / iOS)
   bool get isMobilePlatform => Platform.isAndroid || Platform.isIOS;
@@ -41,11 +78,15 @@ class PrinterService {
           Permission.location,
         ].request();
 
-        final bluetoothScanGranted = statuses[Permission.bluetoothScan]?.isGranted ?? true;
-        final bluetoothConnectGranted = statuses[Permission.bluetoothConnect]?.isGranted ?? true;
-        final locationGranted = statuses[Permission.location]?.isGranted ?? true;
+        final bluetoothScanGranted =
+            statuses[Permission.bluetoothScan]?.isGranted ?? true;
+        final bluetoothConnectGranted =
+            statuses[Permission.bluetoothConnect]?.isGranted ?? true;
+        final locationGranted =
+            statuses[Permission.location]?.isGranted ?? true;
 
-        return (bluetoothScanGranted && bluetoothConnectGranted) || locationGranted;
+        return (bluetoothScanGranted && bluetoothConnectGranted) ||
+            locationGranted;
       }
       return true;
     } catch (e) {
@@ -95,7 +136,8 @@ class PrinterService {
       final hasPermission = await checkAndRequestPermissions();
       if (hasPermission) {
         try {
-          final List<BluetoothInfo> list = await PrintBluetoothThermal.pairedBluetooths;
+          final List<BluetoothInfo> list =
+              await PrintBluetoothThermal.pairedBluetooths;
           for (final d in list) {
             result.add(
               DiscoveredPrinterInfo(
@@ -130,10 +172,19 @@ class PrinterService {
       socket.add(bytes);
       await socket.flush();
       await socket.close();
-      return (success: true, message: 'Berhasil mengirim data ke printer jaringan $ipAddress:$port');
+      return (
+        success: true,
+        message: 'Berhasil mengirim data ke printer jaringan $ipAddress:$port',
+      );
     } catch (e) {
-      debugPrint('Error sending bytes to network printer ($ipAddress:$port): $e');
-      return (success: false, message: 'Gagal menghubungkan ke printer jaringan ($ipAddress:$port): $e');
+      debugPrint(
+        'Error sending bytes to network printer ($ipAddress:$port): $e',
+      );
+      return (
+        success: false,
+        message:
+            'Gagal menghubungkan ke printer jaringan ($ipAddress:$port): $e',
+      );
     } finally {
       socket?.destroy();
     }
@@ -154,73 +205,114 @@ class PrinterService {
   /// Menghasilkan byte untuk Test Print ESC/POS (Bluetooth & Network)
   Future<List<int>> generateTestReceiptBytes(PrinterConfig config) async {
     final profile = await _getProfile();
-    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final paperSize = config.paperSize == PrinterPaperSize.mm58
+        ? PaperSize.mm58
+        : PaperSize.mm80;
     final generator = Generator(paperSize, profile);
     List<int> bytes = [];
 
+    const regular = PosStyles(fontType: PosFontType.fontB);
+    const bold = PosStyles(fontType: PosFontType.fontB, bold: true);
+    const center = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.center,
+    );
+    const right = PosStyles(fontType: PosFontType.fontB, align: PosAlign.right);
+    const rightBold = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.right,
+      bold: true,
+    );
+    const header = PosStyles(
+      fontType: PosFontType.fontA,
+      align: PosAlign.center,
+      bold: true,
+    );
+
     bytes += generator.reset();
-    
-    // Header
-    bytes += generator.text(
-      config.storeName ?? 'SOLLU POS',
-      styles: const PosStyles(
-        align: PosAlign.center,
-        bold: true,
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-      ),
-    );
-    bytes += generator.text(
-      'UJI COBA CETAK STRUK',
-      styles: const PosStyles(align: PosAlign.center, bold: true),
-    );
-    bytes += generator.text(
-      DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now()),
-      styles: const PosStyles(align: PosAlign.center),
-    );
-    bytes += generator.hr();
 
-    // Body
-    bytes += generator.text('Status: TERHUBUNG', styles: const PosStyles(bold: true));
-    bytes += generator.text('Printer: ${config.name}');
-    bytes += generator.text('Tipe: ${config.connectionType.label}');
-    bytes += generator.text('Alamat/IP: ${config.address}');
-    bytes += generator.text('Ukuran Kertas: ${config.paperSize.label}');
+    bytes += generator.text(
+      (config.storeName ?? 'NAMA OUTLET KASIR').toUpperCase(),
+      styles: header,
+    );
+
+    bytes += generator.text('Alamat Outlet Uji Coba', styles: center);
+    bytes += generator.text('Telp: 08123456789', styles: center);
+    bytes += generator.text('Email: test@sollu.id', styles: center);
+    bytes += generator.text('Uji Coba Cetak Struk', styles: center);
+
     bytes += generator.hr();
 
     bytes += generator.row([
-      PosColumn(text: 'Item Contoh A x1', width: 8),
+      PosColumn(text: 'No: INV/TEST/0001', width: 7, styles: regular),
       PosColumn(
-        text: 'Rp 15.000',
-        width: 4,
-        styles: const PosStyles(align: PosAlign.right),
+        text: DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+        width: 5,
+        styles: right,
       ),
     ]);
     bytes += generator.row([
-      PosColumn(text: 'Item Contoh B x2', width: 8),
-      PosColumn(
-        text: 'Rp 20.000',
-        width: 4,
-        styles: const PosStyles(align: PosAlign.right),
-      ),
+      PosColumn(text: 'Kasir: Test User', width: 7, styles: regular),
+      PosColumn(text: 'Dine In', width: 5, styles: rightBold),
+    ]);
+    bytes += generator.text('Pelanggan: Test Customer', styles: regular);
+
+    bytes += generator.hr();
+
+    bytes += generator.text('Kopi Susu Aren', styles: regular);
+    bytes += generator.row([
+      PosColumn(text: '2 x Rp 25.000', width: 7, styles: regular),
+      PosColumn(text: 'Rp 50.000', width: 5, styles: right),
+    ]);
+    bytes += generator.text(
+      '  + Less Sugar, Extra Shot (+Rp 5.000)',
+      styles: regular,
+    );
+    bytes += generator.text('  * Sedikit es', styles: regular);
+
+    bytes += generator.text('Croissant Butter', styles: regular);
+    bytes += generator.row([
+      PosColumn(text: '1 x Rp 25.000', width: 7, styles: regular),
+      PosColumn(text: 'Rp 25.000', width: 5, styles: right),
     ]);
 
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(text: 'Subtotal', width: 6, styles: regular),
+      PosColumn(text: 'Rp 75.000', width: 6, styles: right),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Diskon', width: 6, styles: regular),
+      PosColumn(text: '-Rp 5.000', width: 6, styles: right),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Pajak (PB1/PPN)', width: 6, styles: regular),
+      PosColumn(text: 'Rp 7.000', width: 6, styles: right),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Service Charge', width: 6, styles: regular),
+      PosColumn(text: 'Rp 3.500', width: 6, styles: right),
+    ]);
     bytes += generator.hr();
     bytes += generator.row([
-      PosColumn(text: 'TOTAL', width: 6, styles: const PosStyles(bold: true)),
-      PosColumn(
-        text: 'Rp 35.000',
-        width: 6,
-        styles: const PosStyles(align: PosAlign.right, bold: true),
-      ),
+      PosColumn(text: 'TOTAL', width: 6, styles: bold),
+      PosColumn(text: 'Rp 80.500', width: 6, styles: rightBold),
     ]);
-    bytes += generator.hr();
+    bytes += generator.row([
+      PosColumn(text: 'Tunai', width: 6, styles: regular),
+      PosColumn(text: 'Rp 100.000', width: 6, styles: right),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Kembalian', width: 6, styles: regular),
+      PosColumn(text: 'Rp 19.500', width: 6, styles: right),
+    ]);
 
-    // Footer
     bytes += generator.text(
       config.footerNote ?? 'Printer siap digunakan untuk transaksi!',
-      styles: const PosStyles(align: PosAlign.center),
+      styles: center,
     );
+
     bytes += generator.feed(2);
 
     if (config.autoCut) {
@@ -230,7 +322,6 @@ class PrinterService {
     return bytes;
   }
 
-  /// Menghasilkan bytes struk transaksi resmi ESC/POS (Bluetooth & Network)
   Future<List<int>> generateTransactionReceiptBytes({
     required TransactionDetailData detail,
     required PrinterConfig config,
@@ -240,135 +331,207 @@ class PrinterService {
     String? outletName,
     String? outletAddress,
     String? outletPhone,
+    String? outletEmail,
   }) async {
     final profile = await _getProfile();
-    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final paperSize = config.paperSize == PrinterPaperSize.mm58
+        ? PaperSize.mm58
+        : PaperSize.mm80;
     final generator = Generator(paperSize, profile);
     List<int> bytes = [];
 
+    const regular = PosStyles(fontType: PosFontType.fontB);
+    const bold = PosStyles(fontType: PosFontType.fontB, bold: true);
+    const center = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.center,
+    );
+    const right = PosStyles(fontType: PosFontType.fontB, align: PosAlign.right);
+    const rightBold = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.right,
+      bold: true,
+    );
+    const header = PosStyles(
+      fontType: PosFontType.fontA,
+      align: PosAlign.center,
+      bold: true,
+    );
+
     bytes += generator.reset();
 
-    // 0. Logo Toko
-    if (((outletSetting?['showLogo'] as bool?) ?? true) && logoBytes != null) {
+    // Logo Toko
+    final rawShowLogo =
+        outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
+    final bool showLogo =
+        rawShowLogo == true ||
+        rawShowLogo == 1 ||
+        rawShowLogo == '1' ||
+        rawShowLogo == null;
+    if (showLogo && logoBytes != null) {
       try {
-        final decoded = img.decodeImage(logoBytes);
-        if (decoded != null) {
-          final targetWidth = config.paperSize == PrinterPaperSize.mm58 ? 160 : 220;
-          final resized = img.copyResize(decoded, width: targetWidth);
-          bytes += generator.imageRaster(resized, align: PosAlign.center);
-          bytes += generator.emptyLines(1);
+        final paperWidthDots = config.paperSize == PrinterPaperSize.mm58
+            ? 384
+            : 576;
+        final rasterBytes = await _getLogoRasterBytes(
+          logoBytes,
+          paperWidthDots,
+          generator,
+        );
+        if (rasterBytes != null) {
+          bytes += rasterBytes;
         }
       } catch (e) {
         debugPrint('Error rasterizing logo for ESC/POS: $e');
       }
     }
 
-    final String customHeader = outletSetting?['customHeaderTitle']?.toString() ?? '';
-    final displayName = customHeader.isNotEmpty ? customHeader : (outletName ?? config.storeName ?? 'SOLLU POS');
-    bytes += generator.text(
+    // Header Title
+    final String customHeader =
+        outletSetting?['custom_header_title']?.toString() ??
+        outletSetting?['customHeaderTitle']?.toString() ??
+        '';
+    final displayName = customHeader.isNotEmpty
+        ? customHeader
+        : (outletName ?? config.storeName ?? 'NAMA OUTLET KASIR');
+    bytes += generator.text(displayName, styles: header);
 
-      displayName,
-      styles: const PosStyles(
-        align: PosAlign.center,
-        bold: true,
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-      ),
-    );
-
-    if (((outletSetting?['showAddress'] as bool?) ?? true) && outletAddress != null && outletAddress.isNotEmpty) {
-      bytes += generator.text(
-        outletAddress,
-        styles: const PosStyles(align: PosAlign.center),
-      );
+    // Address & Contact
+    bool showAddress =
+        (outletSetting?['show_address'] as bool?) ??
+        (outletSetting?['showAddress'] as bool?) ??
+        true;
+    if (showAddress && outletAddress != null && outletAddress.isNotEmpty) {
+      bytes += generator.text(outletAddress, styles: center);
     }
-    if (((outletSetting?['showPhone'] as bool?) ?? true) && outletPhone != null && outletPhone.isNotEmpty) {
-      bytes += generator.text(
-        'Telp: $outletPhone',
-        styles: const PosStyles(align: PosAlign.center),
-      );
+    bool showPhone =
+        (outletSetting?['show_phone'] as bool?) ??
+        (outletSetting?['showPhone'] as bool?) ??
+        true;
+    if (showPhone && outletPhone != null && outletPhone.isNotEmpty) {
+      bytes += generator.text('Telp: $outletPhone', styles: center);
+    }
+    bool showEmail =
+        (outletSetting?['show_email'] as bool?) ??
+        (outletSetting?['showEmail'] as bool?) ??
+        false;
+    if (showEmail && outletEmail != null && outletEmail.isNotEmpty) {
+      bytes += generator.text('Email: $outletEmail', styles: center);
     }
 
-    final headerNote = (outletSetting?['headerNotes']?.toString()) ?? config.headerNote;
+    // Header Note
+    final headerNote =
+        (outletSetting?['header_notes']?.toString()) ??
+        (outletSetting?['headerNotes']?.toString()) ??
+        config.headerNote;
     if (headerNote != null && headerNote.isNotEmpty) {
-      bytes += generator.text(
-        headerNote,
-        styles: const PosStyles(align: PosAlign.center),
-      );
-    }
-
-    if ((outletSetting?['wifiInfo']?.toString()) != null && (((outletSetting?['wifiInfo']?.toString().isNotEmpty) ?? false))) {
-      bytes += generator.text(
-        'WiFi: ${outletSetting?['wifiInfo']}',
-        styles: const PosStyles(align: PosAlign.center),
-      );
+      bytes += generator.text(headerNote, styles: center);
     }
 
     bytes += generator.hr();
 
-    // 2. Info Transaksi
+    // Meta Info
     final tx = detail.transaction;
     bytes += generator.row([
-      PosColumn(text: 'No: ${tx.transactionNumber}', width: 8),
       PosColumn(
-        text: DateFormat('dd/MM/yy HH:mm').format(tx.createdAt),
-        width: 4,
-        styles: const PosStyles(align: PosAlign.right),
+        text: 'No: ${tx.transactionNumber.trim()}',
+        width: 7,
+        styles: regular,
+      ),
+      PosColumn(
+        text: DateFormat('dd/MM/yyyy HH:mm').format(tx.createdAt),
+        width: 5,
+        styles: right,
       ),
     ]);
 
-    if (((outletSetting?['showCashierName'] as bool?) ?? true) && cashierName != null && cashierName.isNotEmpty) {
-      bytes += generator.text('Kasir: $cashierName');
+    bool showCashier =
+        (outletSetting?['show_cashier_name'] as bool?) ??
+        (outletSetting?['showCashierName'] as bool?) ??
+        true;
+    String cashierText =
+        (showCashier && cashierName != null && cashierName.isNotEmpty)
+        ? 'Kasir: $cashierName'
+        : '';
+
+    bool showOrderType =
+        (outletSetting?['show_order_type'] as bool?) ??
+        (outletSetting?['showOrderType'] as bool?) ??
+        true;
+    String orderTypeText = showOrderType ? 'Dine In' : ''; // Placeholder
+
+    if (cashierText.isNotEmpty || orderTypeText.isNotEmpty) {
+      bytes += generator.row([
+        PosColumn(text: cashierText, width: 7, styles: regular),
+        PosColumn(text: orderTypeText, width: 5, styles: rightBold),
+      ]);
     }
 
-    if (((outletSetting?['showCustomerName'] as bool?) ?? true) && detail.customer != null) {
-      bytes += generator.text('Pelanggan: ${detail.customer!.name}');
+    bool showCustomer =
+        (outletSetting?['show_customer_name'] as bool?) ??
+        (outletSetting?['showCustomerName'] as bool?) ??
+        true;
+    if (showCustomer && detail.customer != null) {
+      bytes += generator.text(
+        'Pelanggan: ${detail.customer!.name}',
+        styles: regular,
+      );
     }
 
     bytes += generator.hr();
 
-    // 3. Daftar Item
+    // Item List
     for (final item in detail.items) {
-      bytes += generator.text(
-        item.productName,
-        styles: const PosStyles(bold: true),
+      bytes += generator.text(item.productName, styles: regular);
+
+      final qtyStr = item.qty % 1 == 0
+          ? item.qty.toInt().toString()
+          : item.qty.toString();
+      final priceStr = CurrencyFormatter.format(item.price.toInt());
+      final subtotalStr = CurrencyFormatter.format(
+        item.subtotal.toInt() + item.discountAmount.toInt(),
       );
 
-      final qtyStr = item.qty % 1 == 0 ? item.qty.toInt().toString() : item.qty.toString();
-      final priceStr = CurrencyFormatter.format(item.price.toInt());
-      final subtotalStr = CurrencyFormatter.format(item.subtotal.toInt());
-
       bytes += generator.row([
-        PosColumn(text: '$qtyStr x $priceStr', width: 7),
-        PosColumn(
-          text: subtotalStr,
-          width: 5,
-          styles: const PosStyles(align: PosAlign.right),
-        ),
+        PosColumn(text: '$qtyStr x $priceStr', width: 7, styles: regular),
+        PosColumn(text: subtotalStr, width: 5, styles: right),
       ]);
 
-      // Modifiers / Extra
-      if ((outletSetting?['showModifiers'] as bool?) ?? true) {
+      // Modifiers
+      if ((outletSetting?['show_modifiers'] as bool?) ??
+          (outletSetting?['showModifiers'] as bool?) ??
+          true) {
         final modifiers = detail.modifiersByItemId[item.id] ?? [];
-        for (final mod in modifiers) {
-          final modPrice = mod.price > 0 ? ' (+${CurrencyFormatter.format(mod.price.toInt())})' : '';
-          bytes += generator.text('  + ${mod.modifierName}$modPrice');
+        if (modifiers.isNotEmpty) {
+          String modsText = modifiers
+              .map((mod) {
+                final modPrice = mod.price > 0
+                    ? ' (+${CurrencyFormatter.format(mod.price.toInt())})'
+                    : '';
+                return '${mod.modifierName}$modPrice';
+              })
+              .join(', ');
+          bytes += generator.text('  + $modsText', styles: regular);
         }
       }
 
-      // Catatan Item
-      if (((outletSetting?['showItemNotes'] as bool?) ?? true) && item.notes != null && item.notes!.isNotEmpty) {
-        bytes += generator.text('  * ${item.notes}');
+      // Notes
+      if (((outletSetting?['show_item_notes'] as bool?) ??
+              (outletSetting?['showItemNotes'] as bool?) ??
+              true) &&
+          item.notes != null &&
+          item.notes!.isNotEmpty) {
+        bytes += generator.text('  * ${item.notes}', styles: regular);
       }
 
-      // Diskon per item jika ada
+      // Diskon item
       if (item.discountAmount > 0) {
         bytes += generator.row([
-          PosColumn(text: '  Diskon Item', width: 7),
+          PosColumn(text: '  Diskon Item', width: 7, styles: regular),
           PosColumn(
             text: '-${CurrencyFormatter.format(item.discountAmount.toInt())}',
             width: 5,
-            styles: const PosStyles(align: PosAlign.right),
+            styles: right,
           ),
         ]);
       }
@@ -376,46 +539,51 @@ class PrinterService {
 
     bytes += generator.hr();
 
-    // 4. Perhitungan Finansial
+    // Financial Calculation
     bytes += generator.row([
-      PosColumn(text: 'Subtotal', width: 6),
+      PosColumn(text: 'Subtotal', width: 6, styles: regular),
       PosColumn(
         text: CurrencyFormatter.format(tx.subtotal.toInt()),
         width: 6,
-        styles: const PosStyles(align: PosAlign.right),
+        styles: right,
       ),
     ]);
 
     if (tx.discountAmount > 0) {
-      final promoLabel = tx.promoName != null ? 'Diskon (${tx.promoName})' : 'Diskon';
       bytes += generator.row([
-        PosColumn(text: promoLabel, width: 6),
+        PosColumn(text: 'Diskon', width: 6, styles: regular),
         PosColumn(
           text: '-${CurrencyFormatter.format(tx.discountAmount.toInt())}',
           width: 6,
-          styles: const PosStyles(align: PosAlign.right),
+          styles: right,
         ),
       ]);
     }
 
-    if (((outletSetting?['showTaxDetail'] as bool?) ?? true) && tx.taxAmount > 0) {
+    if (((outletSetting?['show_tax_detail'] as bool?) ??
+            (outletSetting?['showTaxDetail'] as bool?) ??
+            true) &&
+        tx.taxAmount > 0) {
       bytes += generator.row([
-        PosColumn(text: 'Pajak (PB1/PPN)', width: 6),
+        PosColumn(text: 'Pajak (PB1/PPN)', width: 6, styles: regular),
         PosColumn(
           text: CurrencyFormatter.format(tx.taxAmount.toInt()),
           width: 6,
-          styles: const PosStyles(align: PosAlign.right),
+          styles: right,
         ),
       ]);
     }
 
-    if (((outletSetting?['showServiceCharge'] as bool?) ?? true) && tx.serviceChargeAmount > 0) {
+    if (((outletSetting?['show_service_charge'] as bool?) ??
+            (outletSetting?['showServiceCharge'] as bool?) ??
+            true) &&
+        tx.serviceChargeAmount > 0) {
       bytes += generator.row([
-        PosColumn(text: 'Service Charge', width: 6),
+        PosColumn(text: 'Service Charge', width: 6, styles: regular),
         PosColumn(
           text: CurrencyFormatter.format(tx.serviceChargeAmount.toInt()),
           width: 6,
-          styles: const PosStyles(align: PosAlign.right),
+          styles: right,
         ),
       ]);
     }
@@ -424,63 +592,69 @@ class PrinterService {
 
     // Total
     bytes += generator.row([
-      PosColumn(text: 'TOTAL', width: 6, styles: const PosStyles(bold: true, height: PosTextSize.size1)),
+      PosColumn(text: 'TOTAL', width: 6, styles: bold),
       PosColumn(
         text: CurrencyFormatter.format(tx.total.toInt()),
         width: 6,
-        styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size1),
+        styles: rightBold,
       ),
     ]);
 
-    // 5. Pembayaran
+    // Pembayaran
     if (detail.payments.isNotEmpty) {
       for (final payment in detail.payments) {
-        final methodName = detail.paymentMethod?.name ?? 'Pembayaran';
+        final methodName = detail.paymentMethod?.name ?? 'Tunai';
         bytes += generator.row([
-          PosColumn(text: methodName, width: 6),
+          PosColumn(text: methodName, width: 6, styles: regular),
           PosColumn(
             text: CurrencyFormatter.format(payment.amount.toInt()),
             width: 6,
-            styles: const PosStyles(align: PosAlign.right),
+            styles: right,
           ),
         ]);
 
         if (payment.changeAmount > 0) {
           bytes += generator.row([
-            PosColumn(text: 'Kembalian', width: 6),
+            PosColumn(text: 'Kembalian', width: 6, styles: regular),
             PosColumn(
               text: CurrencyFormatter.format(payment.changeAmount.toInt()),
               width: 6,
-              styles: const PosStyles(align: PosAlign.right),
+              styles: right,
             ),
           ]);
         }
       }
     }
 
-    bytes += generator.hr();
-
-    // 6. Footer
-    final footer = (outletSetting?['footerNotes']?.toString()) ?? config.footerNote ?? 'Terima Kasih Telah Berbelanja!';
-    bytes += generator.text(
-      footer,
-      styles: const PosStyles(align: PosAlign.center, bold: true),
-    );
-
-    if ((outletSetting?['socialMediaInfo']?.toString()) != null && ((outletSetting?['socialMediaInfo']?.toString().isNotEmpty) ?? false)) {
-      bytes += generator.text(
-        outletSetting?['socialMediaInfo']?.toString() ?? '',
-        styles: const PosStyles(align: PosAlign.center),
-      );
+    // Footer Area
+    final footer =
+        (outletSetting?['footer_notes']?.toString()) ??
+        (outletSetting?['footerNotes']?.toString()) ??
+        config.footerNote;
+    if (footer != null && footer.isNotEmpty) {
+      bytes += generator.text(footer, styles: center);
     }
 
-    bytes += generator.text(
-      'Simpan struk ini sebagai bukti pembayaran yang sah',
-      styles: const PosStyles(align: PosAlign.center),
-    );
+    final socialMedia =
+        (outletSetting?['social_media_info']?.toString()) ??
+        (outletSetting?['socialMediaInfo']?.toString());
+    if (socialMedia != null && socialMedia.isNotEmpty) {
+      bytes += generator.text(socialMedia, styles: center);
+    }
 
-    if ((outletSetting?['showQrCode'] as bool?) ?? false) {
+    final wifiInfo =
+        (outletSetting?['wifi_info']?.toString()) ??
+        (outletSetting?['wifiInfo']?.toString());
+    if (wifiInfo != null && wifiInfo.isNotEmpty) {
+      bytes += generator.text('WiFi: $wifiInfo', styles: center);
+    }
+
+    if ((outletSetting?['show_qr_code'] as bool?) ??
+        (outletSetting?['showQrCode'] as bool?) ??
+        false) {
+      bytes += generator.feed(1);
       bytes += generator.qrcode(tx.transactionNumber, size: QRSize.size4);
+      bytes += generator.text('Scan untuk detail transaksi', styles: center);
     }
 
     bytes += generator.feed(2);
@@ -493,9 +667,15 @@ class PrinterService {
   }
 
   /// Eksekusi Test Print Multiplatform (Bluetooth, System Spooler OS, atau Network TCP)
-  Future<({bool success, String message})> printTest(PrinterConfig config) async {
-    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
-      return (success: false, message: 'Alamat / Identitas printer tidak valid!');
+  Future<({bool success, String message})> printTest(
+    PrinterConfig config,
+  ) async {
+    if (config.address.isEmpty &&
+        (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (
+        success: false,
+        message: 'Alamat / Identitas printer tidak valid!',
+      );
     }
 
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
@@ -532,16 +712,22 @@ class PrinterService {
 
     final connected = await connectBluetooth(config.address);
     if (!connected) {
-      return (success: false, message: 'Gagal menghubungkan ke printer Bluetooth ${config.name}');
+      return (
+        success: false,
+        message: 'Gagal menghubungkan ke printer Bluetooth ${config.name}',
+      );
     }
 
     final bytes = await generateTestReceiptBytes(config);
-    final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
+    final printSuccess = await _writeBluetoothBytesChunked(bytes);
 
     if (printSuccess) {
       return (success: true, message: 'Uji cetak Bluetooth berhasil!');
     } else {
-      return (success: false, message: 'Gagal mengirim data ke printer Bluetooth!');
+      return (
+        success: false,
+        message: 'Gagal mengirim data ke printer Bluetooth!',
+      );
     }
   }
 
@@ -555,9 +741,14 @@ class PrinterService {
     String? outletName,
     String? outletAddress,
     String? outletPhone,
+    String? outletEmail,
   }) async {
-    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
-      return (success: false, message: 'Printer belum dipilih di Pengaturan Printer!');
+    if (config.address.isEmpty &&
+        (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (
+        success: false,
+        message: 'Printer belum dipilih di Pengaturan Printer!',
+      );
     }
 
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
@@ -603,7 +794,10 @@ class PrinterService {
         bytes: bytes,
       );
       if (netResult.success) {
-        return (success: true, message: 'Struk berhasil dicetak ke printer jaringan!');
+        return (
+          success: true,
+          message: 'Struk berhasil dicetak ke printer jaringan!',
+        );
       } else {
         return netResult;
       }
@@ -617,7 +811,10 @@ class PrinterService {
 
     final connected = await connectBluetooth(config.address);
     if (!connected) {
-      return (success: false, message: 'Gagal menghubungkan ke printer ${config.name}');
+      return (
+        success: false,
+        message: 'Gagal menghubungkan ke printer ${config.name}',
+      );
     }
 
     final bytes = await generateTransactionReceiptBytes(
@@ -631,12 +828,31 @@ class PrinterService {
       outletPhone: outletPhone,
     );
 
-    final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
+    final printSuccess = await _writeBluetoothBytesChunked(bytes);
     if (printSuccess) {
       return (success: true, message: 'Struk berhasil dicetak!');
     } else {
       return (success: false, message: 'Gagal mencetak struk Bluetooth!');
     }
+  }
+
+  /// Mengirim byte data ke printer Bluetooth dalam potongan (chunk) kecil
+  /// untuk mencegah buffer overflow pada mikroprosesor printer thermal murah.
+  Future<bool> _writeBluetoothBytesChunked(List<int> bytes) async {
+    if (bytes.isEmpty) return true;
+    const chunkSize = 512;
+    if (bytes.length <= chunkSize) {
+      return await PrintBluetoothThermal.writeBytes(bytes);
+    }
+
+    for (int i = 0; i < bytes.length; i += chunkSize) {
+      final end = (i + chunkSize < bytes.length) ? i + chunkSize : bytes.length;
+      final chunk = bytes.sublist(i, end);
+      final ok = await PrintBluetoothThermal.writeBytes(chunk);
+      if (!ok) return false;
+      await Future.delayed(const Duration(milliseconds: 15));
+    }
+    return true;
   }
 
   /// Menghasilkan byte untuk cetak laporan tutup shift
@@ -647,68 +863,65 @@ class PrinterService {
     String? outletName,
     String? outletAddress,
     String? outletPhone,
+    String? outletEmail,
   }) async {
     final profile = await _getProfile();
-    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final paperSize = config.paperSize == PrinterPaperSize.mm58
+        ? PaperSize.mm58
+        : PaperSize.mm80;
     final generator = Generator(paperSize, profile);
     List<int> bytes = [];
+
+    const regular = PosStyles(fontType: PosFontType.fontB);
+    const bold = PosStyles(fontType: PosFontType.fontB, bold: true);
+    const center = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.center,
+    );
+    const right = PosStyles(fontType: PosFontType.fontB, align: PosAlign.right);
+    const rightBold = PosStyles(
+      fontType: PosFontType.fontB,
+      align: PosAlign.right,
+      bold: true,
+    );
+    const header = PosStyles(
+      fontType: PosFontType.fontA,
+      align: PosAlign.center,
+      bold: true,
+    );
 
     bytes += generator.reset();
 
     // 1. Header Toko
     final displayName = outletName ?? config.storeName ?? 'SOLLU POS';
-    bytes += generator.text(
-      displayName,
-      styles: const PosStyles(
-        align: PosAlign.center,
-        bold: true,
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-      ),
-    );
+    bytes += generator.text(displayName, styles: header);
 
     if (outletAddress != null && outletAddress.isNotEmpty) {
-      bytes += generator.text(
-        outletAddress,
-        styles: const PosStyles(align: PosAlign.center),
-      );
+      bytes += generator.text(outletAddress, styles: center);
     }
     if (outletPhone != null && outletPhone.isNotEmpty) {
-      bytes += generator.text(
-        'Telp: $outletPhone',
-        styles: const PosStyles(align: PosAlign.center),
-      );
+      bytes += generator.text('Telp: $outletPhone', styles: center);
     }
 
     bytes += generator.hr();
 
-    bytes += generator.text(
-      'LAPORAN TUTUP SHIFT',
-      styles: const PosStyles(
-        align: PosAlign.center,
-        bold: true,
-      ),
-    );
+    bytes += generator.text('LAPORAN TUTUP SHIFT', styles: header);
 
     bytes += generator.feed(1);
 
     bytes += generator.row([
-      PosColumn(text: 'Waktu Cetak:', width: 5),
+      PosColumn(text: 'Waktu Cetak:', width: 5, styles: regular),
       PosColumn(
         text: DateFormat('dd/MM/yy HH:mm').format(DateTime.now()),
         width: 7,
-        styles: const PosStyles(align: PosAlign.right),
+        styles: right,
       ),
     ]);
 
     if (cashierName != null && cashierName.isNotEmpty) {
       bytes += generator.row([
-        PosColumn(text: 'Kasir:', width: 5),
-        PosColumn(
-          text: cashierName,
-          width: 7,
-          styles: const PosStyles(align: PosAlign.right),
-        ),
+        PosColumn(text: 'Kasir:', width: 5, styles: regular),
+        PosColumn(text: cashierName, width: 7, styles: right),
       ]);
     }
 
@@ -716,46 +929,48 @@ class PrinterService {
 
     // 2. Rincian Laporan
     bytes += generator.row([
-      PosColumn(text: 'Modal Awal', width: 6),
+      PosColumn(text: 'Modal Awal', width: 6, styles: regular),
       PosColumn(
         text: CurrencyFormatter.format(summary.openingCash.toInt()),
         width: 6,
-        styles: const PosStyles(align: PosAlign.right),
+        styles: right,
       ),
     ]);
 
     bytes += generator.feed(1);
-    bytes += generator.text('Pemasukan per Metode:', styles: const PosStyles(bold: true));
-    
+    bytes += generator.text('Pemasukan per Metode:', styles: bold);
+
     for (final entry in summary.salesByPaymentMethod.entries) {
       bytes += generator.row([
-        PosColumn(text: '- ${entry.key}', width: 6),
+        PosColumn(text: '- ${entry.key}', width: 6, styles: regular),
         PosColumn(
           text: CurrencyFormatter.format(entry.value.toInt()),
           width: 6,
-          styles: const PosStyles(align: PosAlign.right),
+          styles: right,
         ),
       ]);
     }
 
     bytes += generator.feed(1);
     bytes += generator.row([
-      PosColumn(text: 'Kas Masuk/Keluar', width: 6),
+      PosColumn(text: 'Kas Masuk/Keluar', width: 6, styles: regular),
       PosColumn(
-        text: CurrencyFormatter.format((summary.cashIn - summary.cashOut).toInt()),
+        text: CurrencyFormatter.format(
+          (summary.cashIn - summary.cashOut).toInt(),
+        ),
         width: 6,
-        styles: const PosStyles(align: PosAlign.right),
+        styles: right,
       ),
     ]);
 
     bytes += generator.hr();
 
     bytes += generator.row([
-      PosColumn(text: 'Ekspektasi Kas Laci', width: 6, styles: const PosStyles(bold: true)),
+      PosColumn(text: 'Ekspektasi Kas Laci', width: 6, styles: bold),
       PosColumn(
         text: CurrencyFormatter.format(summary.expectedCash.toInt()),
         width: 6,
-        styles: const PosStyles(align: PosAlign.right, bold: true),
+        styles: rightBold,
       ),
     ]);
 
@@ -763,7 +978,7 @@ class PrinterService {
 
     bytes += generator.text(
       'Laporan ini dicetak secara otomatis\ndari sistem Sollu POS.',
-      styles: const PosStyles(align: PosAlign.center),
+      styles: center,
     );
 
     bytes += generator.feed(2);
@@ -784,8 +999,12 @@ class PrinterService {
     String? outletAddress,
     String? outletPhone,
   }) async {
-    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
-      return (success: false, message: 'Printer belum dipilih di Pengaturan Printer!');
+    if (config.address.isEmpty &&
+        (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (
+        success: false,
+        message: 'Printer belum dipilih di Pengaturan Printer!',
+      );
     }
 
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
@@ -827,7 +1046,10 @@ class PrinterService {
         bytes: bytes,
       );
       if (netResult.success) {
-        return (success: true, message: 'Laporan berhasil dicetak ke printer jaringan!');
+        return (
+          success: true,
+          message: 'Laporan berhasil dicetak ke printer jaringan!',
+        );
       } else {
         return netResult;
       }
@@ -841,7 +1063,10 @@ class PrinterService {
 
     final connected = await connectBluetooth(config.address);
     if (!connected) {
-      return (success: false, message: 'Gagal menghubungkan ke printer ${config.name}');
+      return (
+        success: false,
+        message: 'Gagal menghubungkan ke printer ${config.name}',
+      );
     }
 
     final bytes = await generateShiftReportBytes(
@@ -853,7 +1078,7 @@ class PrinterService {
       outletPhone: outletPhone,
     );
 
-    final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
+    final printSuccess = await _writeBluetoothBytesChunked(bytes);
     if (printSuccess) {
       return (success: true, message: 'Laporan shift berhasil dicetak!');
     } else {
@@ -862,15 +1087,23 @@ class PrinterService {
   }
 
   /// Eksekusi perintah pembukaan Cash Drawer (Laci Uang)
-  Future<({bool success, String message})> openCashDrawer(PrinterConfig config) async {
-    if (config.address.isEmpty && (config.ipAddress == null || config.ipAddress!.isEmpty)) {
-      return (success: false, message: 'Printer belum dipilih di Pengaturan Printer!');
+  Future<({bool success, String message})> openCashDrawer(
+    PrinterConfig config,
+  ) async {
+    if (config.address.isEmpty &&
+        (config.ipAddress == null || config.ipAddress!.isEmpty)) {
+      return (
+        success: false,
+        message: 'Printer belum dipilih di Pengaturan Printer!',
+      );
     }
 
     final profile = await _getProfile();
-    final paperSize = config.paperSize == PrinterPaperSize.mm58 ? PaperSize.mm58 : PaperSize.mm80;
+    final paperSize = config.paperSize == PrinterPaperSize.mm58
+        ? PaperSize.mm58
+        : PaperSize.mm80;
     final generator = Generator(paperSize, profile);
-    
+
     // Command standar ESC/POS untuk membuka laci (drawer kick)
     List<int> bytes = [];
     bytes += generator.drawer();
@@ -894,19 +1127,31 @@ class PrinterService {
     if (config.connectionType == PrinterConnectionType.bluetooth) {
       final isBluetoothOn = await isBluetoothEnabled();
       if (!isBluetoothOn) {
-        return (success: false, message: 'Bluetooth perangkat belum dinyalakan!');
+        return (
+          success: false,
+          message: 'Bluetooth perangkat belum dinyalakan!',
+        );
       }
 
       final connected = await connectBluetooth(config.address);
       if (!connected) {
-        return (success: false, message: 'Gagal menghubungkan ke printer Bluetooth ${config.name}');
+        return (
+          success: false,
+          message: 'Gagal menghubungkan ke printer Bluetooth ${config.name}',
+        );
       }
 
       final printSuccess = await PrintBluetoothThermal.writeBytes(bytes);
       if (printSuccess) {
-        return (success: true, message: 'Laci uang berhasil dibuka (Bluetooth)!');
+        return (
+          success: true,
+          message: 'Laci uang berhasil dibuka (Bluetooth)!',
+        );
       } else {
-        return (success: false, message: 'Gagal mengirim perintah ke printer Bluetooth!');
+        return (
+          success: false,
+          message: 'Gagal mengirim perintah ke printer Bluetooth!',
+        );
       }
     }
 

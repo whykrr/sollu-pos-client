@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/database/database_provider.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
@@ -33,23 +34,24 @@ Future<({bool success, String message})> printTransactionReceiptAction({
   final repository = ref.read(transactionRepositoryProvider);
   final detail = await repository.getTransactionDetails(transactionId);
   if (detail == null) {
-    return (
-      success: false,
-      message: 'Data transaksi tidak ditemukan!',
-    );
+    return (success: false, message: 'Data transaksi tidak ditemukan!');
   }
-  
+
   final db = ref.read(databaseProvider);
 
   String? resolvedCashierName = cashierName;
   if (resolvedCashierName == null && detail.transaction.shiftId != null) {
-    final shift = await (db.select(db.shifts)..where((s) => s.id.equals(detail.transaction.shiftId!))).getSingleOrNull();
+    final shift =
+        await (db.select(db.shifts)
+              ..where((s) => s.id.equals(detail.transaction.shiftId!)))
+            .getSingleOrNull();
     if (shift != null) {
-      resolvedCashierName = await ref.read(cashierNameProvider(shift.userId).future);
+      resolvedCashierName = await ref.read(
+        cashierNameProvider(shift.userId).future,
+      );
     }
   }
 
-  
   // Dynamically enrich printer config from synced outlet receipt settings if available (store header, notes)
   final outletSetting = ref.read(outletSettingsProvider);
   final outletProfile = ref.read(outletProfileProvider);
@@ -66,25 +68,50 @@ Future<({bool success, String message})> printTransactionReceiptAction({
               outletSetting['customHeaderTitle'].toString().isNotEmpty)
           ? outletSetting['customHeaderTitle'].toString()
           : (outletName ?? profileOutletName ?? printerConfig.storeName),
-      headerNote: outletSetting['headerNotes']?.toString() ?? printerConfig.headerNote,
-      footerNote: outletSetting['footerNotes']?.toString() ?? printerConfig.footerNote,
+      headerNote:
+          outletSetting['headerNotes']?.toString() ?? printerConfig.headerNote,
+      footerNote:
+          outletSetting['footerNotes']?.toString() ?? printerConfig.footerNote,
     );
   }
 
   // Load cached logo bytes if showLogo is enabled
   Uint8List? logoBytes;
-  if (((outletSetting?['showLogo'] as bool?) ?? true) &&
-      outletSetting?['localLogoPath'] != null) {
-    try {
-      final file = File(outletSetting!['localLogoPath'].toString());
-      if (await file.exists()) {
-        logoBytes = await file.readAsBytes();
+  final rawShowLogo =
+      outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
+  final bool showLogo = rawShowLogo == true ||
+      rawShowLogo == 1 ||
+      rawShowLogo == '1' ||
+      rawShowLogo == null;
+
+  if (showLogo) {
+    final logoPath = outletSetting?['localLogoPath'] ??
+        outletSetting?['local_logo_path'] ??
+        outletProfile?['local_logo_path'] ??
+        outletProfile?['localLogoPath'];
+
+    if (logoPath != null && logoPath.toString().isNotEmpty) {
+      try {
+        final file = File(logoPath.toString());
+        if (await file.exists()) {
+          logoBytes = await file.readAsBytes();
+        }
+      } catch (e) {
+        debugPrint('Error reading local logo file: $e');
       }
-    } catch (e) {
-      debugPrint('Error reading logo file: $e');
+    }
+
+    // Fallback: Load default asset logo if local logo is not available
+    if (logoBytes == null || logoBytes.isEmpty) {
+      try {
+        final ByteData assetData =
+            await rootBundle.load('img/logo-colored.png');
+        logoBytes = assetData.buffer.asUint8List();
+      } catch (e) {
+        debugPrint('Error loading asset logo fallback: $e');
+      }
     }
   }
-
 
   final service = ref.read(printerServiceProvider);
   return await service.printTransactionReceipt(
@@ -96,6 +123,7 @@ Future<({bool success, String message})> printTransactionReceiptAction({
     outletName: outletName ?? profileOutletName,
     outletAddress: outletAddress ?? profileOutletAddress,
     outletPhone: outletPhone ?? profileOutletPhone,
+    outletEmail: outletProfile?['email']?.toString(),
   );
 }
 
@@ -141,7 +169,9 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
   }
 
   Future<void> _syncToLocalDbAndBackend(PrinterConfig config) async {
-    final paperSizeStr = config.paperSize == PrinterPaperSize.mm80 ? '80mm' : '58mm';
+    final paperSizeStr = config.paperSize == PrinterPaperSize.mm80
+        ? '80mm'
+        : '58mm';
     // 1. Override local SharedPreferences OutletSettings
     try {
       final service = ref.read(outletSettingsServiceProvider);
@@ -167,12 +197,15 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
           'open_cash_drawer': config.openCashDrawer,
         },
       );
-      debugPrint('Printer paper size successfully synced to central backend: $paperSizeStr');
+      debugPrint(
+        'Printer paper size successfully synced to central backend: $paperSizeStr',
+      );
     } catch (e) {
-      debugPrint('Failed to sync printer settings to backend (offline or error): $e');
+      debugPrint(
+        'Failed to sync printer settings to backend (offline or error): $e',
+      );
     }
   }
-
 
   Future<void> updateAutoPrint(bool autoPrint) async {
     // 1. Update SharedPreferences DB
@@ -230,7 +263,11 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
     }
   }
 
-  Future<void> updateNotes({String? storeName, String? headerNote, String? footerNote}) async {
+  Future<void> updateNotes({
+    String? storeName,
+    String? headerNote,
+    String? footerNote,
+  }) async {
     if (state != null) {
       final updated = state!.copyWith(
         storeName: storeName ?? state!.storeName,
@@ -244,10 +281,11 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
 
 final selectedPrinterProvider =
     NotifierProvider<SelectedPrinterNotifier, PrinterConfig?>(
-  SelectedPrinterNotifier.new,
-);
+      SelectedPrinterNotifier.new,
+    );
 
-class AvailablePrintersNotifier extends AsyncNotifier<List<DiscoveredPrinterInfo>> {
+class AvailablePrintersNotifier
+    extends AsyncNotifier<List<DiscoveredPrinterInfo>> {
   @override
   Future<List<DiscoveredPrinterInfo>> build() async {
     return _fetchDevices();
@@ -265,6 +303,7 @@ class AvailablePrintersNotifier extends AsyncNotifier<List<DiscoveredPrinterInfo
 }
 
 final availablePrintersProvider =
-    AsyncNotifierProvider<AvailablePrintersNotifier, List<DiscoveredPrinterInfo>>(
-  AvailablePrintersNotifier.new,
-);
+    AsyncNotifierProvider<
+      AvailablePrintersNotifier,
+      List<DiscoveredPrinterInfo>
+    >(AvailablePrintersNotifier.new);
