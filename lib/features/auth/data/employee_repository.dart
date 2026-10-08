@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/database/app_database.dart';
 
@@ -12,7 +13,7 @@ class EmployeeRepository {
 
   Future<void> syncEmployees() async {
     try {
-      final response = await _dioClient.dio.get('/employees');
+      final response = await _dioClient.dio.get(ApiEndpoints.employees);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
@@ -72,7 +73,7 @@ class EmployeeRepository {
   }) async {
     try {
       final response = await _dioClient.dio.put(
-        '/employees/pin',
+        ApiEndpoints.employeesPin,
         data: {
           'user_id': userId,
           'current_pin': currentPin,

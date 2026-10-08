@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../presentation/providers/cart_provider.dart';
 
@@ -441,7 +442,7 @@ class TransactionRepository {
   }) async {
     try {
       final response = await _dioClient.dio.post(
-        '/transactions',
+        ApiEndpoints.transactions,
         data: {
           'offline_id': txId,
           'transaction_number': txNumber,

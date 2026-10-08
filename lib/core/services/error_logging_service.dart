@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sollu_pos_client/core/network/api_endpoints.dart';
 import 'package:sollu_pos_client/core/network/dio_client.dart';
 
 class ErrorLoggingService {
@@ -54,7 +55,7 @@ class ErrorLoggingService {
         'app_version': '${packageInfo.version} (${packageInfo.buildNumber})',
       };
 
-      await _dioClient.dio.post('/pos/logs/error', data: payload);
+      await _dioClient.dio.post(ApiEndpoints.logsError, data: payload);
     } catch (e) {
       // Failed to send error log, avoid infinite loop
       debugPrint('Failed to send error log to backend: $e');

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/device_info_service.dart';
 import '../../../core/services/secure_storage_service.dart';
@@ -28,7 +29,7 @@ class AuthRepository {
       final platformType = _deviceInfoService.getPlatformType();
 
       final response = await _dioClient.dio.post(
-        '/device/connect',
+        ApiEndpoints.deviceConnect,
         data: {
           'otp': otp,
           'device_uuid': deviceUuid,
@@ -63,7 +64,7 @@ class AuthRepository {
       final platformType = _deviceInfoService.getPlatformType();
 
       final response = await _dioClient.dio.get(
-        '/device/status',
+        ApiEndpoints.deviceStatus,
         queryParameters: {
           'app_version': appVersion,
           'platform_type': platformType,
@@ -87,7 +88,7 @@ class AuthRepository {
   Future<bool> unpairDevice({String? userId}) async {
     try {
       final response = await _dioClient.dio.post(
-        '/device/unpair',
+        ApiEndpoints.deviceUnpair,
         data: userId != null
             ? {
                 'user_id': userId,

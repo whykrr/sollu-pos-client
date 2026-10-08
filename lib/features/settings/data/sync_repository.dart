@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/services/outlet_settings_service.dart';
@@ -18,7 +19,7 @@ class SyncRepository {
 
   Future<void> syncMasterData() async {
     try {
-      final response = await _dioClient.dio.get('/sync/master');
+      final response = await _dioClient.dio.get(ApiEndpoints.syncMaster);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = response.data['data'];

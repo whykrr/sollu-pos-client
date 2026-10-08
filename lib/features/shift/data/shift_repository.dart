@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/database/app_database.dart';
 
@@ -82,7 +83,7 @@ class ShiftRepository {
     // Kirim event buka shift ke backend di background jika online
     try {
       final response = await _dioClient.dio.post(
-        '/shifts/open',
+        ApiEndpoints.shiftsOpen,
         data: {
           'shift_id': shiftId,
           'user_id': userId,
@@ -214,7 +215,7 @@ class ShiftRepository {
     // Kirim penutupan shift ke backend jika online
     try {
       final response = await _dioClient.dio.post(
-        '/shifts/close',
+        ApiEndpoints.shiftsClose,
         data: {
           'shift_id': shiftId,
           'closing_cash': closingCash,
@@ -259,7 +260,7 @@ class ShiftRepository {
 
     try {
       final response = await _dioClient.dio.post(
-        '/shifts/cash-log',
+        ApiEndpoints.shiftsCashLog,
         data: {
           'id': logId,
           'shift_id': shiftId,
@@ -345,7 +346,7 @@ class ShiftRepository {
 
     try {
       final response = await _dioClient.dio.post(
-        '/shifts/sync',
+        ApiEndpoints.shiftsSync,
         data: {'shifts': payloadShifts},
       );
 
