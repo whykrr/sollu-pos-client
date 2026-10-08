@@ -18,7 +18,7 @@ class OpenShiftDialog extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) {
     return showDialog(
       context: context,
-      barrierDismissible: false, // Wajib diisi sebelum mulai kasir
+      barrierDismissible: true,
       builder: (context) => const OpenShiftDialog(),
     );
   }
@@ -212,20 +212,14 @@ class _OpenShiftDialogState extends ConsumerState<OpenShiftDialog> {
         ),
       ),
       actions: [
-        TextButton.icon(
+        TextButton(
           onPressed: _isLoading
               ? null
               : () {
                   Navigator.of(context).pop();
-                  context.go('/dashboard');
                 },
-          icon: const Icon(
-            Icons.dashboard_outlined,
-            size: 16,
-            color: SolluColors.textMuted,
-          ),
-          label: const Text(
-            'Kembali ke Dashboard',
+          child: const Text(
+            'Batal',
             style: TextStyle(
               color: SolluColors.textMuted,
               fontWeight: FontWeight.w600,

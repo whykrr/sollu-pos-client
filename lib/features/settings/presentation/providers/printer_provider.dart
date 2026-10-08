@@ -9,6 +9,7 @@ import 'package:sollu_pos_client/core/services/printer_service.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
 
 final printerServiceProvider = Provider<PrinterService>((ref) {
   return PrinterService();
@@ -50,6 +51,8 @@ Future<({bool success, String message})> printTransactionReceiptAction({
       );
     }
   }
+  // Fallback ke nama kasir yang sedang aktif jika transaksi tanpa shift
+  resolvedCashierName ??= ref.read(activeEmployeeProvider)?['name']?.toString();
 
   // Dynamically enrich printer config from synced outlet receipt settings if available (store header, notes)
   final outletSetting = ref.read(outletSettingsProvider);

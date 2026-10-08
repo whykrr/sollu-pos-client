@@ -5264,6 +5264,18 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
   static const VerificationMeta _offlineIdMeta = const VerificationMeta(
     'offlineId',
   );
@@ -5330,6 +5342,7 @@ class $TransactionsTable extends Transactions
     status,
     notes,
     isOffline,
+    syncStatus,
     offlineId,
     dueDate,
     createdAt,
@@ -5493,6 +5506,12 @@ class $TransactionsTable extends Transactions
         isOffline.isAcceptableOrUnknown(data['is_offline']!, _isOfflineMeta),
       );
     }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
     if (data.containsKey('offline_id')) {
       context.handle(
         _offlineIdMeta,
@@ -5602,6 +5621,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_offline'],
       )!,
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
       offlineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}offline_id'],
@@ -5647,6 +5670,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String status;
   final String? notes;
   final bool isOffline;
+  final String syncStatus;
   final String? offlineId;
   final DateTime? dueDate;
   final DateTime createdAt;
@@ -5671,6 +5695,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.status,
     this.notes,
     required this.isOffline,
+    required this.syncStatus,
     this.offlineId,
     this.dueDate,
     required this.createdAt,
@@ -5710,6 +5735,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       map['notes'] = Variable<String>(notes);
     }
     map['is_offline'] = Variable<bool>(isOffline);
+    map['sync_status'] = Variable<String>(syncStatus);
     if (!nullToAbsent || offlineId != null) {
       map['offline_id'] = Variable<String>(offlineId);
     }
@@ -5756,6 +5782,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? const Value.absent()
           : Value(notes),
       isOffline: Value(isOffline),
+      syncStatus: Value(syncStatus),
       offlineId: offlineId == null && nullToAbsent
           ? const Value.absent()
           : Value(offlineId),
@@ -5796,6 +5823,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       isOffline: serializer.fromJson<bool>(json['isOffline']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
       offlineId: serializer.fromJson<String?>(json['offlineId']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -5825,6 +5853,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'isOffline': serializer.toJson<bool>(isOffline),
+      'syncStatus': serializer.toJson<String>(syncStatus),
       'offlineId': serializer.toJson<String?>(offlineId),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -5852,6 +5881,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     String? status,
     Value<String?> notes = const Value.absent(),
     bool? isOffline,
+    String? syncStatus,
     Value<String?> offlineId = const Value.absent(),
     Value<DateTime?> dueDate = const Value.absent(),
     DateTime? createdAt,
@@ -5878,6 +5908,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     status: status ?? this.status,
     notes: notes.present ? notes.value : this.notes,
     isOffline: isOffline ?? this.isOffline,
+    syncStatus: syncStatus ?? this.syncStatus,
     offlineId: offlineId.present ? offlineId.value : this.offlineId,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     createdAt: createdAt ?? this.createdAt,
@@ -5920,6 +5951,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
       isOffline: data.isOffline.present ? data.isOffline.value : this.isOffline,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
       offlineId: data.offlineId.present ? data.offlineId.value : this.offlineId,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -5949,6 +5983,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('offlineId: $offlineId, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
@@ -5978,6 +6013,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     status,
     notes,
     isOffline,
+    syncStatus,
     offlineId,
     dueDate,
     createdAt,
@@ -6006,6 +6042,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.status == this.status &&
           other.notes == this.notes &&
           other.isOffline == this.isOffline &&
+          other.syncStatus == this.syncStatus &&
           other.offlineId == this.offlineId &&
           other.dueDate == this.dueDate &&
           other.createdAt == this.createdAt &&
@@ -6032,6 +6069,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> status;
   final Value<String?> notes;
   final Value<bool> isOffline;
+  final Value<String> syncStatus;
   final Value<String?> offlineId;
   final Value<DateTime?> dueDate;
   final Value<DateTime> createdAt;
@@ -6057,6 +6095,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
+    this.syncStatus = const Value.absent(),
     this.offlineId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -6083,6 +6122,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String status,
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
+    this.syncStatus = const Value.absent(),
     this.offlineId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -6115,6 +6155,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? status,
     Expression<String>? notes,
     Expression<bool>? isOffline,
+    Expression<String>? syncStatus,
     Expression<String>? offlineId,
     Expression<DateTime>? dueDate,
     Expression<DateTime>? createdAt,
@@ -6142,6 +6183,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (isOffline != null) 'is_offline': isOffline,
+      if (syncStatus != null) 'sync_status': syncStatus,
       if (offlineId != null) 'offline_id': offlineId,
       if (dueDate != null) 'due_date': dueDate,
       if (createdAt != null) 'created_at': createdAt,
@@ -6170,6 +6212,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String>? status,
     Value<String?>? notes,
     Value<bool>? isOffline,
+    Value<String>? syncStatus,
     Value<String?>? offlineId,
     Value<DateTime?>? dueDate,
     Value<DateTime>? createdAt,
@@ -6196,6 +6239,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       isOffline: isOffline ?? this.isOffline,
+      syncStatus: syncStatus ?? this.syncStatus,
       offlineId: offlineId ?? this.offlineId,
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
@@ -6266,6 +6310,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (isOffline.present) {
       map['is_offline'] = Variable<bool>(isOffline.value);
     }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
     if (offlineId.present) {
       map['offline_id'] = Variable<String>(offlineId.value);
     }
@@ -6306,6 +6353,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('offlineId: $offlineId, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
@@ -10252,6 +10300,378 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   }
 }
 
+class $LocalHeldTransactionsTable extends LocalHeldTransactions
+    with TableInfo<$LocalHeldTransactionsTable, LocalHeldTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalHeldTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _customerNoteMeta = const VerificationMeta(
+    'customerNote',
+  );
+  @override
+  late final GeneratedColumn<String> customerNote = GeneratedColumn<String>(
+    'customer_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cartPayloadJsonMeta = const VerificationMeta(
+    'cartPayloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> cartPayloadJson = GeneratedColumn<String>(
+    'cart_payload_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subtotalMeta = const VerificationMeta(
+    'subtotal',
+  );
+  @override
+  late final GeneratedColumn<double> subtotal = GeneratedColumn<double>(
+    'subtotal',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _heldAtMeta = const VerificationMeta('heldAt');
+  @override
+  late final GeneratedColumn<DateTime> heldAt = GeneratedColumn<DateTime>(
+    'held_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    customerNote,
+    cartPayloadJson,
+    subtotal,
+    heldAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_held_transactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalHeldTransaction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('customer_note')) {
+      context.handle(
+        _customerNoteMeta,
+        customerNote.isAcceptableOrUnknown(
+          data['customer_note']!,
+          _customerNoteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cart_payload_json')) {
+      context.handle(
+        _cartPayloadJsonMeta,
+        cartPayloadJson.isAcceptableOrUnknown(
+          data['cart_payload_json']!,
+          _cartPayloadJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cartPayloadJsonMeta);
+    }
+    if (data.containsKey('subtotal')) {
+      context.handle(
+        _subtotalMeta,
+        subtotal.isAcceptableOrUnknown(data['subtotal']!, _subtotalMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subtotalMeta);
+    }
+    if (data.containsKey('held_at')) {
+      context.handle(
+        _heldAtMeta,
+        heldAt.isAcceptableOrUnknown(data['held_at']!, _heldAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalHeldTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalHeldTransaction(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      customerNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_note'],
+      ),
+      cartPayloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cart_payload_json'],
+      )!,
+      subtotal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}subtotal'],
+      )!,
+      heldAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}held_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalHeldTransactionsTable createAlias(String alias) {
+    return $LocalHeldTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalHeldTransaction extends DataClass
+    implements Insertable<LocalHeldTransaction> {
+  final String id;
+  final String? customerNote;
+  final String cartPayloadJson;
+  final double subtotal;
+  final DateTime heldAt;
+  const LocalHeldTransaction({
+    required this.id,
+    this.customerNote,
+    required this.cartPayloadJson,
+    required this.subtotal,
+    required this.heldAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || customerNote != null) {
+      map['customer_note'] = Variable<String>(customerNote);
+    }
+    map['cart_payload_json'] = Variable<String>(cartPayloadJson);
+    map['subtotal'] = Variable<double>(subtotal);
+    map['held_at'] = Variable<DateTime>(heldAt);
+    return map;
+  }
+
+  LocalHeldTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return LocalHeldTransactionsCompanion(
+      id: Value(id),
+      customerNote: customerNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerNote),
+      cartPayloadJson: Value(cartPayloadJson),
+      subtotal: Value(subtotal),
+      heldAt: Value(heldAt),
+    );
+  }
+
+  factory LocalHeldTransaction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalHeldTransaction(
+      id: serializer.fromJson<String>(json['id']),
+      customerNote: serializer.fromJson<String?>(json['customerNote']),
+      cartPayloadJson: serializer.fromJson<String>(json['cartPayloadJson']),
+      subtotal: serializer.fromJson<double>(json['subtotal']),
+      heldAt: serializer.fromJson<DateTime>(json['heldAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'customerNote': serializer.toJson<String?>(customerNote),
+      'cartPayloadJson': serializer.toJson<String>(cartPayloadJson),
+      'subtotal': serializer.toJson<double>(subtotal),
+      'heldAt': serializer.toJson<DateTime>(heldAt),
+    };
+  }
+
+  LocalHeldTransaction copyWith({
+    String? id,
+    Value<String?> customerNote = const Value.absent(),
+    String? cartPayloadJson,
+    double? subtotal,
+    DateTime? heldAt,
+  }) => LocalHeldTransaction(
+    id: id ?? this.id,
+    customerNote: customerNote.present ? customerNote.value : this.customerNote,
+    cartPayloadJson: cartPayloadJson ?? this.cartPayloadJson,
+    subtotal: subtotal ?? this.subtotal,
+    heldAt: heldAt ?? this.heldAt,
+  );
+  LocalHeldTransaction copyWithCompanion(LocalHeldTransactionsCompanion data) {
+    return LocalHeldTransaction(
+      id: data.id.present ? data.id.value : this.id,
+      customerNote: data.customerNote.present
+          ? data.customerNote.value
+          : this.customerNote,
+      cartPayloadJson: data.cartPayloadJson.present
+          ? data.cartPayloadJson.value
+          : this.cartPayloadJson,
+      subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
+      heldAt: data.heldAt.present ? data.heldAt.value : this.heldAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalHeldTransaction(')
+          ..write('id: $id, ')
+          ..write('customerNote: $customerNote, ')
+          ..write('cartPayloadJson: $cartPayloadJson, ')
+          ..write('subtotal: $subtotal, ')
+          ..write('heldAt: $heldAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, customerNote, cartPayloadJson, subtotal, heldAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalHeldTransaction &&
+          other.id == this.id &&
+          other.customerNote == this.customerNote &&
+          other.cartPayloadJson == this.cartPayloadJson &&
+          other.subtotal == this.subtotal &&
+          other.heldAt == this.heldAt);
+}
+
+class LocalHeldTransactionsCompanion
+    extends UpdateCompanion<LocalHeldTransaction> {
+  final Value<String> id;
+  final Value<String?> customerNote;
+  final Value<String> cartPayloadJson;
+  final Value<double> subtotal;
+  final Value<DateTime> heldAt;
+  final Value<int> rowid;
+  const LocalHeldTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.customerNote = const Value.absent(),
+    this.cartPayloadJson = const Value.absent(),
+    this.subtotal = const Value.absent(),
+    this.heldAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalHeldTransactionsCompanion.insert({
+    required String id,
+    this.customerNote = const Value.absent(),
+    required String cartPayloadJson,
+    required double subtotal,
+    this.heldAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       cartPayloadJson = Value(cartPayloadJson),
+       subtotal = Value(subtotal);
+  static Insertable<LocalHeldTransaction> custom({
+    Expression<String>? id,
+    Expression<String>? customerNote,
+    Expression<String>? cartPayloadJson,
+    Expression<double>? subtotal,
+    Expression<DateTime>? heldAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (customerNote != null) 'customer_note': customerNote,
+      if (cartPayloadJson != null) 'cart_payload_json': cartPayloadJson,
+      if (subtotal != null) 'subtotal': subtotal,
+      if (heldAt != null) 'held_at': heldAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalHeldTransactionsCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? customerNote,
+    Value<String>? cartPayloadJson,
+    Value<double>? subtotal,
+    Value<DateTime>? heldAt,
+    Value<int>? rowid,
+  }) {
+    return LocalHeldTransactionsCompanion(
+      id: id ?? this.id,
+      customerNote: customerNote ?? this.customerNote,
+      cartPayloadJson: cartPayloadJson ?? this.cartPayloadJson,
+      subtotal: subtotal ?? this.subtotal,
+      heldAt: heldAt ?? this.heldAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (customerNote.present) {
+      map['customer_note'] = Variable<String>(customerNote.value);
+    }
+    if (cartPayloadJson.present) {
+      map['cart_payload_json'] = Variable<String>(cartPayloadJson.value);
+    }
+    if (subtotal.present) {
+      map['subtotal'] = Variable<double>(subtotal.value);
+    }
+    if (heldAt.present) {
+      map['held_at'] = Variable<DateTime>(heldAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalHeldTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('customerNote: $customerNote, ')
+          ..write('cartPayloadJson: $cartPayloadJson, ')
+          ..write('subtotal: $subtotal, ')
+          ..write('heldAt: $heldAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10289,6 +10709,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $TransactionPromosTable(this);
   late final $EmployeesTable employees = $EmployeesTable(this);
   late final $CustomersTable customers = $CustomersTable(this);
+  late final $LocalHeldTransactionsTable localHeldTransactions =
+      $LocalHeldTransactionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10315,6 +10737,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactionPromos,
     employees,
     customers,
+    localHeldTransactions,
   ];
 }
 
@@ -15774,6 +16197,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required String status,
       Value<String?> notes,
       Value<bool> isOffline,
+      Value<String> syncStatus,
       Value<String?> offlineId,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
@@ -15801,6 +16225,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<String?> notes,
       Value<bool> isOffline,
+      Value<String> syncStatus,
       Value<String?> offlineId,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
@@ -15991,6 +16416,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isOffline => $composableBuilder(
     column: $table.isOffline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16212,6 +16642,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get offlineId => $composableBuilder(
     column: $table.offlineId,
     builder: (column) => ColumnOrderings(column),
@@ -16334,6 +16769,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<bool> get isOffline =>
       $composableBuilder(column: $table.isOffline, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get offlineId =>
       $composableBuilder(column: $table.offlineId, builder: (column) => column);
@@ -16500,6 +16940,7 @@ class $$TransactionsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -16525,6 +16966,7 @@ class $$TransactionsTableTableManager
                 status: status,
                 notes: notes,
                 isOffline: isOffline,
+                syncStatus: syncStatus,
                 offlineId: offlineId,
                 dueDate: dueDate,
                 createdAt: createdAt,
@@ -16552,6 +16994,7 @@ class $$TransactionsTableTableManager
                 required String status,
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -16577,6 +17020,7 @@ class $$TransactionsTableTableManager
                 status: status,
                 notes: notes,
                 isOffline: isOffline,
+                syncStatus: syncStatus,
                 offlineId: offlineId,
                 dueDate: dueDate,
                 createdAt: createdAt,
@@ -19592,6 +20036,229 @@ typedef $$CustomersTableProcessedTableManager =
       Customer,
       PrefetchHooks Function()
     >;
+typedef $$LocalHeldTransactionsTableCreateCompanionBuilder =
+    LocalHeldTransactionsCompanion Function({
+      required String id,
+      Value<String?> customerNote,
+      required String cartPayloadJson,
+      required double subtotal,
+      Value<DateTime> heldAt,
+      Value<int> rowid,
+    });
+typedef $$LocalHeldTransactionsTableUpdateCompanionBuilder =
+    LocalHeldTransactionsCompanion Function({
+      Value<String> id,
+      Value<String?> customerNote,
+      Value<String> cartPayloadJson,
+      Value<double> subtotal,
+      Value<DateTime> heldAt,
+      Value<int> rowid,
+    });
+
+class $$LocalHeldTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
+  $$LocalHeldTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customerNote => $composableBuilder(
+    column: $table.customerNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cartPayloadJson => $composableBuilder(
+    column: $table.cartPayloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get subtotal => $composableBuilder(
+    column: $table.subtotal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalHeldTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
+  $$LocalHeldTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customerNote => $composableBuilder(
+    column: $table.customerNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cartPayloadJson => $composableBuilder(
+    column: $table.cartPayloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get subtotal => $composableBuilder(
+    column: $table.subtotal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalHeldTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
+  $$LocalHeldTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get customerNote => $composableBuilder(
+    column: $table.customerNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cartPayloadJson => $composableBuilder(
+    column: $table.cartPayloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get subtotal =>
+      $composableBuilder(column: $table.subtotal, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get heldAt =>
+      $composableBuilder(column: $table.heldAt, builder: (column) => column);
+}
+
+class $$LocalHeldTransactionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalHeldTransactionsTable,
+          LocalHeldTransaction,
+          $$LocalHeldTransactionsTableFilterComposer,
+          $$LocalHeldTransactionsTableOrderingComposer,
+          $$LocalHeldTransactionsTableAnnotationComposer,
+          $$LocalHeldTransactionsTableCreateCompanionBuilder,
+          $$LocalHeldTransactionsTableUpdateCompanionBuilder,
+          (
+            LocalHeldTransaction,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalHeldTransactionsTable,
+              LocalHeldTransaction
+            >,
+          ),
+          LocalHeldTransaction,
+          PrefetchHooks Function()
+        > {
+  $$LocalHeldTransactionsTableTableManager(
+    _$AppDatabase db,
+    $LocalHeldTransactionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalHeldTransactionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalHeldTransactionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalHeldTransactionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> customerNote = const Value.absent(),
+                Value<String> cartPayloadJson = const Value.absent(),
+                Value<double> subtotal = const Value.absent(),
+                Value<DateTime> heldAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalHeldTransactionsCompanion(
+                id: id,
+                customerNote: customerNote,
+                cartPayloadJson: cartPayloadJson,
+                subtotal: subtotal,
+                heldAt: heldAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> customerNote = const Value.absent(),
+                required String cartPayloadJson,
+                required double subtotal,
+                Value<DateTime> heldAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalHeldTransactionsCompanion.insert(
+                id: id,
+                customerNote: customerNote,
+                cartPayloadJson: cartPayloadJson,
+                subtotal: subtotal,
+                heldAt: heldAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalHeldTransactionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalHeldTransactionsTable,
+      LocalHeldTransaction,
+      $$LocalHeldTransactionsTableFilterComposer,
+      $$LocalHeldTransactionsTableOrderingComposer,
+      $$LocalHeldTransactionsTableAnnotationComposer,
+      $$LocalHeldTransactionsTableCreateCompanionBuilder,
+      $$LocalHeldTransactionsTableUpdateCompanionBuilder,
+      (
+        LocalHeldTransaction,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalHeldTransactionsTable,
+          LocalHeldTransaction
+        >,
+      ),
+      LocalHeldTransaction,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -19645,4 +20312,6 @@ class $AppDatabaseManager {
       $$EmployeesTableTableManager(_db, _db.employees);
   $$CustomersTableTableManager get customers =>
       $$CustomersTableTableManager(_db, _db.customers);
+  $$LocalHeldTransactionsTableTableManager get localHeldTransactions =>
+      $$LocalHeldTransactionsTableTableManager(_db, _db.localHeldTransactions);
 }

@@ -11,6 +11,7 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/transaction
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 
 class PaymentDialog extends ConsumerStatefulWidget {
@@ -130,6 +131,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
     try {
       final appliedDiscount = ref.read(appliedDiscountProvider);
       final activeShift = ref.read(activeShiftProvider).asData?.value;
+      final activeEmployee = ref.read(activeEmployeeProvider);
       final taxRate = ref.read(activeTaxRateProvider);
       final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
 
@@ -153,6 +155,7 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
       final repository = ref.read(transactionRepositoryProvider);
       final tx = await repository.createTransaction(
         shiftId: activeShift?.id,
+        cashierId: activeEmployee?['id']?.toString(),
         items: cart,
         subtotal: subtotal,
         discountAmount: discountAmount,
