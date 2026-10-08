@@ -4,6 +4,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/services/device_info_service.dart';
 import '../../../core/services/secure_storage_service.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/database/app_database.dart';
 
 class AuthRepository {
@@ -11,13 +12,15 @@ class AuthRepository {
   final DeviceInfoService _deviceInfoService;
   final SecureStorageService _secureStorage;
   final AppDatabase _database;
+  final SharedPreferences? _prefs;
 
   AuthRepository(
     this._dioClient,
     this._deviceInfoService,
     this._secureStorage,
-    this._database,
-  );
+    this._database, [
+    this._prefs,
+  ]);
 
   /// Pair device using OTP
   Future<bool> connectDevice(String otp) async {
@@ -76,9 +79,13 @@ class AuthRepository {
     }
   }
 
-  /// Disconnect/Logout device and clear local database
+  /// Disconnect/Logout device, clear tokens, wipe sync timestamps, and clear local database
   Future<void> disconnect() async {
     await _secureStorage.clearAll();
+    if (_prefs != null) {
+      await _prefs.remove('last_sync_at');
+      await _prefs.remove('last_synced_at');
+    }
     try {
       await _database.clearAllData();
     } catch (_) {}

@@ -12,6 +12,7 @@ import 'package:sollu_pos_client/features/settings/presentation/pages/settings_s
 import 'package:sollu_pos_client/features/settings/presentation/pages/printer_settings_screen.dart';
 import 'package:sollu_pos_client/features/settings/presentation/pages/payment_method_settings_screen.dart';
 import 'package:sollu_pos_client/features/pos/presentation/pages/products_screen.dart';
+import 'package:sollu_pos_client/features/pos/presentation/pages/checkout_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -42,6 +43,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
+      ),
+      GoRoute(
+        path: '/checkout',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final initialMethodType = extra?['initialMethodType'] as String?;
+          return CustomTransitionPage(
+            child: CheckoutScreen(initialMethodType: initialMethodType),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       GoRoute(
         path: '/history',

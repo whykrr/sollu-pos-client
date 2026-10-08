@@ -1,69 +1,97 @@
+import 'dart:convert';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../../core/database/app_database.dart';
+import '../../../settings/presentation/providers/outlet_settings_provider.dart';
+import '../../data/database/daos/held_bills_dao.dart';
 import 'cart_provider.dart';
 
-class HoldOrder {
-  final String id;
-  final String? customerName;
-  final String? note;
-  final List<CartItem> items;
-  final double subtotal;
-  final DateTime heldAt;
+/// Stream Provider untuk daftar transaksi yang ditahan di SQLite lokal
+final heldTransactionsStreamProvider =
+    StreamProvider<List<HeldTransaction>>((ref) {
+  final dao = ref.watch(heldBillsDaoProvider);
+  final outletId = ref.watch(currentOutletIdProvider);
+  return dao.watchHeldTransactions(outletId);
+});
 
-  HoldOrder({
-    required this.id,
-    this.customerName,
-    this.note,
-    required this.items,
-    required this.subtotal,
-    required this.heldAt,
-  });
-}
+/// Service untuk mengelola transaksi yang ditahan (Hold & Resume) di SQLite
+class HeldBillsService {
+  final HeldBillsDao _dao;
+  final Ref _ref;
+  final Uuid _uuid = const Uuid();
 
-class HoldCartNotifier extends Notifier<List<HoldOrder>> {
-  @override
-  List<HoldOrder> build() => [];
+  HeldBillsService(this._dao, this._ref);
 
-  /// Menahan pesanan keranjang saat ini
-  HoldOrder? holdCurrentCart(
-    List<CartItem> items, {
+  /// Menahan pesanan keranjang saat ini secara persisten ke SQLite
+  Future<HeldTransaction?> holdCurrentCart({
+    required List<CartItem> items,
+    required String holdLabel,
     String? customerName,
-    String? note,
-  }) {
+    String? tableNumber,
+    String? notes,
+  }) async {
     if (items.isEmpty) return null;
 
-    final subtotal = items.fold(
+    final outletId = _ref.read(currentOutletIdProvider);
+    final id = _uuid.v7(); // UUIDv7 untuk penomoran berurutan berbasis waktu
+
+    final double subtotal = items.fold(
       0.0,
-      (sum, item) => sum + (item.price * item.qty),
+      (sum, item) => sum + item.calculatedSubtotal,
     );
-    final newHoldOrder = HoldOrder(
-      id: 'HOLD-${DateTime.now().millisecondsSinceEpoch}',
-      customerName: customerName,
-      note: note,
-      items: List.from(items),
+    final double total = subtotal;
+
+    final cartPayloadJson =
+        jsonEncode(items.map((e) => e.toJson()).toList());
+
+    final entry = HeldTransactionsCompanion.insert(
+      id: id,
+      outletId: outletId,
+      holdLabel: holdLabel,
+      customerName: Value(customerName),
+      tableNumber: Value(tableNumber),
       subtotal: subtotal,
+      total: total,
+      cartPayload: cartPayloadJson,
+      notes: Value(notes),
       heldAt: DateTime.now(),
     );
 
-    state = [newHoldOrder, ...state];
-    return newHoldOrder;
+    await _dao.insertHeldTransaction(entry);
+
+    // Bersihkan keranjang saat ini
+    _ref.read(cartProvider.notifier).clearCart();
+
+    return _dao.getHeldTransactionById(id);
   }
 
-  /// Menghapus transaksi yang ditahan dari antrean
-  void removeHoldOrder(String id) {
-    state = state.where((order) => order.id != id).toList();
+  /// Memulihkan transaksi yang ditahan kembali ke keranjang belanja
+  Future<bool> resumeHeldBill(HeldTransaction heldTx) async {
+    try {
+      final decodedList = jsonDecode(heldTx.cartPayload) as List;
+      final restoredItems = decodedList
+          .map((item) => CartItem.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+      _ref.read(cartProvider.notifier).setCart(restoredItems);
+
+      // Hapus dari SQLite setelah sukses dimuat kembali
+      await _dao.deleteHeldTransaction(heldTx.id);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
-  /// Mengambil transaksi yang ditahan untuk dimuat kembali ke keranjang
-  HoldOrder? restoreHoldOrder(String id) {
-    final order = state.firstWhere(
-      (element) => element.id == id,
-      orElse: () => throw Exception('Order not found'),
-    );
-    removeHoldOrder(id);
-    return order;
+  /// Menghapus transaksi yang ditahan dari SQLite
+  Future<void> deleteHeldBill(String id) async {
+    await _dao.deleteHeldTransaction(id);
   }
 }
 
-final holdCartProvider = NotifierProvider<HoldCartNotifier, List<HoldOrder>>(
-  HoldCartNotifier.new,
-);
+final heldBillsServiceProvider = Provider<HeldBillsService>((ref) {
+  final dao = ref.watch(heldBillsDaoProvider);
+  return HeldBillsService(dao, ref);
+});

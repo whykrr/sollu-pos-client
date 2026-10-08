@@ -101,4 +101,24 @@ class AppConfig {
 
   /// Cek apakah berjalan di environment production
   static bool get isProduction => appEnv.toLowerCase() == 'production';
+
+  /// Reverb WebSocket Configuration
+  static String get reverbHost =>
+      dotenv.env['REVERB_HOST'] ??
+      const String.fromEnvironment('REVERB_HOST', defaultValue: '127.0.0.1');
+
+  static int get reverbPort =>
+      int.tryParse(dotenv.env['REVERB_PORT'] ?? '') ??
+      const int.fromEnvironment('REVERB_PORT', defaultValue: 8088);
+
+  static String get reverbAppKey =>
+      dotenv.env['REVERB_APP_KEY'] ??
+      const String.fromEnvironment(
+        'REVERB_APP_KEY',
+        defaultValue: 'z6p5lzt5ezllisvnvecs',
+      );
+
+  static String get reverbScheme =>
+      dotenv.env['REVERB_SCHEME'] ??
+      const String.fromEnvironment('REVERB_SCHEME', defaultValue: 'http');
 }

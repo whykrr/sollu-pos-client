@@ -439,4 +439,54 @@ class PosRepository {
     )..where((i) => i.productId.equals(productId))).getSingleOrNull();
     return inv?.id;
   }
+
+  /// Memeriksa ketersediaan stok untuk item-item di keranjang belanja.
+  /// Mengembalikan daftar nama item yang stoknya kurang dari kuantitas belanja (jika trackInventory aktif).
+  Future<List<String>> checkCartStockAvailability(List<dynamic> items) async {
+    final List<String> insufficientItems = [];
+
+    // Kelompokkan total kuantitas per inventory_item_id
+    final Map<String, double> requiredQtyByInvId = {};
+    final Map<String, String> itemNamesByInvId = {};
+
+    for (final item in items) {
+      String? resolvedInvId = (item.inventoryItemId != null && item.inventoryItemId.toString().isNotEmpty)
+          ? item.inventoryItemId.toString()
+          : null;
+
+      if (resolvedInvId == null && item.productId != null && item.productId.toString().isNotEmpty) {
+        final prodId = item.productId.toString();
+        final String? varOptId = item.variantGroupOptionId ??
+            (item.selectedVariants is Map ? item.selectedVariants.values.firstOrNull?.toString() : null);
+
+        if (varOptId != null) {
+          resolvedInvId = await findInventoryItemIdForVariant(prodId, varOptId);
+        }
+        resolvedInvId ??= await findStandaloneInventoryItemId(prodId);
+      }
+
+      if (resolvedInvId != null) {
+        final double qty = (item.qty as num).toDouble();
+        requiredQtyByInvId[resolvedInvId] = (requiredQtyByInvId[resolvedInvId] ?? 0.0) + qty;
+        itemNamesByInvId[resolvedInvId] = item.name.toString();
+      }
+    }
+
+    for (final entry in requiredQtyByInvId.entries) {
+      final invId = entry.key;
+      final requiredQty = entry.value;
+
+      final inventory = await (_database.select(_database.inventories)
+            ..where((i) => i.id.equals(invId)))
+          .getSingleOrNull();
+
+      if (inventory != null && inventory.trackInventory) {
+        if (inventory.stock < requiredQty) {
+          insufficientItems.add(itemNamesByInvId[invId] ?? inventory.name);
+        }
+      }
+    }
+
+    return insufficientItems;
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/providers/auto_sync_provider.dart';
+import '../../../core/providers/preferences_provider.dart';
 import '../../../core/services/device_info_service.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../data/auth_repository.dart';
@@ -27,12 +28,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final deviceInfoService = ref.watch(deviceInfoServiceProvider);
   final secureStorage = ref.watch(secureStorageProvider);
   final database = ref.watch(databaseProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
 
   return AuthRepository(
     dioClient,
     deviceInfoService,
     secureStorage,
     database,
+    prefs,
   );
 });
 
@@ -94,6 +97,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> disconnect() async {
     final repo = ref.read(authRepositoryProvider);
     await repo.disconnect();
+    await ref.read(lastSyncProvider.notifier).clearTimestamp();
     state = AuthState.unauthenticated;
   }
 
@@ -104,6 +108,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final repo = ref.read(authRepositoryProvider);
       final success = await repo.unpairDevice(userId: userId);
       if (success) {
+        await ref.read(lastSyncProvider.notifier).clearTimestamp();
         state = AuthState.unauthenticated;
       } else {
         errorMessage = 'Gagal memutuskan sambungan perangkat.';

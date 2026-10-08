@@ -14,6 +14,8 @@ class ApiEndpoints {
 
   // --- Master Data Synchronization ---
   static const String syncMaster = '$posPrefix/sync/master';
+  static const String syncInitial = '$posPrefix/sync/initial';
+  static const String syncDelta = '$posPrefix/sync/delta';
 
   // --- Employee Management ---
   static const String employees = '$posPrefix/employees';

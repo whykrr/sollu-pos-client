@@ -144,3 +144,26 @@ class TransactionPromos extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+@DataClassName('HeldTransaction')
+class HeldTransactions extends Table {
+  TextColumn get id => text()(); // UUIDv7
+  TextColumn get outletId => text()();
+  TextColumn get holdLabel => text().withLength(max: 100)();
+  TextColumn get customerName => text().nullable()();
+  TextColumn get tableNumber => text().nullable()();
+  RealColumn get subtotal => real()();
+  RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get taxAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get serviceChargeAmount =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get total => real()();
+  TextColumn get cartPayload => text()(); // JSON serialized List<CartItem>
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get heldAt => dateTime()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+

@@ -5264,18 +5264,6 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(true),
   );
-  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
-    'syncStatus',
-  );
-  @override
-  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
-    'sync_status',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('pending'),
-  );
   static const VerificationMeta _offlineIdMeta = const VerificationMeta(
     'offlineId',
   );
@@ -5342,7 +5330,6 @@ class $TransactionsTable extends Transactions
     status,
     notes,
     isOffline,
-    syncStatus,
     offlineId,
     dueDate,
     createdAt,
@@ -5506,12 +5493,6 @@ class $TransactionsTable extends Transactions
         isOffline.isAcceptableOrUnknown(data['is_offline']!, _isOfflineMeta),
       );
     }
-    if (data.containsKey('sync_status')) {
-      context.handle(
-        _syncStatusMeta,
-        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
-      );
-    }
     if (data.containsKey('offline_id')) {
       context.handle(
         _offlineIdMeta,
@@ -5621,10 +5602,6 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_offline'],
       )!,
-      syncStatus: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}sync_status'],
-      )!,
       offlineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}offline_id'],
@@ -5670,7 +5647,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String status;
   final String? notes;
   final bool isOffline;
-  final String syncStatus;
   final String? offlineId;
   final DateTime? dueDate;
   final DateTime createdAt;
@@ -5695,7 +5671,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.status,
     this.notes,
     required this.isOffline,
-    required this.syncStatus,
     this.offlineId,
     this.dueDate,
     required this.createdAt,
@@ -5735,7 +5710,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       map['notes'] = Variable<String>(notes);
     }
     map['is_offline'] = Variable<bool>(isOffline);
-    map['sync_status'] = Variable<String>(syncStatus);
     if (!nullToAbsent || offlineId != null) {
       map['offline_id'] = Variable<String>(offlineId);
     }
@@ -5782,7 +5756,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? const Value.absent()
           : Value(notes),
       isOffline: Value(isOffline),
-      syncStatus: Value(syncStatus),
       offlineId: offlineId == null && nullToAbsent
           ? const Value.absent()
           : Value(offlineId),
@@ -5823,7 +5796,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       isOffline: serializer.fromJson<bool>(json['isOffline']),
-      syncStatus: serializer.fromJson<String>(json['syncStatus']),
       offlineId: serializer.fromJson<String?>(json['offlineId']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -5853,7 +5825,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'isOffline': serializer.toJson<bool>(isOffline),
-      'syncStatus': serializer.toJson<String>(syncStatus),
       'offlineId': serializer.toJson<String?>(offlineId),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -5881,7 +5852,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     String? status,
     Value<String?> notes = const Value.absent(),
     bool? isOffline,
-    String? syncStatus,
     Value<String?> offlineId = const Value.absent(),
     Value<DateTime?> dueDate = const Value.absent(),
     DateTime? createdAt,
@@ -5908,7 +5878,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     status: status ?? this.status,
     notes: notes.present ? notes.value : this.notes,
     isOffline: isOffline ?? this.isOffline,
-    syncStatus: syncStatus ?? this.syncStatus,
     offlineId: offlineId.present ? offlineId.value : this.offlineId,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     createdAt: createdAt ?? this.createdAt,
@@ -5951,9 +5920,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
       isOffline: data.isOffline.present ? data.isOffline.value : this.isOffline,
-      syncStatus: data.syncStatus.present
-          ? data.syncStatus.value
-          : this.syncStatus,
       offlineId: data.offlineId.present ? data.offlineId.value : this.offlineId,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -5983,7 +5949,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
-          ..write('syncStatus: $syncStatus, ')
           ..write('offlineId: $offlineId, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
@@ -6013,7 +5978,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     status,
     notes,
     isOffline,
-    syncStatus,
     offlineId,
     dueDate,
     createdAt,
@@ -6042,7 +6006,6 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.status == this.status &&
           other.notes == this.notes &&
           other.isOffline == this.isOffline &&
-          other.syncStatus == this.syncStatus &&
           other.offlineId == this.offlineId &&
           other.dueDate == this.dueDate &&
           other.createdAt == this.createdAt &&
@@ -6069,7 +6032,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> status;
   final Value<String?> notes;
   final Value<bool> isOffline;
-  final Value<String> syncStatus;
   final Value<String?> offlineId;
   final Value<DateTime?> dueDate;
   final Value<DateTime> createdAt;
@@ -6095,7 +6057,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
-    this.syncStatus = const Value.absent(),
     this.offlineId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -6122,7 +6083,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String status,
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
-    this.syncStatus = const Value.absent(),
     this.offlineId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -6155,7 +6115,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? status,
     Expression<String>? notes,
     Expression<bool>? isOffline,
-    Expression<String>? syncStatus,
     Expression<String>? offlineId,
     Expression<DateTime>? dueDate,
     Expression<DateTime>? createdAt,
@@ -6183,7 +6142,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (isOffline != null) 'is_offline': isOffline,
-      if (syncStatus != null) 'sync_status': syncStatus,
       if (offlineId != null) 'offline_id': offlineId,
       if (dueDate != null) 'due_date': dueDate,
       if (createdAt != null) 'created_at': createdAt,
@@ -6212,7 +6170,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String>? status,
     Value<String?>? notes,
     Value<bool>? isOffline,
-    Value<String>? syncStatus,
     Value<String?>? offlineId,
     Value<DateTime?>? dueDate,
     Value<DateTime>? createdAt,
@@ -6239,7 +6196,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       isOffline: isOffline ?? this.isOffline,
-      syncStatus: syncStatus ?? this.syncStatus,
       offlineId: offlineId ?? this.offlineId,
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
@@ -6310,9 +6266,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (isOffline.present) {
       map['is_offline'] = Variable<bool>(isOffline.value);
     }
-    if (syncStatus.present) {
-      map['sync_status'] = Variable<String>(syncStatus.value);
-    }
     if (offlineId.present) {
       map['offline_id'] = Variable<String>(offlineId.value);
     }
@@ -6353,7 +6306,6 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
-          ..write('syncStatus: $syncStatus, ')
           ..write('offlineId: $offlineId, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
@@ -10300,12 +10252,12 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   }
 }
 
-class $LocalHeldTransactionsTable extends LocalHeldTransactions
-    with TableInfo<$LocalHeldTransactionsTable, LocalHeldTransaction> {
+class $HeldTransactionsTable extends HeldTransactions
+    with TableInfo<$HeldTransactionsTable, HeldTransaction> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $LocalHeldTransactionsTable(this.attachedDatabase, [this._alias]);
+  $HeldTransactionsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -10315,27 +10267,50 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _customerNoteMeta = const VerificationMeta(
-    'customerNote',
+  static const VerificationMeta _outletIdMeta = const VerificationMeta(
+    'outletId',
   );
   @override
-  late final GeneratedColumn<String> customerNote = GeneratedColumn<String>(
-    'customer_note',
+  late final GeneratedColumn<String> outletId = GeneratedColumn<String>(
+    'outlet_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _holdLabelMeta = const VerificationMeta(
+    'holdLabel',
+  );
+  @override
+  late final GeneratedColumn<String> holdLabel = GeneratedColumn<String>(
+    'hold_label',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 100),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _customerNameMeta = const VerificationMeta(
+    'customerName',
+  );
+  @override
+  late final GeneratedColumn<String> customerName = GeneratedColumn<String>(
+    'customer_name',
     aliasedName,
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _cartPayloadJsonMeta = const VerificationMeta(
-    'cartPayloadJson',
+  static const VerificationMeta _tableNumberMeta = const VerificationMeta(
+    'tableNumber',
   );
   @override
-  late final GeneratedColumn<String> cartPayloadJson = GeneratedColumn<String>(
-    'cart_payload_json',
+  late final GeneratedColumn<String> tableNumber = GeneratedColumn<String>(
+    'table_number',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _subtotalMeta = const VerificationMeta(
     'subtotal',
@@ -10348,10 +10323,86 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _discountAmountMeta = const VerificationMeta(
+    'discountAmount',
+  );
+  @override
+  late final GeneratedColumn<double> discountAmount = GeneratedColumn<double>(
+    'discount_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _taxAmountMeta = const VerificationMeta(
+    'taxAmount',
+  );
+  @override
+  late final GeneratedColumn<double> taxAmount = GeneratedColumn<double>(
+    'tax_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _serviceChargeAmountMeta =
+      const VerificationMeta('serviceChargeAmount');
+  @override
+  late final GeneratedColumn<double> serviceChargeAmount =
+      GeneratedColumn<double>(
+        'service_charge_amount',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _totalMeta = const VerificationMeta('total');
+  @override
+  late final GeneratedColumn<double> total = GeneratedColumn<double>(
+    'total',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cartPayloadMeta = const VerificationMeta(
+    'cartPayload',
+  );
+  @override
+  late final GeneratedColumn<String> cartPayload = GeneratedColumn<String>(
+    'cart_payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _heldAtMeta = const VerificationMeta('heldAt');
   @override
   late final GeneratedColumn<DateTime> heldAt = GeneratedColumn<DateTime>(
     'held_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
     aliasedName,
     false,
     type: DriftSqlType.dateTime,
@@ -10361,19 +10412,28 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    customerNote,
-    cartPayloadJson,
+    outletId,
+    holdLabel,
+    customerName,
+    tableNumber,
     subtotal,
+    discountAmount,
+    taxAmount,
+    serviceChargeAmount,
+    total,
+    cartPayload,
+    notes,
     heldAt,
+    createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'local_held_transactions';
+  static const String $name = 'held_transactions';
   @override
   VerificationContext validateIntegrity(
-    Insertable<LocalHeldTransaction> instance, {
+    Insertable<HeldTransaction> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -10383,25 +10443,39 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('customer_note')) {
+    if (data.containsKey('outlet_id')) {
       context.handle(
-        _customerNoteMeta,
-        customerNote.isAcceptableOrUnknown(
-          data['customer_note']!,
-          _customerNoteMeta,
+        _outletIdMeta,
+        outletId.isAcceptableOrUnknown(data['outlet_id']!, _outletIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_outletIdMeta);
+    }
+    if (data.containsKey('hold_label')) {
+      context.handle(
+        _holdLabelMeta,
+        holdLabel.isAcceptableOrUnknown(data['hold_label']!, _holdLabelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_holdLabelMeta);
+    }
+    if (data.containsKey('customer_name')) {
+      context.handle(
+        _customerNameMeta,
+        customerName.isAcceptableOrUnknown(
+          data['customer_name']!,
+          _customerNameMeta,
         ),
       );
     }
-    if (data.containsKey('cart_payload_json')) {
+    if (data.containsKey('table_number')) {
       context.handle(
-        _cartPayloadJsonMeta,
-        cartPayloadJson.isAcceptableOrUnknown(
-          data['cart_payload_json']!,
-          _cartPayloadJsonMeta,
+        _tableNumberMeta,
+        tableNumber.isAcceptableOrUnknown(
+          data['table_number']!,
+          _tableNumberMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_cartPayloadJsonMeta);
     }
     if (data.containsKey('subtotal')) {
       context.handle(
@@ -10411,10 +10485,67 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
     } else if (isInserting) {
       context.missing(_subtotalMeta);
     }
+    if (data.containsKey('discount_amount')) {
+      context.handle(
+        _discountAmountMeta,
+        discountAmount.isAcceptableOrUnknown(
+          data['discount_amount']!,
+          _discountAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tax_amount')) {
+      context.handle(
+        _taxAmountMeta,
+        taxAmount.isAcceptableOrUnknown(data['tax_amount']!, _taxAmountMeta),
+      );
+    }
+    if (data.containsKey('service_charge_amount')) {
+      context.handle(
+        _serviceChargeAmountMeta,
+        serviceChargeAmount.isAcceptableOrUnknown(
+          data['service_charge_amount']!,
+          _serviceChargeAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total')) {
+      context.handle(
+        _totalMeta,
+        total.isAcceptableOrUnknown(data['total']!, _totalMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalMeta);
+    }
+    if (data.containsKey('cart_payload')) {
+      context.handle(
+        _cartPayloadMeta,
+        cartPayload.isAcceptableOrUnknown(
+          data['cart_payload']!,
+          _cartPayloadMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cartPayloadMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     if (data.containsKey('held_at')) {
       context.handle(
         _heldAtMeta,
         heldAt.isAcceptableOrUnknown(data['held_at']!, _heldAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_heldAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
     return context;
@@ -10423,88 +10554,178 @@ class $LocalHeldTransactionsTable extends LocalHeldTransactions
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  LocalHeldTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+  HeldTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LocalHeldTransaction(
+    return HeldTransaction(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      customerNote: attachedDatabase.typeMapping.read(
+      outletId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}customer_note'],
-      ),
-      cartPayloadJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}cart_payload_json'],
+        data['${effectivePrefix}outlet_id'],
       )!,
+      holdLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hold_label'],
+      )!,
+      customerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_name'],
+      ),
+      tableNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}table_number'],
+      ),
       subtotal: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}subtotal'],
       )!,
+      discountAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}discount_amount'],
+      )!,
+      taxAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}tax_amount'],
+      )!,
+      serviceChargeAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}service_charge_amount'],
+      )!,
+      total: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total'],
+      )!,
+      cartPayload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cart_payload'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       heldAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}held_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
       )!,
     );
   }
 
   @override
-  $LocalHeldTransactionsTable createAlias(String alias) {
-    return $LocalHeldTransactionsTable(attachedDatabase, alias);
+  $HeldTransactionsTable createAlias(String alias) {
+    return $HeldTransactionsTable(attachedDatabase, alias);
   }
 }
 
-class LocalHeldTransaction extends DataClass
-    implements Insertable<LocalHeldTransaction> {
+class HeldTransaction extends DataClass implements Insertable<HeldTransaction> {
   final String id;
-  final String? customerNote;
-  final String cartPayloadJson;
+  final String outletId;
+  final String holdLabel;
+  final String? customerName;
+  final String? tableNumber;
   final double subtotal;
+  final double discountAmount;
+  final double taxAmount;
+  final double serviceChargeAmount;
+  final double total;
+  final String cartPayload;
+  final String? notes;
   final DateTime heldAt;
-  const LocalHeldTransaction({
+  final DateTime createdAt;
+  const HeldTransaction({
     required this.id,
-    this.customerNote,
-    required this.cartPayloadJson,
+    required this.outletId,
+    required this.holdLabel,
+    this.customerName,
+    this.tableNumber,
     required this.subtotal,
+    required this.discountAmount,
+    required this.taxAmount,
+    required this.serviceChargeAmount,
+    required this.total,
+    required this.cartPayload,
+    this.notes,
     required this.heldAt,
+    required this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    if (!nullToAbsent || customerNote != null) {
-      map['customer_note'] = Variable<String>(customerNote);
+    map['outlet_id'] = Variable<String>(outletId);
+    map['hold_label'] = Variable<String>(holdLabel);
+    if (!nullToAbsent || customerName != null) {
+      map['customer_name'] = Variable<String>(customerName);
     }
-    map['cart_payload_json'] = Variable<String>(cartPayloadJson);
+    if (!nullToAbsent || tableNumber != null) {
+      map['table_number'] = Variable<String>(tableNumber);
+    }
     map['subtotal'] = Variable<double>(subtotal);
+    map['discount_amount'] = Variable<double>(discountAmount);
+    map['tax_amount'] = Variable<double>(taxAmount);
+    map['service_charge_amount'] = Variable<double>(serviceChargeAmount);
+    map['total'] = Variable<double>(total);
+    map['cart_payload'] = Variable<String>(cartPayload);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     map['held_at'] = Variable<DateTime>(heldAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
-  LocalHeldTransactionsCompanion toCompanion(bool nullToAbsent) {
-    return LocalHeldTransactionsCompanion(
+  HeldTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return HeldTransactionsCompanion(
       id: Value(id),
-      customerNote: customerNote == null && nullToAbsent
+      outletId: Value(outletId),
+      holdLabel: Value(holdLabel),
+      customerName: customerName == null && nullToAbsent
           ? const Value.absent()
-          : Value(customerNote),
-      cartPayloadJson: Value(cartPayloadJson),
+          : Value(customerName),
+      tableNumber: tableNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tableNumber),
       subtotal: Value(subtotal),
+      discountAmount: Value(discountAmount),
+      taxAmount: Value(taxAmount),
+      serviceChargeAmount: Value(serviceChargeAmount),
+      total: Value(total),
+      cartPayload: Value(cartPayload),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       heldAt: Value(heldAt),
+      createdAt: Value(createdAt),
     );
   }
 
-  factory LocalHeldTransaction.fromJson(
+  factory HeldTransaction.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LocalHeldTransaction(
+    return HeldTransaction(
       id: serializer.fromJson<String>(json['id']),
-      customerNote: serializer.fromJson<String?>(json['customerNote']),
-      cartPayloadJson: serializer.fromJson<String>(json['cartPayloadJson']),
+      outletId: serializer.fromJson<String>(json['outletId']),
+      holdLabel: serializer.fromJson<String>(json['holdLabel']),
+      customerName: serializer.fromJson<String?>(json['customerName']),
+      tableNumber: serializer.fromJson<String?>(json['tableNumber']),
       subtotal: serializer.fromJson<double>(json['subtotal']),
+      discountAmount: serializer.fromJson<double>(json['discountAmount']),
+      taxAmount: serializer.fromJson<double>(json['taxAmount']),
+      serviceChargeAmount: serializer.fromJson<double>(
+        json['serviceChargeAmount'],
+      ),
+      total: serializer.fromJson<double>(json['total']),
+      cartPayload: serializer.fromJson<String>(json['cartPayload']),
+      notes: serializer.fromJson<String?>(json['notes']),
       heldAt: serializer.fromJson<DateTime>(json['heldAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
   @override
@@ -10512,124 +10733,265 @@ class LocalHeldTransaction extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'customerNote': serializer.toJson<String?>(customerNote),
-      'cartPayloadJson': serializer.toJson<String>(cartPayloadJson),
+      'outletId': serializer.toJson<String>(outletId),
+      'holdLabel': serializer.toJson<String>(holdLabel),
+      'customerName': serializer.toJson<String?>(customerName),
+      'tableNumber': serializer.toJson<String?>(tableNumber),
       'subtotal': serializer.toJson<double>(subtotal),
+      'discountAmount': serializer.toJson<double>(discountAmount),
+      'taxAmount': serializer.toJson<double>(taxAmount),
+      'serviceChargeAmount': serializer.toJson<double>(serviceChargeAmount),
+      'total': serializer.toJson<double>(total),
+      'cartPayload': serializer.toJson<String>(cartPayload),
+      'notes': serializer.toJson<String?>(notes),
       'heldAt': serializer.toJson<DateTime>(heldAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
-  LocalHeldTransaction copyWith({
+  HeldTransaction copyWith({
     String? id,
-    Value<String?> customerNote = const Value.absent(),
-    String? cartPayloadJson,
+    String? outletId,
+    String? holdLabel,
+    Value<String?> customerName = const Value.absent(),
+    Value<String?> tableNumber = const Value.absent(),
     double? subtotal,
+    double? discountAmount,
+    double? taxAmount,
+    double? serviceChargeAmount,
+    double? total,
+    String? cartPayload,
+    Value<String?> notes = const Value.absent(),
     DateTime? heldAt,
-  }) => LocalHeldTransaction(
+    DateTime? createdAt,
+  }) => HeldTransaction(
     id: id ?? this.id,
-    customerNote: customerNote.present ? customerNote.value : this.customerNote,
-    cartPayloadJson: cartPayloadJson ?? this.cartPayloadJson,
+    outletId: outletId ?? this.outletId,
+    holdLabel: holdLabel ?? this.holdLabel,
+    customerName: customerName.present ? customerName.value : this.customerName,
+    tableNumber: tableNumber.present ? tableNumber.value : this.tableNumber,
     subtotal: subtotal ?? this.subtotal,
+    discountAmount: discountAmount ?? this.discountAmount,
+    taxAmount: taxAmount ?? this.taxAmount,
+    serviceChargeAmount: serviceChargeAmount ?? this.serviceChargeAmount,
+    total: total ?? this.total,
+    cartPayload: cartPayload ?? this.cartPayload,
+    notes: notes.present ? notes.value : this.notes,
     heldAt: heldAt ?? this.heldAt,
+    createdAt: createdAt ?? this.createdAt,
   );
-  LocalHeldTransaction copyWithCompanion(LocalHeldTransactionsCompanion data) {
-    return LocalHeldTransaction(
+  HeldTransaction copyWithCompanion(HeldTransactionsCompanion data) {
+    return HeldTransaction(
       id: data.id.present ? data.id.value : this.id,
-      customerNote: data.customerNote.present
-          ? data.customerNote.value
-          : this.customerNote,
-      cartPayloadJson: data.cartPayloadJson.present
-          ? data.cartPayloadJson.value
-          : this.cartPayloadJson,
+      outletId: data.outletId.present ? data.outletId.value : this.outletId,
+      holdLabel: data.holdLabel.present ? data.holdLabel.value : this.holdLabel,
+      customerName: data.customerName.present
+          ? data.customerName.value
+          : this.customerName,
+      tableNumber: data.tableNumber.present
+          ? data.tableNumber.value
+          : this.tableNumber,
       subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
+      discountAmount: data.discountAmount.present
+          ? data.discountAmount.value
+          : this.discountAmount,
+      taxAmount: data.taxAmount.present ? data.taxAmount.value : this.taxAmount,
+      serviceChargeAmount: data.serviceChargeAmount.present
+          ? data.serviceChargeAmount.value
+          : this.serviceChargeAmount,
+      total: data.total.present ? data.total.value : this.total,
+      cartPayload: data.cartPayload.present
+          ? data.cartPayload.value
+          : this.cartPayload,
+      notes: data.notes.present ? data.notes.value : this.notes,
       heldAt: data.heldAt.present ? data.heldAt.value : this.heldAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('LocalHeldTransaction(')
+    return (StringBuffer('HeldTransaction(')
           ..write('id: $id, ')
-          ..write('customerNote: $customerNote, ')
-          ..write('cartPayloadJson: $cartPayloadJson, ')
+          ..write('outletId: $outletId, ')
+          ..write('holdLabel: $holdLabel, ')
+          ..write('customerName: $customerName, ')
+          ..write('tableNumber: $tableNumber, ')
           ..write('subtotal: $subtotal, ')
-          ..write('heldAt: $heldAt')
+          ..write('discountAmount: $discountAmount, ')
+          ..write('taxAmount: $taxAmount, ')
+          ..write('serviceChargeAmount: $serviceChargeAmount, ')
+          ..write('total: $total, ')
+          ..write('cartPayload: $cartPayload, ')
+          ..write('notes: $notes, ')
+          ..write('heldAt: $heldAt, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, customerNote, cartPayloadJson, subtotal, heldAt);
+  int get hashCode => Object.hash(
+    id,
+    outletId,
+    holdLabel,
+    customerName,
+    tableNumber,
+    subtotal,
+    discountAmount,
+    taxAmount,
+    serviceChargeAmount,
+    total,
+    cartPayload,
+    notes,
+    heldAt,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is LocalHeldTransaction &&
+      (other is HeldTransaction &&
           other.id == this.id &&
-          other.customerNote == this.customerNote &&
-          other.cartPayloadJson == this.cartPayloadJson &&
+          other.outletId == this.outletId &&
+          other.holdLabel == this.holdLabel &&
+          other.customerName == this.customerName &&
+          other.tableNumber == this.tableNumber &&
           other.subtotal == this.subtotal &&
-          other.heldAt == this.heldAt);
+          other.discountAmount == this.discountAmount &&
+          other.taxAmount == this.taxAmount &&
+          other.serviceChargeAmount == this.serviceChargeAmount &&
+          other.total == this.total &&
+          other.cartPayload == this.cartPayload &&
+          other.notes == this.notes &&
+          other.heldAt == this.heldAt &&
+          other.createdAt == this.createdAt);
 }
 
-class LocalHeldTransactionsCompanion
-    extends UpdateCompanion<LocalHeldTransaction> {
+class HeldTransactionsCompanion extends UpdateCompanion<HeldTransaction> {
   final Value<String> id;
-  final Value<String?> customerNote;
-  final Value<String> cartPayloadJson;
+  final Value<String> outletId;
+  final Value<String> holdLabel;
+  final Value<String?> customerName;
+  final Value<String?> tableNumber;
   final Value<double> subtotal;
+  final Value<double> discountAmount;
+  final Value<double> taxAmount;
+  final Value<double> serviceChargeAmount;
+  final Value<double> total;
+  final Value<String> cartPayload;
+  final Value<String?> notes;
   final Value<DateTime> heldAt;
+  final Value<DateTime> createdAt;
   final Value<int> rowid;
-  const LocalHeldTransactionsCompanion({
+  const HeldTransactionsCompanion({
     this.id = const Value.absent(),
-    this.customerNote = const Value.absent(),
-    this.cartPayloadJson = const Value.absent(),
+    this.outletId = const Value.absent(),
+    this.holdLabel = const Value.absent(),
+    this.customerName = const Value.absent(),
+    this.tableNumber = const Value.absent(),
     this.subtotal = const Value.absent(),
+    this.discountAmount = const Value.absent(),
+    this.taxAmount = const Value.absent(),
+    this.serviceChargeAmount = const Value.absent(),
+    this.total = const Value.absent(),
+    this.cartPayload = const Value.absent(),
+    this.notes = const Value.absent(),
     this.heldAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  LocalHeldTransactionsCompanion.insert({
+  HeldTransactionsCompanion.insert({
     required String id,
-    this.customerNote = const Value.absent(),
-    required String cartPayloadJson,
+    required String outletId,
+    required String holdLabel,
+    this.customerName = const Value.absent(),
+    this.tableNumber = const Value.absent(),
     required double subtotal,
-    this.heldAt = const Value.absent(),
+    this.discountAmount = const Value.absent(),
+    this.taxAmount = const Value.absent(),
+    this.serviceChargeAmount = const Value.absent(),
+    required double total,
+    required String cartPayload,
+    this.notes = const Value.absent(),
+    required DateTime heldAt,
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       cartPayloadJson = Value(cartPayloadJson),
-       subtotal = Value(subtotal);
-  static Insertable<LocalHeldTransaction> custom({
+       outletId = Value(outletId),
+       holdLabel = Value(holdLabel),
+       subtotal = Value(subtotal),
+       total = Value(total),
+       cartPayload = Value(cartPayload),
+       heldAt = Value(heldAt);
+  static Insertable<HeldTransaction> custom({
     Expression<String>? id,
-    Expression<String>? customerNote,
-    Expression<String>? cartPayloadJson,
+    Expression<String>? outletId,
+    Expression<String>? holdLabel,
+    Expression<String>? customerName,
+    Expression<String>? tableNumber,
     Expression<double>? subtotal,
+    Expression<double>? discountAmount,
+    Expression<double>? taxAmount,
+    Expression<double>? serviceChargeAmount,
+    Expression<double>? total,
+    Expression<String>? cartPayload,
+    Expression<String>? notes,
     Expression<DateTime>? heldAt,
+    Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (customerNote != null) 'customer_note': customerNote,
-      if (cartPayloadJson != null) 'cart_payload_json': cartPayloadJson,
+      if (outletId != null) 'outlet_id': outletId,
+      if (holdLabel != null) 'hold_label': holdLabel,
+      if (customerName != null) 'customer_name': customerName,
+      if (tableNumber != null) 'table_number': tableNumber,
       if (subtotal != null) 'subtotal': subtotal,
+      if (discountAmount != null) 'discount_amount': discountAmount,
+      if (taxAmount != null) 'tax_amount': taxAmount,
+      if (serviceChargeAmount != null)
+        'service_charge_amount': serviceChargeAmount,
+      if (total != null) 'total': total,
+      if (cartPayload != null) 'cart_payload': cartPayload,
+      if (notes != null) 'notes': notes,
       if (heldAt != null) 'held_at': heldAt,
+      if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  LocalHeldTransactionsCompanion copyWith({
+  HeldTransactionsCompanion copyWith({
     Value<String>? id,
-    Value<String?>? customerNote,
-    Value<String>? cartPayloadJson,
+    Value<String>? outletId,
+    Value<String>? holdLabel,
+    Value<String?>? customerName,
+    Value<String?>? tableNumber,
     Value<double>? subtotal,
+    Value<double>? discountAmount,
+    Value<double>? taxAmount,
+    Value<double>? serviceChargeAmount,
+    Value<double>? total,
+    Value<String>? cartPayload,
+    Value<String?>? notes,
     Value<DateTime>? heldAt,
+    Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
-    return LocalHeldTransactionsCompanion(
+    return HeldTransactionsCompanion(
       id: id ?? this.id,
-      customerNote: customerNote ?? this.customerNote,
-      cartPayloadJson: cartPayloadJson ?? this.cartPayloadJson,
+      outletId: outletId ?? this.outletId,
+      holdLabel: holdLabel ?? this.holdLabel,
+      customerName: customerName ?? this.customerName,
+      tableNumber: tableNumber ?? this.tableNumber,
       subtotal: subtotal ?? this.subtotal,
+      discountAmount: discountAmount ?? this.discountAmount,
+      taxAmount: taxAmount ?? this.taxAmount,
+      serviceChargeAmount: serviceChargeAmount ?? this.serviceChargeAmount,
+      total: total ?? this.total,
+      cartPayload: cartPayload ?? this.cartPayload,
+      notes: notes ?? this.notes,
       heldAt: heldAt ?? this.heldAt,
+      createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -10640,17 +11002,46 @@ class LocalHeldTransactionsCompanion
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (customerNote.present) {
-      map['customer_note'] = Variable<String>(customerNote.value);
+    if (outletId.present) {
+      map['outlet_id'] = Variable<String>(outletId.value);
     }
-    if (cartPayloadJson.present) {
-      map['cart_payload_json'] = Variable<String>(cartPayloadJson.value);
+    if (holdLabel.present) {
+      map['hold_label'] = Variable<String>(holdLabel.value);
+    }
+    if (customerName.present) {
+      map['customer_name'] = Variable<String>(customerName.value);
+    }
+    if (tableNumber.present) {
+      map['table_number'] = Variable<String>(tableNumber.value);
     }
     if (subtotal.present) {
       map['subtotal'] = Variable<double>(subtotal.value);
     }
+    if (discountAmount.present) {
+      map['discount_amount'] = Variable<double>(discountAmount.value);
+    }
+    if (taxAmount.present) {
+      map['tax_amount'] = Variable<double>(taxAmount.value);
+    }
+    if (serviceChargeAmount.present) {
+      map['service_charge_amount'] = Variable<double>(
+        serviceChargeAmount.value,
+      );
+    }
+    if (total.present) {
+      map['total'] = Variable<double>(total.value);
+    }
+    if (cartPayload.present) {
+      map['cart_payload'] = Variable<String>(cartPayload.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (heldAt.present) {
       map['held_at'] = Variable<DateTime>(heldAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -10660,12 +11051,21 @@ class LocalHeldTransactionsCompanion
 
   @override
   String toString() {
-    return (StringBuffer('LocalHeldTransactionsCompanion(')
+    return (StringBuffer('HeldTransactionsCompanion(')
           ..write('id: $id, ')
-          ..write('customerNote: $customerNote, ')
-          ..write('cartPayloadJson: $cartPayloadJson, ')
+          ..write('outletId: $outletId, ')
+          ..write('holdLabel: $holdLabel, ')
+          ..write('customerName: $customerName, ')
+          ..write('tableNumber: $tableNumber, ')
           ..write('subtotal: $subtotal, ')
+          ..write('discountAmount: $discountAmount, ')
+          ..write('taxAmount: $taxAmount, ')
+          ..write('serviceChargeAmount: $serviceChargeAmount, ')
+          ..write('total: $total, ')
+          ..write('cartPayload: $cartPayload, ')
+          ..write('notes: $notes, ')
           ..write('heldAt: $heldAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10709,8 +11109,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $TransactionPromosTable(this);
   late final $EmployeesTable employees = $EmployeesTable(this);
   late final $CustomersTable customers = $CustomersTable(this);
-  late final $LocalHeldTransactionsTable localHeldTransactions =
-      $LocalHeldTransactionsTable(this);
+  late final $HeldTransactionsTable heldTransactions = $HeldTransactionsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10737,7 +11138,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactionPromos,
     employees,
     customers,
-    localHeldTransactions,
+    heldTransactions,
   ];
 }
 
@@ -16197,7 +16598,6 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required String status,
       Value<String?> notes,
       Value<bool> isOffline,
-      Value<String> syncStatus,
       Value<String?> offlineId,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
@@ -16225,7 +16625,6 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<String?> notes,
       Value<bool> isOffline,
-      Value<String> syncStatus,
       Value<String?> offlineId,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
@@ -16416,11 +16815,6 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isOffline => $composableBuilder(
     column: $table.isOffline,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get syncStatus => $composableBuilder(
-    column: $table.syncStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16642,11 +17036,6 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get syncStatus => $composableBuilder(
-    column: $table.syncStatus,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get offlineId => $composableBuilder(
     column: $table.offlineId,
     builder: (column) => ColumnOrderings(column),
@@ -16769,11 +17158,6 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<bool> get isOffline =>
       $composableBuilder(column: $table.isOffline, builder: (column) => column);
-
-  GeneratedColumn<String> get syncStatus => $composableBuilder(
-    column: $table.syncStatus,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<String> get offlineId =>
       $composableBuilder(column: $table.offlineId, builder: (column) => column);
@@ -16940,7 +17324,6 @@ class $$TransactionsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
-                Value<String> syncStatus = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -16966,7 +17349,6 @@ class $$TransactionsTableTableManager
                 status: status,
                 notes: notes,
                 isOffline: isOffline,
-                syncStatus: syncStatus,
                 offlineId: offlineId,
                 dueDate: dueDate,
                 createdAt: createdAt,
@@ -16994,7 +17376,6 @@ class $$TransactionsTableTableManager
                 required String status,
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
-                Value<String> syncStatus = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -17020,7 +17401,6 @@ class $$TransactionsTableTableManager
                 status: status,
                 notes: notes,
                 isOffline: isOffline,
-                syncStatus: syncStatus,
                 offlineId: offlineId,
                 dueDate: dueDate,
                 createdAt: createdAt,
@@ -20036,28 +20416,46 @@ typedef $$CustomersTableProcessedTableManager =
       Customer,
       PrefetchHooks Function()
     >;
-typedef $$LocalHeldTransactionsTableCreateCompanionBuilder =
-    LocalHeldTransactionsCompanion Function({
+typedef $$HeldTransactionsTableCreateCompanionBuilder =
+    HeldTransactionsCompanion Function({
       required String id,
-      Value<String?> customerNote,
-      required String cartPayloadJson,
+      required String outletId,
+      required String holdLabel,
+      Value<String?> customerName,
+      Value<String?> tableNumber,
       required double subtotal,
-      Value<DateTime> heldAt,
+      Value<double> discountAmount,
+      Value<double> taxAmount,
+      Value<double> serviceChargeAmount,
+      required double total,
+      required String cartPayload,
+      Value<String?> notes,
+      required DateTime heldAt,
+      Value<DateTime> createdAt,
       Value<int> rowid,
     });
-typedef $$LocalHeldTransactionsTableUpdateCompanionBuilder =
-    LocalHeldTransactionsCompanion Function({
+typedef $$HeldTransactionsTableUpdateCompanionBuilder =
+    HeldTransactionsCompanion Function({
       Value<String> id,
-      Value<String?> customerNote,
-      Value<String> cartPayloadJson,
+      Value<String> outletId,
+      Value<String> holdLabel,
+      Value<String?> customerName,
+      Value<String?> tableNumber,
       Value<double> subtotal,
+      Value<double> discountAmount,
+      Value<double> taxAmount,
+      Value<double> serviceChargeAmount,
+      Value<double> total,
+      Value<String> cartPayload,
+      Value<String?> notes,
       Value<DateTime> heldAt,
+      Value<DateTime> createdAt,
       Value<int> rowid,
     });
 
-class $$LocalHeldTransactionsTableFilterComposer
-    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
-  $$LocalHeldTransactionsTableFilterComposer({
+class $$HeldTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $HeldTransactionsTable> {
+  $$HeldTransactionsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -20069,13 +20467,23 @@ class $$LocalHeldTransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get customerNote => $composableBuilder(
-    column: $table.customerNote,
+  ColumnFilters<String> get outletId => $composableBuilder(
+    column: $table.outletId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get cartPayloadJson => $composableBuilder(
-    column: $table.cartPayloadJson,
+  ColumnFilters<String> get holdLabel => $composableBuilder(
+    column: $table.holdLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customerName => $composableBuilder(
+    column: $table.customerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tableNumber => $composableBuilder(
+    column: $table.tableNumber,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20084,15 +20492,50 @@ class $$LocalHeldTransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get taxAmount => $composableBuilder(
+    column: $table.taxAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get serviceChargeAmount => $composableBuilder(
+    column: $table.serviceChargeAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get total => $composableBuilder(
+    column: $table.total,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cartPayload => $composableBuilder(
+    column: $table.cartPayload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get heldAt => $composableBuilder(
     column: $table.heldAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
-class $$LocalHeldTransactionsTableOrderingComposer
-    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
-  $$LocalHeldTransactionsTableOrderingComposer({
+class $$HeldTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $HeldTransactionsTable> {
+  $$HeldTransactionsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -20104,13 +20547,23 @@ class $$LocalHeldTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get customerNote => $composableBuilder(
-    column: $table.customerNote,
+  ColumnOrderings<String> get outletId => $composableBuilder(
+    column: $table.outletId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get cartPayloadJson => $composableBuilder(
-    column: $table.cartPayloadJson,
+  ColumnOrderings<String> get holdLabel => $composableBuilder(
+    column: $table.holdLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customerName => $composableBuilder(
+    column: $table.customerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tableNumber => $composableBuilder(
+    column: $table.tableNumber,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -20119,15 +20572,50 @@ class $$LocalHeldTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get taxAmount => $composableBuilder(
+    column: $table.taxAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get serviceChargeAmount => $composableBuilder(
+    column: $table.serviceChargeAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get total => $composableBuilder(
+    column: $table.total,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cartPayload => $composableBuilder(
+    column: $table.cartPayload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get heldAt => $composableBuilder(
     column: $table.heldAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
-class $$LocalHeldTransactionsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $LocalHeldTransactionsTable> {
-  $$LocalHeldTransactionsTableAnnotationComposer({
+class $$HeldTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $HeldTransactionsTable> {
+  $$HeldTransactionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -20137,97 +20625,157 @@ class $$LocalHeldTransactionsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get customerNote => $composableBuilder(
-    column: $table.customerNote,
+  GeneratedColumn<String> get outletId =>
+      $composableBuilder(column: $table.outletId, builder: (column) => column);
+
+  GeneratedColumn<String> get holdLabel =>
+      $composableBuilder(column: $table.holdLabel, builder: (column) => column);
+
+  GeneratedColumn<String> get customerName => $composableBuilder(
+    column: $table.customerName,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get cartPayloadJson => $composableBuilder(
-    column: $table.cartPayloadJson,
+  GeneratedColumn<String> get tableNumber => $composableBuilder(
+    column: $table.tableNumber,
     builder: (column) => column,
   );
 
   GeneratedColumn<double> get subtotal =>
       $composableBuilder(column: $table.subtotal, builder: (column) => column);
 
+  GeneratedColumn<double> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get taxAmount =>
+      $composableBuilder(column: $table.taxAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get serviceChargeAmount => $composableBuilder(
+    column: $table.serviceChargeAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get total =>
+      $composableBuilder(column: $table.total, builder: (column) => column);
+
+  GeneratedColumn<String> get cartPayload => $composableBuilder(
+    column: $table.cartPayload,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
   GeneratedColumn<DateTime> get heldAt =>
       $composableBuilder(column: $table.heldAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
-class $$LocalHeldTransactionsTableTableManager
+class $$HeldTransactionsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $LocalHeldTransactionsTable,
-          LocalHeldTransaction,
-          $$LocalHeldTransactionsTableFilterComposer,
-          $$LocalHeldTransactionsTableOrderingComposer,
-          $$LocalHeldTransactionsTableAnnotationComposer,
-          $$LocalHeldTransactionsTableCreateCompanionBuilder,
-          $$LocalHeldTransactionsTableUpdateCompanionBuilder,
+          $HeldTransactionsTable,
+          HeldTransaction,
+          $$HeldTransactionsTableFilterComposer,
+          $$HeldTransactionsTableOrderingComposer,
+          $$HeldTransactionsTableAnnotationComposer,
+          $$HeldTransactionsTableCreateCompanionBuilder,
+          $$HeldTransactionsTableUpdateCompanionBuilder,
           (
-            LocalHeldTransaction,
+            HeldTransaction,
             BaseReferences<
               _$AppDatabase,
-              $LocalHeldTransactionsTable,
-              LocalHeldTransaction
+              $HeldTransactionsTable,
+              HeldTransaction
             >,
           ),
-          LocalHeldTransaction,
+          HeldTransaction,
           PrefetchHooks Function()
         > {
-  $$LocalHeldTransactionsTableTableManager(
+  $$HeldTransactionsTableTableManager(
     _$AppDatabase db,
-    $LocalHeldTransactionsTable table,
+    $HeldTransactionsTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$LocalHeldTransactionsTableFilterComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$HeldTransactionsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$LocalHeldTransactionsTableOrderingComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$HeldTransactionsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$LocalHeldTransactionsTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$HeldTransactionsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String?> customerNote = const Value.absent(),
-                Value<String> cartPayloadJson = const Value.absent(),
+                Value<String> outletId = const Value.absent(),
+                Value<String> holdLabel = const Value.absent(),
+                Value<String?> customerName = const Value.absent(),
+                Value<String?> tableNumber = const Value.absent(),
                 Value<double> subtotal = const Value.absent(),
+                Value<double> discountAmount = const Value.absent(),
+                Value<double> taxAmount = const Value.absent(),
+                Value<double> serviceChargeAmount = const Value.absent(),
+                Value<double> total = const Value.absent(),
+                Value<String> cartPayload = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime> heldAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => LocalHeldTransactionsCompanion(
+              }) => HeldTransactionsCompanion(
                 id: id,
-                customerNote: customerNote,
-                cartPayloadJson: cartPayloadJson,
+                outletId: outletId,
+                holdLabel: holdLabel,
+                customerName: customerName,
+                tableNumber: tableNumber,
                 subtotal: subtotal,
+                discountAmount: discountAmount,
+                taxAmount: taxAmount,
+                serviceChargeAmount: serviceChargeAmount,
+                total: total,
+                cartPayload: cartPayload,
+                notes: notes,
                 heldAt: heldAt,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String id,
-                Value<String?> customerNote = const Value.absent(),
-                required String cartPayloadJson,
+                required String outletId,
+                required String holdLabel,
+                Value<String?> customerName = const Value.absent(),
+                Value<String?> tableNumber = const Value.absent(),
                 required double subtotal,
-                Value<DateTime> heldAt = const Value.absent(),
+                Value<double> discountAmount = const Value.absent(),
+                Value<double> taxAmount = const Value.absent(),
+                Value<double> serviceChargeAmount = const Value.absent(),
+                required double total,
+                required String cartPayload,
+                Value<String?> notes = const Value.absent(),
+                required DateTime heldAt,
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => LocalHeldTransactionsCompanion.insert(
+              }) => HeldTransactionsCompanion.insert(
                 id: id,
-                customerNote: customerNote,
-                cartPayloadJson: cartPayloadJson,
+                outletId: outletId,
+                holdLabel: holdLabel,
+                customerName: customerName,
+                tableNumber: tableNumber,
                 subtotal: subtotal,
+                discountAmount: discountAmount,
+                taxAmount: taxAmount,
+                serviceChargeAmount: serviceChargeAmount,
+                total: total,
+                cartPayload: cartPayload,
+                notes: notes,
                 heldAt: heldAt,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -20238,25 +20786,21 @@ class $$LocalHeldTransactionsTableTableManager
       );
 }
 
-typedef $$LocalHeldTransactionsTableProcessedTableManager =
+typedef $$HeldTransactionsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $LocalHeldTransactionsTable,
-      LocalHeldTransaction,
-      $$LocalHeldTransactionsTableFilterComposer,
-      $$LocalHeldTransactionsTableOrderingComposer,
-      $$LocalHeldTransactionsTableAnnotationComposer,
-      $$LocalHeldTransactionsTableCreateCompanionBuilder,
-      $$LocalHeldTransactionsTableUpdateCompanionBuilder,
+      $HeldTransactionsTable,
+      HeldTransaction,
+      $$HeldTransactionsTableFilterComposer,
+      $$HeldTransactionsTableOrderingComposer,
+      $$HeldTransactionsTableAnnotationComposer,
+      $$HeldTransactionsTableCreateCompanionBuilder,
+      $$HeldTransactionsTableUpdateCompanionBuilder,
       (
-        LocalHeldTransaction,
-        BaseReferences<
-          _$AppDatabase,
-          $LocalHeldTransactionsTable,
-          LocalHeldTransaction
-        >,
+        HeldTransaction,
+        BaseReferences<_$AppDatabase, $HeldTransactionsTable, HeldTransaction>,
       ),
-      LocalHeldTransaction,
+      HeldTransaction,
       PrefetchHooks Function()
     >;
 
@@ -20312,6 +20856,6 @@ class $AppDatabaseManager {
       $$EmployeesTableTableManager(_db, _db.employees);
   $$CustomersTableTableManager get customers =>
       $$CustomersTableTableManager(_db, _db.customers);
-  $$LocalHeldTransactionsTableTableManager get localHeldTransactions =>
-      $$LocalHeldTransactionsTableTableManager(_db, _db.localHeldTransactions);
+  $$HeldTransactionsTableTableManager get heldTransactions =>
+      $$HeldTransactionsTableTableManager(_db, _db.heldTransactions);
 }

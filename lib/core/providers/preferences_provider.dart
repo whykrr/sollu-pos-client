@@ -59,6 +59,18 @@ class LastSyncNotifier extends Notifier<DateTime?> {
     state = now;
   }
 
+  Future<void> updateWithTimestamp(DateTime dateTime) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, dateTime.toIso8601String());
+    state = dateTime;
+  }
+
+  Future<void> clearTimestamp() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.remove(_key);
+    state = null;
+  }
+
   /// Menghasilkan teks waktu relatif yang mudah dibaca
   static String formatRelative(DateTime? dateTime) {
     if (dateTime == null) return 'Belum pernah sinkronisasi';

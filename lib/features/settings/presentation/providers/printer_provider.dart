@@ -141,6 +141,13 @@ Future<({bool success, String message})> openCashDrawerAction({
     );
   }
 
+  if (!printerConfig.openCashDrawer) {
+    return (
+      success: false,
+      message: 'Pengaturan buka laci otomatis sedang nonaktif.',
+    );
+  }
+
   final service = ref.read(printerServiceProvider);
   return await service.openCashDrawer(printerConfig);
 }

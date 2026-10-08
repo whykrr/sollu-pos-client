@@ -50,6 +50,7 @@ class TransactionRepository {
   Future<({Transaction transaction, TransactionDetailData detail})>
   createTransaction({
     String? shiftId,
+    String? cashierId,
     String? customerId,
     required List<CartItem> items,
     required double subtotal,
@@ -576,18 +577,18 @@ class TransactionRepository {
         shiftId: tx.shiftId,
         customerId: tx.customerId,
         subtotal: tx.subtotal,
-        discountAmount: tx.discountAmount ?? 0.0,
+        discountAmount: tx.discountAmount,
         discountType: tx.discountType,
         discountValue: tx.discountValue,
         promoName: tx.promoName,
         promoId: details.promo?.promoId,
-        taxAmount: tx.taxAmount ?? 0.0,
-        serviceChargeAmount: tx.serviceChargeAmount ?? 0.0,
+        taxAmount: tx.taxAmount,
+        serviceChargeAmount: tx.serviceChargeAmount,
         total: tx.total,
         itemsPayload: itemsPayload,
         paymentMethodId: payment.paymentMethodId ?? 'cash',
         paymentAmount: payment.amount,
-        changeAmount: payment.changeAmount ?? 0.0,
+        changeAmount: payment.changeAmount,
         notes: tx.notes,
       );
 

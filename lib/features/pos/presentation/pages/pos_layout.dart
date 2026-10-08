@@ -9,20 +9,22 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/transaction
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
-import 'package:sollu_pos_client/features/payment/presentation/widgets/payment_dialog.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/product_grid.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/cart_panel.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dialogs.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/insufficient_stock_dialog.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/widgets/shift_dialogs.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/category_sidebar.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/providers/connectivity_provider.dart';
-
+import 'package:sollu_pos_client/features/pos/presentation/widgets/held_bills_drawer.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/hold_orders_dialog.dart';
 
@@ -30,7 +32,7 @@ import 'package:sollu_pos_client/features/shift/presentation/providers/shift_pro
 import 'package:sollu_pos_client/features/settings/presentation/providers/bootstrap_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/widgets/sync_progress_overlay.dart';
 import 'package:sollu_pos_client/core/providers/auto_sync_provider.dart';
-import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/realtime_provider.dart';
 
 class PosLayout extends ConsumerStatefulWidget {
   const PosLayout({super.key});
@@ -53,6 +55,8 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     super.initState();
     // Jalankan auto-sync bootstrap data master & karyawan di background jika online
     ref.read(bootstrapProvider);
+    // Inisialisasi Reverb WebSocket Realtime Client
+    ref.read(posReverbClientProvider);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Cek langsung ke database SQLite apakah sudah ada shift yang berstatus 'open'
@@ -94,27 +98,6 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     return result.authorized;
   }
 
-  int _calculateCartTotal() {
-    final cart = ref.read(cartProvider);
-    final appliedDiscount = ref.read(appliedDiscountProvider);
-    final taxRate = ref.read(activeTaxRateProvider);
-    final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
-
-    final double subtotal = cart.fold(
-      0.0,
-      (sum, item) => sum + item.calculatedSubtotal,
-    );
-    final double discountAmount = appliedDiscount != null
-        ? appliedDiscount.calculateDiscount(subtotal)
-        : 0.0;
-    final double taxableAmount = (subtotal - discountAmount).clamp(
-      0.0,
-      double.infinity,
-    );
-    final double tax = taxableAmount * (taxRate / 100.0);
-    final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
-    return (taxableAmount + tax + serviceCharge).toInt();
-  }
 
   void _handleReprintLastReceipt() {
     final repo = ref.read(transactionRepositoryProvider);
@@ -365,8 +348,22 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           EmptyCartDialog.show(context);
           return;
         }
-        final totalF10 = _calculateCartTotal();
-        PaymentDialog.show(context, totalF10, initialMethodType: 'cash');
+        final allowNegF10 = ref.read(allowNegativeStockProvider);
+        if (!allowNegF10) {
+          final posRepo = ref.read(posRepositoryProvider);
+          final outOfStockItems =
+              await posRepo.checkCartStockAvailability(cartF10);
+          if (outOfStockItems.isNotEmpty && mounted) {
+            await InsufficientStockDialog.show(
+              context,
+              outOfStockItemNames: outOfStockItems,
+            );
+            return;
+          }
+        }
+        if (mounted) {
+          context.push('/checkout', extra: {'initialMethodType': 'cash'});
+        }
         break;
 
       case 'F11':
@@ -375,8 +372,22 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           EmptyCartDialog.show(context);
           return;
         }
-        final totalF11 = _calculateCartTotal();
-        PaymentDialog.show(context, totalF11, initialMethodType: 'other');
+        final allowNegF11 = ref.read(allowNegativeStockProvider);
+        if (!allowNegF11) {
+          final posRepo = ref.read(posRepositoryProvider);
+          final outOfStockItems =
+              await posRepo.checkCartStockAvailability(cartF11);
+          if (outOfStockItems.isNotEmpty && mounted) {
+            await InsufficientStockDialog.show(
+              context,
+              outOfStockItemNames: outOfStockItems,
+            );
+            return;
+          }
+        }
+        if (mounted) {
+          context.push('/checkout', extra: {'initialMethodType': 'qris'});
+        }
         break;
 
       case 'F12':
@@ -411,7 +422,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     }
   }
 
-  void _handleHoldOrder() {
+  Future<void> _handleHoldOrder() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -427,31 +438,103 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       return;
     }
 
-    final heldOrder = ref.read(holdCartProvider.notifier).holdCurrentCart(cart);
-    if (heldOrder != null) {
-      ref.read(cartProvider.notifier).clearCart();
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Pesanan berhasil ditahan (${heldOrder.id}). Tekan F9 untuk memuat kembali.',
-          ),
-          backgroundColor: SolluColors.success,
-          duration: const Duration(seconds: 3),
+    final labelController = TextEditingController(
+      text:
+          'Pesanan #${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+    );
+
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SolluColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: SolluColors.neutral, width: 1.0),
         ),
-      );
+        title: const Text('Tahan Pesanan (Hold)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Beri label atau catatan untuk pesanan ini (misal meja/pelanggan):',
+              style: TextStyle(fontSize: 13, color: SolluColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: labelController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Contoh: Meja 5 / Budi',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SolluColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            onPressed: () =>
+                Navigator.of(ctx).pop(labelController.text.trim()),
+            child: const Text('Tahan Pesanan'),
+          ),
+        ],
+      ),
+    );
+
+    if (label != null && label.isNotEmpty && mounted) {
+      final heldOrder =
+          await ref.read(heldBillsServiceProvider).holdCurrentCart(
+                items: cart,
+                holdLabel: label,
+              );
+      if (heldOrder != null && mounted) {
+        ref.read(appliedDiscountProvider.notifier).clearDiscount();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Pesanan '$label' berhasil disimpan ke daftar Hold. Tekan F9 untuk memuat kembali.",
+            ),
+            backgroundColor: SolluColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
-  void _handleCheckout() {
+  Future<void> _handleCheckout() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) {
       EmptyCartDialog.show(context);
       return;
     }
 
-    final total = _calculateCartTotal();
-    PaymentDialog.show(context, total);
+    final allowNegativeStock = ref.read(allowNegativeStockProvider);
+    if (!allowNegativeStock) {
+      final posRepo = ref.read(posRepositoryProvider);
+      final outOfStockItems = await posRepo.checkCartStockAvailability(cart);
+      if (outOfStockItems.isNotEmpty && mounted) {
+        await InsufficientStockDialog.show(
+          context,
+          outOfStockItemNames: outOfStockItems,
+        );
+        return;
+      }
+    }
+
+    if (mounted) {
+      context.push('/checkout');
+    }
   }
 
   @override
@@ -663,6 +746,62 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           ),
           actions: [
             Center(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final heldBillsAsync =
+                      ref.watch(heldTransactionsStreamProvider);
+                  final count = heldBillsAsync.asData?.value.length ?? 0;
+                  return InkWell(
+                    onTap: () => HeldBillsDrawer.showAsDialog(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 38),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: count > 0
+                            ? SolluColors.warning.withValues(alpha: 0.1)
+                            : SolluColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: count > 0
+                              ? SolluColors.warning
+                              : SolluColors.neutral,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pause_circle_outline,
+                            size: 16,
+                            color: count > 0
+                                ? SolluColors.warning
+                                : SolluColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Hold ($count)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: count > 0
+                                  ? SolluColors.warning
+                                  : SolluColors.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Center(
               child: IconButton(
                 icon: const Icon(
                   Icons.keyboard_alt_outlined,
@@ -808,83 +947,86 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             ),
             const SizedBox(width: 8),
             Center(
-              child: ElevatedButton.icon(
-                onPressed: _isSyncing
-                    ? null
-                    : () async {
-                        setState(() {
-                          _isSyncing = true;
-                        });
+              child: Tooltip(
+                message: 'Sinkronisasi Cepat (Delta)',
+                child: InkWell(
+                  onTap: _isSyncing
+                      ? null
+                      : () async {
+                          setState(() {
+                            _isSyncing = true;
+                          });
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Menyingkronkan Master Data...'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-
-                        try {
-                          final syncRepository = ref.read(
-                            syncRepositoryProvider,
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Menyingkronkan Data Perubahan (Delta)...'),
+                              duration: Duration(seconds: 1),
+                            ),
                           );
-                          await syncRepository.syncMasterData();
 
-                          ref.invalidate(employeeListProvider);
-                          ref.invalidate(posItemsProvider);
-                          ref.invalidate(posCategoriesProvider);
-
-                          // Simpan timestamp sinkronisasi terakhir
-                          ref.read(lastSyncProvider.notifier).updateTimestamp();
-
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Sinkronisasi selesai!'),
-                                backgroundColor: Colors.green,
-                              ),
+                          try {
+                            final syncRepository = ref.read(
+                              syncRepositoryProvider,
                             );
+                            await syncRepository.syncDeltaData();
+
+                            ref.invalidate(employeeListProvider);
+                            ref.invalidate(posItemsProvider);
+                            ref.invalidate(posCategoriesProvider);
+
+                            // Simpan timestamp sinkronisasi terakhir
+                            ref.read(lastSyncProvider.notifier).updateTimestamp();
+
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Sinkronisasi delta selesai!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Gagal sinkronisasi: $e'),
+                                  backgroundColor: SolluColors.danger,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isSyncing = false;
+                              });
+                            }
                           }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Gagal sinkronisasi: $e'),
-                                backgroundColor: SolluColors.danger,
-                              ),
-                            );
-                          }
-                        } finally {
-                          if (mounted) {
-                            setState(() {
-                              _isSyncing = false;
-                            });
-                          }
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SolluColors.secondary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                        },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: SolluColors.secondary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: _isSyncing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.sync,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: _isSyncing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.sync, size: 18),
-                label: Text(
-                  _isSyncing ? 'Sinkronisasi...' : 'Sinkronisasi Data',
                 ),
               ),
             ),

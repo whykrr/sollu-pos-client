@@ -71,6 +71,51 @@ class CartItem {
       selectedModifiers: selectedModifiers,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'product_id': productId,
+      'inventory_item_id': inventoryItemId,
+      'variant_group_option_id': variantGroupOptionId,
+      'name': name,
+      'price': price,
+      'qty': qty,
+      'discount_type': discountType,
+      'discount_value': discountValue,
+      'notes': notes,
+      'selected_variants': selectedVariants,
+      'selected_modifiers': selectedModifiers,
+    };
+  }
+
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    return CartItem(
+      id: json['id'] as String,
+      productId: json['product_id'] as String,
+      inventoryItemId: json['inventory_item_id'] as String,
+      variantGroupOptionId: json['variant_group_option_id'] as String?,
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+      qty: (json['qty'] as num?)?.toInt() ?? 1,
+      discountType: json['discount_type'] as String?,
+      discountValue: (json['discount_value'] as num?)?.toDouble(),
+      notes: json['notes'] as String?,
+      selectedVariants:
+          (json['selected_variants'] as Map<String, dynamic>?)?.map(
+                (k, v) => MapEntry(k, v.toString()),
+              ) ??
+              const {},
+      selectedModifiers:
+          (json['selected_modifiers'] as Map<String, dynamic>?)?.map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as List).map((e) => e.toString()).toList(),
+                ),
+              ) ??
+              const {},
+    );
+  }
 }
 
 class CartNotifier extends Notifier<List<CartItem>> {
@@ -176,6 +221,10 @@ class CartNotifier extends Notifier<List<CartItem>> {
 
   void clearCart() {
     state = [];
+  }
+
+  void setCart(List<CartItem> items) {
+    state = items;
   }
 }
 

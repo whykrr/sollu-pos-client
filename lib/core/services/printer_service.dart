@@ -820,6 +820,10 @@ class PrinterService {
       bytes += generator.cut();
     }
 
+    if (config.openCashDrawer) {
+      bytes += generator.drawer();
+    }
+
     return bytes;
   }
 

@@ -30,3 +30,20 @@ final activeServiceChargeRateProvider = Provider<double>((ref) {
   }
   return 0.0;
 });
+
+/// Computed provider for current outlet ID
+final currentOutletIdProvider = Provider<String>((ref) {
+  final profile = ref.watch(outletProfileProvider);
+  return profile?['id']?.toString() ?? 'default-outlet';
+});
+
+/// Computed provider for allow negative stock setting (defaults to true)
+final allowNegativeStockProvider = Provider<bool>((ref) {
+  final settings = ref.watch(outletSettingsProvider);
+  if (settings != null && settings.containsKey('allowNegativeStock')) {
+    final val = settings['allowNegativeStock'];
+    return val == true || val == 1 || val == '1' || val == 'true';
+  }
+  return true;
+});
+

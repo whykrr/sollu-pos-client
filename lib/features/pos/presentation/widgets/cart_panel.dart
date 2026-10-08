@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sollu_pos_client/features/payment/presentation/widgets/payment_dialog.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
@@ -10,6 +10,8 @@ import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dia
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/insufficient_stock_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 
 class CartPanel extends ConsumerStatefulWidget {
@@ -600,7 +602,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                     _buildActionButton(
                       Icons.pause_circle_outline,
                       'Hold',
-                      onTap: () {
+                      onTap: () async {
                         if (cart.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -609,18 +611,82 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           );
                           return;
                         }
-                        ref
-                            .read(holdCartProvider.notifier)
-                            .holdCurrentCart(cart);
-                        ref.read(cartProvider.notifier).clearCart();
-                        ref
-                            .read(appliedDiscountProvider.notifier)
-                            .clearDiscount();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Pesanan berhasil di-hold'),
+
+                        final labelController = TextEditingController(
+                          text:
+                              'Pesanan #${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                        );
+
+                        final label = await showDialog<String>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: SolluColors.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: const BorderSide(
+                                color: SolluColors.neutral,
+                                width: 1.0,
+                              ),
+                            ),
+                            title: const Text('Tahan Pesanan (Hold)'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Beri label atau catatan untuk pesanan ini:',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: SolluColors.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: labelController,
+                                  autofocus: true,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Contoh: Meja 5 / Budi',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(null),
+                                child: const Text('Batal'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SolluColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                ),
+                                onPressed: () => Navigator.of(ctx).pop(
+                                  labelController.text.trim(),
+                                ),
+                                child: const Text('Tahan Pesanan'),
+                              ),
+                            ],
                           ),
                         );
+
+                        if (label != null && label.isNotEmpty && context.mounted) {
+                          await ref
+                              .read(heldBillsServiceProvider)
+                              .holdCurrentCart(items: cart, holdLabel: label);
+                          ref
+                              .read(appliedDiscountProvider.notifier)
+                              .clearDiscount();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Pesanan '$label' berhasil disimpan ke daftar Hold.",
+                              ),
+                              backgroundColor: SolluColors.success,
+                            ),
+                          );
+                        }
                       },
                     ),
                     const SizedBox(width: 8),
@@ -639,12 +705,30 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (cart.isEmpty) {
                             EmptyCartDialog.show(context);
                             return;
                           }
-                          PaymentDialog.show(context, total.toInt());
+
+                          final allowNegativeStock =
+                              ref.read(allowNegativeStockProvider);
+                          if (!allowNegativeStock) {
+                            final posRepo = ref.read(posRepositoryProvider);
+                            final outOfStockItems =
+                                await posRepo.checkCartStockAvailability(cart);
+                            if (outOfStockItems.isNotEmpty && context.mounted) {
+                              await InsufficientStockDialog.show(
+                                context,
+                                outOfStockItemNames: outOfStockItems,
+                              );
+                              return;
+                            }
+                          }
+
+                          if (context.mounted) {
+                            context.push('/checkout');
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 20),
