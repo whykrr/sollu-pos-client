@@ -1,4 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../routing/app_router.dart';
 import '../services/secure_storage_service.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -28,5 +31,36 @@ class AuthInterceptor extends Interceptor {
     }
 
     super.onRequest(options, handler);
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    if (err.response?.statusCode == 401) {
+      final responseData = err.response?.data;
+      final errorCode = responseData is Map ? responseData['error_code'] : null;
+
+      if (errorCode == 'DEVICE_UNPAIRED') {
+        // Clear all local credentials and storage
+        await _storage.clearAll();
+
+        // Redirect to login if navigator key is available
+        final context = rootNavigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Perangkat ini telah diputus dari outlet oleh manajer.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          context.go('/login');
+        }
+      }
+    }
+    super.onError(err, handler);
   }
 }

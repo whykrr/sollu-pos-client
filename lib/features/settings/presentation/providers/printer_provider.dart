@@ -6,7 +6,6 @@ import 'package:sollu_pos_client/core/database/database_provider.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/printer_service.dart';
-import 'package:sollu_pos_client/features/auth/providers/auth_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
@@ -127,6 +126,7 @@ Future<({bool success, String message})> printTransactionReceiptAction({
   );
 }
 
+/// Helper aksi untuk memicu pembukaan laci kasir (Drawer Kick) secara manual
 Future<({bool success, String message})> openCashDrawerAction({
   required WidgetRef ref,
 }) async {
@@ -134,7 +134,7 @@ Future<({bool success, String message})> openCashDrawerAction({
   if (printerConfig == null) {
     return (
       success: false,
-      message: 'Printer belum diatur! Silakan pilih printer di Pengaturan.',
+      message: 'Printer belum diatur! Hubungkan printer di Pengaturan.',
     );
   }
 
@@ -164,53 +164,25 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
     await prefs.setString(_key, config.toJson());
     state = config;
 
-    // Override local database & sync to backend central database
-    await _syncToLocalDbAndBackend(config);
-  }
-
-  Future<void> _syncToLocalDbAndBackend(PrinterConfig config) async {
-    final paperSizeStr = config.paperSize == PrinterPaperSize.mm80
-        ? '80mm'
-        : '58mm';
-    // 1. Override local SharedPreferences OutletSettings
+    // Simpan ukuran kertas ke OutletSettingsService lokal (dedicated on-device)
     try {
       final service = ref.read(outletSettingsServiceProvider);
-      final existing = service.getOutletSettings();
-      if (existing != null) {
-        existing['paperSize'] = paperSizeStr;
-        await service.saveOutletSettings(existing);
-      }
+      final existing = service.getOutletSettings() ?? <String, dynamic>{};
+      final paperSizeStr = config.paperSize == PrinterPaperSize.mm80
+          ? '80mm'
+          : '58mm';
+      existing['paperSize'] = paperSizeStr;
+      await service.saveOutletSettings(existing);
     } catch (e) {
       debugPrint('Error updating local outlet settings paper size: $e');
-    }
-
-    // 2. Sync to Backend Central API
-    try {
-      final dioClient = ref.read(dioClientProvider);
-      await dioClient.dio.put(
-        '/settings/printer',
-        data: {
-          'paper_size': paperSizeStr,
-          'printer_name': config.name,
-          'printer_mac_address': config.address,
-          'auto_cut': config.autoCut,
-          'open_cash_drawer': config.openCashDrawer,
-        },
-      );
-      debugPrint(
-        'Printer paper size successfully synced to central backend: $paperSizeStr',
-      );
-    } catch (e) {
-      debugPrint(
-        'Failed to sync printer settings to backend (offline or error): $e',
-      );
     }
   }
 
   Future<void> updateAutoPrint(bool autoPrint) async {
-    // 1. Update SharedPreferences DB
+    // Update SharedPreferences via OutletSettingsService lokal secara dedicated
     try {
       final service = ref.read(outletSettingsServiceProvider);
+      await service.saveAutoPrint(autoPrint);
       final existing = service.getOutletSettings();
       if (existing != null) {
         existing['autoPrint'] = autoPrint;
@@ -218,21 +190,6 @@ class SelectedPrinterNotifier extends Notifier<PrinterConfig?> {
       }
     } catch (e) {
       debugPrint('Error updating auto_print locally: $e');
-    }
-
-    // 2. Sync to Backend
-    if (state != null) {
-      await _syncToLocalDbAndBackend(state!);
-    } else {
-      try {
-        final dioClient = ref.read(dioClientProvider);
-        await dioClient.dio.put(
-          '/settings/printer',
-          data: {'auto_print': autoPrint},
-        );
-      } catch (e) {
-        debugPrint('Failed to sync auto_print to backend: $e');
-      }
     }
   }
 
@@ -307,3 +264,74 @@ final availablePrintersProvider =
       AvailablePrintersNotifier,
       List<DiscoveredPrinterInfo>
     >(AvailablePrintersNotifier.new);
+
+/// Helper aksi untuk menjalankan Live Setup Test Print dengan konteks toko riil
+Future<({bool success, String message})> printTestReceiptAction({
+  required WidgetRef ref,
+  required PrinterConfig config,
+}) async {
+  final outletSetting = ref.read(outletSettingsProvider);
+  final outletProfile = ref.read(outletProfileProvider);
+
+  String? profileOutletName = outletProfile?['name']?.toString();
+
+  PrinterConfig effectiveConfig = config;
+  if (outletSetting != null) {
+    effectiveConfig = config.copyWith(
+      storeName:
+          (outletSetting['customHeaderTitle'] != null &&
+              outletSetting['customHeaderTitle'].toString().isNotEmpty)
+          ? outletSetting['customHeaderTitle'].toString()
+          : (profileOutletName ?? config.storeName),
+      headerNote:
+          outletSetting['headerNotes']?.toString() ?? config.headerNote,
+      footerNote:
+          outletSetting['footerNotes']?.toString() ?? config.footerNote,
+    );
+  }
+
+  // Load cached logo bytes if showLogo is enabled
+  Uint8List? logoBytes;
+  final rawShowLogo =
+      outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
+  final bool showLogo = rawShowLogo == true ||
+      rawShowLogo == 1 ||
+      rawShowLogo == '1' ||
+      rawShowLogo == null;
+
+  if (showLogo) {
+    final logoPath = outletSetting?['localLogoPath'] ??
+        outletSetting?['local_logo_path'] ??
+        outletProfile?['local_logo_path'] ??
+        outletProfile?['localLogoPath'];
+
+    if (logoPath != null && logoPath.toString().isNotEmpty) {
+      try {
+        final file = File(logoPath.toString());
+        if (await file.exists()) {
+          logoBytes = await file.readAsBytes();
+        }
+      } catch (e) {
+        debugPrint('Error reading local logo file for test: $e');
+      }
+    }
+
+    if (logoBytes == null || logoBytes.isEmpty) {
+      try {
+        final ByteData assetData =
+            await rootBundle.load('img/logo-colored.png');
+        logoBytes = assetData.buffer.asUint8List();
+      } catch (e) {
+        debugPrint('Error loading asset logo fallback for test: $e');
+      }
+    }
+  }
+
+  final service = ref.read(printerServiceProvider);
+  return await service.printTest(
+    effectiveConfig,
+    outletProfile: outletProfile,
+    outletSetting: outletSetting,
+    logoBytes: logoBytes,
+  );
+}

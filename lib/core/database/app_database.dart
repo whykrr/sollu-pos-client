@@ -40,7 +40,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -55,8 +55,27 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await customStatement('DROP TABLE IF EXISTS outlet_settings;');
         }
+        if (from < 4) {
+          await m.addColumn(employees, employees.permissions);
+        }
+        if (from < 5) {
+          await m.addColumn(products, products.productType);
+          await m.addColumn(products, products.unit);
+          await m.addColumn(inventories, inventories.unit);
+        }
+        if (from < 6) {
+          await m.addColumn(employees, employees.isRootUser);
+        }
       },
     );
+  }
+
+  Future<void> clearAllData() async {
+    await transaction(() async {
+      for (final table in allTables) {
+        await delete(table).go();
+      }
+    });
   }
 }
 

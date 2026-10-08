@@ -219,18 +219,9 @@ class _ProductCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? SolluColors.primary : Colors.transparent,
-          width: isSelected ? 2.5 : 1,
+          color: isSelected ? SolluColors.primary : const Color(0xFFE2E8F0),
+          width: isSelected ? 2.5 : 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected
-                ? SolluColors.primary.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.03),
-            blurRadius: isSelected ? 18 : 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,

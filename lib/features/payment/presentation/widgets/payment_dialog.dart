@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/database/app_database.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
@@ -14,14 +15,26 @@ import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 
 class PaymentDialog extends ConsumerStatefulWidget {
   final int totalAmount;
+  final String? initialMethodType;
 
-  const PaymentDialog({super.key, required this.totalAmount});
+  const PaymentDialog({
+    super.key,
+    required this.totalAmount,
+    this.initialMethodType,
+  });
 
-  static Future<void> show(BuildContext context, int totalAmount) {
+  static Future<void> show(
+    BuildContext context,
+    int totalAmount, {
+    String? initialMethodType,
+  }) {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PaymentDialog(totalAmount: totalAmount),
+      builder: (context) => PaymentDialog(
+        totalAmount: totalAmount,
+        initialMethodType: initialMethodType,
+      ),
     );
   }
 
@@ -168,31 +181,34 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         _showSuccessDialog(tx.transaction, method, changeAmount);
 
         // Buka laci kasir otomatis jika tipe pembayaran tunai (Cash)
-        // if (isCash) {
-        //   openCashDrawerAction(ref: ref).then((result) {
-        //     if (!result.success && mounted) {
-        //       debugPrint('Gagal membuka laci: ${result.message}');
-        //     }
-        //   });
-        // }
+        if (isCash) {
+          openCashDrawerAction(ref: ref).then((result) {
+            if (!result.success && mounted) {
+              debugPrint('Gagal membuka laci: ${result.message}');
+            }
+          });
+        }
 
-        // Otomatis cetak struk karena user menekan "Bayar & Cetak Struk"
-        printTransactionReceiptAction(
-          ref: ref,
-          transactionId: tx.transaction.id,
-        ).then((result) {
-          if (!result.success) {
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Gagal mencetak struk otomatis: ${result.message}',
+        // Otomatis cetak struk jika auto_print aktif pada device (default: true)
+        final autoPrint = ref.read(outletSettingsServiceProvider).getAutoPrint();
+        if (autoPrint) {
+          printTransactionReceiptAction(
+            ref: ref,
+            transactionId: tx.transaction.id,
+          ).then((result) {
+            if (!result.success) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Gagal mencetak struk otomatis: ${result.message}',
+                  ),
+                  backgroundColor: SolluColors.warning,
+                  behavior: SnackBarBehavior.floating,
                 ),
-                backgroundColor: SolluColors.warning,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        });
+              );
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -430,7 +446,28 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                       ),
                     ];
 
-              _selectedMethod ??= activeMethods.first;
+              if (_selectedMethod == null) {
+                if (widget.initialMethodType == 'other') {
+                  _selectedMethod = activeMethods.firstWhere(
+                    (m) =>
+                        m.type != 'cash' &&
+                        !m.name.toLowerCase().contains('tunai'),
+                    orElse: () => activeMethods.first,
+                  );
+                } else if (widget.initialMethodType != null) {
+                  _selectedMethod = activeMethods.firstWhere(
+                    (m) =>
+                        m.type.toLowerCase() ==
+                            widget.initialMethodType!.toLowerCase() ||
+                        m.name.toLowerCase().contains(
+                              widget.initialMethodType!.toLowerCase(),
+                            ),
+                    orElse: () => activeMethods.first,
+                  );
+                } else {
+                  _selectedMethod = activeMethods.first;
+                }
+              }
               final currentMethod = _selectedMethod!;
               final isCash =
                   currentMethod.type == 'cash' ||

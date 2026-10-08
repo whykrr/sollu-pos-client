@@ -47,10 +47,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Stack(
         children: [
           Center(
-            child: Container(
-              width: 520,
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
                 color: SolluColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
@@ -105,6 +107,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: SolluColors.primary,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: isLoading
                           ? const SizedBox(
@@ -134,6 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),
@@ -251,29 +257,32 @@ class _OtpSingleCharFormState extends State<_OtpSingleCharForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < 4; i++) ...[
-          _buildSingleBox(i),
-          if (i < 3) const SizedBox(width: 6),
-        ],
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10.0),
-          child: Text(
-            '-',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: SolluColors.neutralDark,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (int i = 0; i < 4; i++) ...[
+            _buildSingleBox(i),
+            if (i < 3) const SizedBox(width: 6),
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10.0),
+            child: Text(
+              '-',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: SolluColors.neutralDark,
+              ),
             ),
           ),
-        ),
-        for (int i = 4; i < 8; i++) ...[
-          _buildSingleBox(i),
-          if (i < 7) const SizedBox(width: 6),
+          for (int i = 4; i < 8; i++) ...[
+            _buildSingleBox(i),
+            if (i < 7) const SizedBox(width: 6),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

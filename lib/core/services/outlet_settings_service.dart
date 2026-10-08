@@ -33,8 +33,19 @@ class OutletSettingsService {
     return null;
   }
 
+  static const _autoPrintKey = 'pos_auto_print';
+
+  Future<void> saveAutoPrint(bool autoPrint) async {
+    await _prefs.setBool(_autoPrintKey, autoPrint);
+  }
+
+  bool getAutoPrint() {
+    return _prefs.getBool(_autoPrintKey) ?? true;
+  }
+
   Future<void> clearAll() async {
     await _prefs.remove(_outletProfileKey);
     await _prefs.remove(_outletSettingsKey);
+    await _prefs.remove(_autoPrintKey);
   }
 }

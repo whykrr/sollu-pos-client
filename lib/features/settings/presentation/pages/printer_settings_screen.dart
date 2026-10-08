@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/models/printer_model.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 
@@ -43,9 +44,7 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
 
   Future<void> _handleTestPrint(PrinterConfig config) async {
     setState(() => _isTesting = true);
-    final service = ref.read(printerServiceProvider);
-    
-    final result = await service.printTest(config);
+    final result = await printTestReceiptAction(ref: ref, config: config);
 
     if (mounted) {
       setState(() => _isTesting = false);
@@ -449,6 +448,17 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen>
               const SizedBox(height: 16),
               const Divider(height: 1),
               const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Cetak Otomatis Struk (Auto Print)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Struk otomatis dicetak setiap kali transaksi pembayaran selesai', style: TextStyle(fontSize: 12, color: SolluColors.textMuted)),
+                value: ref.watch(outletSettingsServiceProvider).getAutoPrint(),
+                activeTrackColor: SolluColors.primary,
+                onChanged: (val) {
+                  ref.read(selectedPrinterProvider.notifier).updateAutoPrint(val);
+                  setState(() {});
+                },
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Potong Kertas Otomatis (Auto-Cut)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),

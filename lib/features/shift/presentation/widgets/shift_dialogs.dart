@@ -155,9 +155,13 @@ class _OpenShiftDialogState extends ConsumerState<OpenShiftDialog> {
                     ),
                   ),
                   items: employees.map((emp) {
+                    final roleLabel =
+                        (emp.isRootUser || emp.role == 'Akun Utama')
+                        ? 'Akun Utama'
+                        : (emp.role ?? 'Kasir');
                     return DropdownMenuItem(
                       value: emp.id,
-                      child: Text('${emp.name} (${emp.role ?? "Kasir"})'),
+                      child: Text('${emp.name} ($roleLabel)'),
                     );
                   }).toList(),
                   onChanged: (val) {

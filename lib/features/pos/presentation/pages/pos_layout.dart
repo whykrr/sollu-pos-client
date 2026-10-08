@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
+import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/hardware_scanner_listener.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/supervisor_challenge_dialog.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_provider.dart';
@@ -21,7 +25,6 @@ import 'package:sollu_pos_client/core/providers/connectivity_provider.dart';
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/hold_orders_dialog.dart';
-import 'package:sollu_pos_client/features/pos/presentation/widgets/transaction_history_dialog.dart';
 
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/bootstrap_provider.dart';
@@ -73,101 +76,337 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     super.dispose();
   }
 
-  void _handleShortcut(String key) {
+  Future<bool> _ensureAuthorized(
+    String requiredPermission,
+    String actionTitle,
+  ) async {
+    final activeEmployee = ref.read(activeEmployeeProvider);
+    final hasPerm = activeEmployee != null &&
+        (activeEmployee.hasPermission(requiredPermission) ||
+            activeEmployee.isSupervisor());
+    if (hasPerm) return true;
+
+    final result = await SupervisorChallengeDialog.authorize(
+      context,
+      actionTitle: actionTitle,
+      requiredPermission: requiredPermission,
+    );
+    return result.authorized;
+  }
+
+  int _calculateCartTotal() {
+    final cart = ref.read(cartProvider);
+    final appliedDiscount = ref.read(appliedDiscountProvider);
+    final taxRate = ref.read(activeTaxRateProvider);
+    final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
+
+    final double subtotal = cart.fold(
+      0.0,
+      (sum, item) => sum + item.calculatedSubtotal,
+    );
+    final double discountAmount = appliedDiscount != null
+        ? appliedDiscount.calculateDiscount(subtotal)
+        : 0.0;
+    final double taxableAmount = (subtotal - discountAmount).clamp(
+      0.0,
+      double.infinity,
+    );
+    final double tax = taxableAmount * (taxRate / 100.0);
+    final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
+    return (taxableAmount + tax + serviceCharge).toInt();
+  }
+
+  void _handleReprintLastReceipt() {
+    final repo = ref.read(transactionRepositoryProvider);
+    repo.getLastTransactionId().then((txId) {
+      if (txId != null) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Mencetak ulang struk transaksi terakhir...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+        printTransactionReceiptAction(ref: ref, transactionId: txId).then((res) {
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  res.success ? 'Struk berhasil dicetak' : 'Gagal: ${res.message}',
+                ),
+                backgroundColor:
+                    res.success ? SolluColors.success : SolluColors.danger,
+              ),
+            );
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Belum ada transaksi untuk dicetak.')),
+        );
+      }
+    });
+  }
+
+  Future<void> _handleBarcodeScanned(String barcode) async {
+    final query = barcode.trim();
+    if (query.isEmpty) return;
+
+    final repository = ref.read(posRepositoryProvider);
+    final matchedItem = await repository.findItemByBarcodeOrSku(query);
+
+    if (matchedItem != null && mounted) {
+      final cartItem = CartItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        productId: matchedItem.isProductMode
+            ? matchedItem.id
+            : matchedItem.inventory!.productId,
+        inventoryItemId: matchedItem.isProductMode ? '' : matchedItem.id,
+        name: matchedItem.name,
+        price: matchedItem.price,
+        qty: 1,
+      );
+      ref.read(cartProvider.notifier).addItem(cartItem);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Item ditambahkan: ${matchedItem.name}'),
+          backgroundColor: SolluColors.success,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Barcode "$query" tidak ditemukan dalam katalog'),
+          backgroundColor: SolluColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleShortcut(String key) async {
     if (!mounted) return;
 
     switch (key) {
       case 'F1':
         _searchFocusNode.requestFocus();
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pencarian Produk / Scan Barcode (F1)'),
-            duration: Duration(seconds: 1),
-          ),
-        );
         break;
+
       case 'F2':
-        _productGridFocusNode.requestFocus();
-        setState(() {
-          _selectedProductIndex = 0;
-        });
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fokus Daftar Produk: Item #1 Terpilih (F2)'),
-            duration: Duration(seconds: 1),
-          ),
+        final authorized = await _ensureAuthorized(
+          'transaction.discount',
+          'Diskon Manual',
         );
+        if (authorized && mounted) {
+          DiscountDialog.show(context);
+        }
         break;
+
       case 'F3':
         _cartFocusNode.requestFocus();
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fokus Keranjang (F3) - Tekan Enter untuk ubah Qty'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        final cart = ref.read(cartProvider);
+        if (cart.isNotEmpty) {
+          final selectedIndex =
+              ref.read(selectedCartIndexProvider).clamp(0, cart.length - 1);
+          final item = cart[selectedIndex];
+          EditCartItemDialog.show(
+            context: context,
+            item: item,
+            onSaved: (qty, discountType, discountValue, notes) {
+              ref.read(cartProvider.notifier).updateItemDetails(
+                    item.id,
+                    qty: qty,
+                    discountType: discountType,
+                    discountValue: discountValue,
+                    notes: notes,
+                  );
+            },
+          );
+        }
         break;
+
       case 'F4':
-        DiscountDialog.show(context);
-        break;
-      case 'F5':
         CustomerDialog.show(context);
         break;
-      case 'F6':
-        _handleHoldOrder();
-        break;
-      case 'F7':
-        HoldOrdersDialog.show(context);
-        break;
-      case 'F8':
-        _handleCheckout();
-        break;
-      case 'F9':
-        TransactionHistoryDialog.show(context);
-        break;
-      case 'F10':
-        final repo = ref.read(transactionRepositoryProvider);
-        repo.getLastTransactionId().then((txId) {
-          if (txId != null) {
-            final messenger = ScaffoldMessenger.of(context);
-            messenger.showSnackBar(
-              const SnackBar(
-                content: Text('Mencetak ulang struk transaksi terakhir...'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-            printTransactionReceiptAction(ref: ref, transactionId: txId).then((
-              res,
-            ) {
-              if (mounted) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      res.success
-                          ? 'Struk berhasil dicetak'
-                          : 'Gagal: ${res.message}',
-                    ),
-                    backgroundColor: res.success
-                        ? SolluColors.success
-                        : SolluColors.danger,
+
+      case 'F5':
+        final cartF5 = ref.read(cartProvider);
+        if (cartF5.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Keranjang masih kosong')),
+          );
+          return;
+        }
+        final idxF5 =
+            ref.read(selectedCartIndexProvider).clamp(0, cartF5.length - 1);
+        final itemF5 = cartF5[idxF5];
+        final authF5 = await _ensureAuthorized(
+          'transaction.override_price',
+          'Ubah Harga (${itemF5.name})',
+        );
+        if (authF5 && mounted) {
+          OpenPriceDialog.show(
+            context,
+            item: itemF5,
+            onPriceUpdated: (newPrice) {
+              ref.read(cartProvider.notifier).updatePrice(itemF5.id, newPrice);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Harga "${itemF5.name}" diubah menjadi ${CurrencyFormatter.format(newPrice.toInt())}',
                   ),
-                );
-              }
-            });
-          } else {
+                  backgroundColor: SolluColors.success,
+                ),
+              );
+            },
+          );
+        }
+        break;
+
+      case 'F6':
+        final cartF6 = ref.read(cartProvider);
+        if (cartF6.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Keranjang masih kosong')),
+          );
+          return;
+        }
+        final idxF6 =
+            ref.read(selectedCartIndexProvider).clamp(0, cartF6.length - 1);
+        final itemF6 = cartF6[idxF6];
+        final authF6 = await _ensureAuthorized(
+          'transaction.void',
+          'Void Item "${itemF6.name}"',
+        );
+        if (authF6 && mounted) {
+          ref.read(cartProvider.notifier).removeItem(itemF6.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Item "${itemF6.name}" berhasil dihapus/void'),
+              backgroundColor: SolluColors.warning,
+            ),
+          );
+        }
+        break;
+
+      case 'F7':
+        final cartF7 = ref.read(cartProvider);
+        if (cartF7.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Keranjang sudah kosong')),
+          );
+          return;
+        }
+        final authF7 = await _ensureAuthorized(
+          'transaction.void',
+          'Void Seluruh Transaksi',
+        );
+        if (authF7 && mounted) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: SolluColors.neutral, width: 1.5),
+              ),
+              title: const Text(
+                'Konfirmasi Void Seluruh Transaksi',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: const Text(
+                'Apakah Anda yakin ingin membatalkan dan mengosongkan seluruh item dalam keranjang?',
+              ),
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Batal (Esc)'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SolluColors.danger,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Ya, Void Transaksi',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true && mounted) {
+            ref.read(cartProvider.notifier).clearCart();
+            ref.read(appliedDiscountProvider.notifier).clearDiscount();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Belum ada transaksi untuk dicetak.'),
+                content: Text('Seluruh transaksi berhasil di-void'),
+                backgroundColor: SolluColors.danger,
               ),
             );
           }
-        });
+        }
         break;
+
+      case 'F8':
+        _handleHoldOrder();
+        break;
+
+      case 'F9':
+        HoldOrdersDialog.show(context);
+        break;
+
+      case 'F10':
+        final cartF10 = ref.read(cartProvider);
+        if (cartF10.isEmpty) {
+          EmptyCartDialog.show(context);
+          return;
+        }
+        final totalF10 = _calculateCartTotal();
+        PaymentDialog.show(context, totalF10, initialMethodType: 'cash');
+        break;
+
+      case 'F11':
+        final cartF11 = ref.read(cartProvider);
+        if (cartF11.isEmpty) {
+          EmptyCartDialog.show(context);
+          return;
+        }
+        final totalF11 = _calculateCartTotal();
+        PaymentDialog.show(context, totalF11, initialMethodType: 'other');
+        break;
+
       case 'F12':
-        CloseShiftDialog.show(context);
+        _handleCheckout();
+        break;
+
+      case 'Space':
+        final authDrawer = await _ensureAuthorized(
+          'transaction.open_drawer',
+          'Buka Laci Kasir Manual',
+        );
+        if (authDrawer && mounted) {
+          final res = await openCashDrawerAction(ref: ref);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(res.message),
+                backgroundColor:
+                    res.success ? SolluColors.success : SolluColors.warning,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+        break;
+
+      case 'Esc':
+        _searchController.clear();
+        ref.read(posSearchQueryProvider.notifier).setQuery('');
+        _keyboardFocusNode.requestFocus();
         break;
     }
   }
@@ -195,7 +434,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Pesanan berhasil ditahan (${heldOrder.id}). Tekan F7 untuk memuat kembali.',
+            'Pesanan berhasil ditahan (${heldOrder.id}). Tekan F9 untuk memuat kembali.',
           ),
           backgroundColor: SolluColors.success,
           duration: const Duration(seconds: 3),
@@ -211,24 +450,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       return;
     }
 
-    final appliedDiscount = ref.read(appliedDiscountProvider);
-    final taxRate = ref.read(activeTaxRateProvider);
-    final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
-
-    final double subtotal = cart.fold(
-      0.0,
-      (sum, item) => sum + item.calculatedSubtotal,
-    );
-    final double discountAmount = appliedDiscount != null
-        ? appliedDiscount.calculateDiscount(subtotal)
-        : 0.0;
-    final double taxableAmount = (subtotal - discountAmount).clamp(
-      0.0,
-      double.infinity,
-    );
-    final double tax = taxableAmount * (taxRate / 100.0);
-    final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
-    final int total = (taxableAmount + tax + serviceCharge).toInt();
+    final total = _calculateCartTotal();
     PaymentDialog.show(context, total);
   }
 
@@ -246,55 +468,97 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
       }
     });
 
-    return Focus(
-      focusNode: _keyboardFocusNode,
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          final logicalKey = event.logicalKey;
-          if (logicalKey == LogicalKeyboardKey.f1) {
-            ref.read(shortcutProvider.notifier).trigger('F1');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f2) {
-            ref.read(shortcutProvider.notifier).trigger('F2');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f3) {
-            ref.read(shortcutProvider.notifier).trigger('F3');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f4) {
-            ref.read(shortcutProvider.notifier).trigger('F4');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f5) {
-            ref.read(shortcutProvider.notifier).trigger('F5');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f6) {
-            ref.read(shortcutProvider.notifier).trigger('F6');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f7) {
-            ref.read(shortcutProvider.notifier).trigger('F7');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f8) {
-            ref.read(shortcutProvider.notifier).trigger('F8');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f9) {
-            ref.read(shortcutProvider.notifier).trigger('F9');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f10) {
-            ref.read(shortcutProvider.notifier).trigger('F10');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f12) {
-            ref.read(shortcutProvider.notifier).trigger('F12');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.escape) {
-            ref.read(shortcutProvider.notifier).trigger('Esc');
-            // Allow escape to also close dialogs natively if needed, but we handle it
+    return HardwareScannerListener(
+      onBarcodeScanned: (barcode) => _handleBarcodeScanned(barcode),
+      child: Focus(
+        focusNode: _keyboardFocusNode,
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            final logicalKey = event.logicalKey;
+            final isCtrl = HardwareKeyboard.instance.isControlPressed ||
+                HardwareKeyboard.instance.isMetaPressed;
+
+            // Ctrl + P: Cetak ulang struk transaksi terakhir
+            if (isCtrl && logicalKey == LogicalKeyboardKey.keyP) {
+              _handleReprintLastReceipt();
+              return KeyEventResult.handled;
+            }
+
+            // Spacebar: Buka laci kasir manual jika tidak sedang fokus di pencarian
+            if (logicalKey == LogicalKeyboardKey.space &&
+                !_searchFocusNode.hasFocus) {
+              ref.read(shortcutProvider.notifier).trigger('Space');
+              return KeyEventResult.handled;
+            }
+
+            // Panah Bawah / Atas: Navigasi item keranjang
+            if (logicalKey == LogicalKeyboardKey.arrowDown &&
+                !_searchFocusNode.hasFocus) {
+              final cart = ref.read(cartProvider);
+              if (cart.isNotEmpty) {
+                final current = ref.read(selectedCartIndexProvider);
+                final next = (current + 1).clamp(0, cart.length - 1);
+                ref.read(selectedCartIndexProvider.notifier).state = next;
+              }
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.arrowUp &&
+                !_searchFocusNode.hasFocus) {
+              final cart = ref.read(cartProvider);
+              if (cart.isNotEmpty) {
+                final current = ref.read(selectedCartIndexProvider);
+                final next = (current - 1).clamp(0, cart.length - 1);
+                ref.read(selectedCartIndexProvider.notifier).state = next;
+              }
+              return KeyEventResult.handled;
+            }
+
+            if (logicalKey == LogicalKeyboardKey.f1) {
+              ref.read(shortcutProvider.notifier).trigger('F1');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f2) {
+              ref.read(shortcutProvider.notifier).trigger('F2');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f3) {
+              ref.read(shortcutProvider.notifier).trigger('F3');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f4) {
+              ref.read(shortcutProvider.notifier).trigger('F4');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f5) {
+              ref.read(shortcutProvider.notifier).trigger('F5');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f6) {
+              ref.read(shortcutProvider.notifier).trigger('F6');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f7) {
+              ref.read(shortcutProvider.notifier).trigger('F7');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f8) {
+              ref.read(shortcutProvider.notifier).trigger('F8');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f9) {
+              ref.read(shortcutProvider.notifier).trigger('F9');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f10) {
+              ref.read(shortcutProvider.notifier).trigger('F10');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f11) {
+              ref.read(shortcutProvider.notifier).trigger('F11');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.f12) {
+              ref.read(shortcutProvider.notifier).trigger('F12');
+              return KeyEventResult.handled;
+            } else if (logicalKey == LogicalKeyboardKey.escape) {
+              ref.read(shortcutProvider.notifier).trigger('Esc');
+              return KeyEventResult.handled;
+            }
           }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Scaffold(
-        backgroundColor: SolluColors.background,
-        appBar: AppBar(
+          return KeyEventResult.ignored;
+        },
+        child: Scaffold(
+          backgroundColor: SolluColors.background,
+          appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 1,
           titleSpacing: 16,
@@ -560,11 +824,6 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                         );
 
                         try {
-                          final employeeRepository = ref.read(
-                            employeeRepositoryProvider,
-                          );
-                          await employeeRepository.syncEmployees();
-
                           final syncRepository = ref.read(
                             syncRepositoryProvider,
                           );
@@ -663,6 +922,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             // Floating Sync Overlay
             const SyncProgressOverlay(),
           ],
+        ),
         ),
       ),
     );

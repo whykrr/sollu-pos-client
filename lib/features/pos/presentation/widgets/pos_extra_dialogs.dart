@@ -1033,19 +1033,23 @@ class ShortcutHelpDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, String>> shortcuts = [
-      {'key': 'F1', 'desc': 'Cari Produk / Scan Barcode'},
-      {'key': 'F2', 'desc': 'Fokus Daftar Produk (Pilih Item #1)'},
-      {'key': 'F3', 'desc': 'Fokus List Keranjang & Ubah Qty via Enter'},
-      {'key': 'F4', 'desc': 'Tambah Diskon Bill'},
-      {'key': 'F5', 'desc': 'Pilih Pelanggan / Member'},
-      {'key': 'F6', 'desc': 'Tahan Pesanan (Hold Order)'},
-      {'key': 'F7', 'desc': 'Daftar Transaksi Ditahan (Recall Hold)'},
-      {'key': 'F8', 'desc': 'Checkout & Pembayaran'},
-      {'key': 'F9', 'desc': 'Daftar Riwayat Transaksi Shift'},
-      {'key': 'F10', 'desc': 'Cetak Ulang Struk (Reprint)'},
-      {'key': 'F11', 'desc': 'Toggle Layar Penuh Kiosk (Desktop)'},
-      {'key': 'F12', 'desc': 'Tutup Shift Kasir'},
-      {'key': 'Esc', 'desc': 'Tutup Popup / Batal'},
+      {'key': 'F1', 'desc': 'Pencarian Produk / Scan Barcode Ready'},
+      {'key': 'F2', 'desc': 'Diskon Transaksi / Item (Perlu Wewenang)'},
+      {'key': 'F3', 'desc': 'Fokus Keranjang & Ubah Qty'},
+      {'key': 'F4', 'desc': 'Pilih Pelanggan / Member'},
+      {'key': 'F5', 'desc': 'Open Price / Ubah Harga Manual (Perlu Wewenang)'},
+      {'key': 'F6', 'desc': 'Void Item Keranjang (Perlu Wewenang)'},
+      {'key': 'F7', 'desc': 'Void Seluruh Transaksi / Bersihkan (Perlu Wewenang)'},
+      {'key': 'F8', 'desc': 'Tahan Pesanan (Hold Bill)'},
+      {'key': 'F9', 'desc': 'Daftar Pesanan Ditahan (Recall Bill)'},
+      {'key': 'F10', 'desc': 'Bayar Cepat Tunai (Quick Cash)'},
+      {'key': 'F11', 'desc': 'Metode Pembayaran Lain (QRIS / EDC / Transfer)'},
+      {'key': 'F12', 'desc': 'Bayar & Selesaikan Transaksi (Checkout)'},
+      {'key': 'Esc', 'desc': 'Batal / Bersihkan Input / Tutup Modal'},
+      {'key': '↑ / ↓', 'desc': 'Navigasi Pilihan Item Keranjang'},
+      {'key': 'Enter', 'desc': 'Konfirmasi Aksi / Tambah Item'},
+      {'key': 'Ctrl+P', 'desc': 'Cetak Ulang Struk Transaksi Terakhir'},
+      {'key': 'Space', 'desc': 'Buka Laci Kasir Manual (Cash Drawer Kick)'},
     ];
 
     return AlertDialog(
@@ -1217,6 +1221,522 @@ class EmptyCartDialog extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Modal Dialog untuk Open Price / Ubah Harga Manual Baris Item (Shortcut F5)
+class OpenPriceDialog extends StatefulWidget {
+  final CartItem item;
+  final Function(double newPrice) onPriceUpdated;
+
+  const OpenPriceDialog({
+    super.key,
+    required this.item,
+    required this.onPriceUpdated,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required CartItem item,
+    required Function(double newPrice) onPriceUpdated,
+  }) {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => OpenPriceDialog(
+        item: item,
+        onPriceUpdated: onPriceUpdated,
+      ),
+    );
+  }
+
+  @override
+  State<OpenPriceDialog> createState() => _OpenPriceDialogState();
+}
+
+class _OpenPriceDialogState extends State<OpenPriceDialog> {
+  final TextEditingController _priceController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController.text = CurrencyInputFormatter.format(widget.item.price.toInt());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+      _priceController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _priceController.text.length,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final parsed = CurrencyInputFormatter.parse(_priceController.text);
+    if (parsed < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harga tidak boleh negatif'),
+          backgroundColor: SolluColors.danger,
+        ),
+      );
+      return;
+    }
+    widget.onPriceUpdated(parsed);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+            _submit();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.of(context).pop();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: SolluColors.neutral, width: 1.5),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SolluColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.price_change_outlined, color: SolluColors.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Ubah Harga Jual (F5)',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: SolluColors.textDark,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.item.name,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: SolluColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Harga saat ini: ${CurrencyFormatter.format(widget.item.price.toInt())}',
+                style: const TextStyle(fontSize: 13, color: SolluColors.textMuted),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Harga Satuan Baru (Rp)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _priceController,
+                focusNode: _focusNode,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  CurrencyInputFormatter(),
+                ],
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
+                ),
+                decoration: InputDecoration(
+                  prefixText: 'Rp ',
+                  prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textMuted),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SolluColors.neutral, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Batal (Esc)'),
+          ),
+          ElevatedButton(
+            onPressed: _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SolluColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text('Simpan (Enter)', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Modal Dialog Bayar Cepat Tunai (Shortcut F10)
+class QuickCashDialog extends StatefulWidget {
+  final int totalAmount;
+  final Function(double cashReceived) onConfirm;
+
+  const QuickCashDialog({
+    super.key,
+    required this.totalAmount,
+    required this.onConfirm,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required int totalAmount,
+    required Function(double cashReceived) onConfirm,
+  }) {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => QuickCashDialog(
+        totalAmount: totalAmount,
+        onConfirm: onConfirm,
+      ),
+    );
+  }
+
+  @override
+  State<QuickCashDialog> createState() => _QuickCashDialogState();
+}
+
+class _QuickCashDialogState extends State<QuickCashDialog> {
+  final TextEditingController _cashController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  double _cashReceived = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _cashReceived = widget.totalAmount.toDouble();
+    _cashController.text = CurrencyInputFormatter.format(widget.totalAmount);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+      _cashController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _cashController.text.length,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _cashController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  List<double> _getPresets() {
+    final total = widget.totalAmount.toDouble();
+    final Set<double> presets = {total};
+
+    final standardDenominations = [20000.0, 50000.0, 100000.0, 200000.0];
+    for (final denom in standardDenominations) {
+      if (denom > total) {
+        presets.add(denom);
+      }
+    }
+
+    final next50k = (total / 50000.0).ceil() * 50000.0;
+    if (next50k > total) presets.add(next50k);
+
+    final next100k = (total / 100000.0).ceil() * 100000.0;
+    if (next100k > total) presets.add(next100k);
+
+    final sorted = presets.toList()..sort();
+    return sorted.take(4).toList();
+  }
+
+  void _onPresetSelected(double amount) {
+    setState(() {
+      _cashReceived = amount;
+      _cashController.text = CurrencyInputFormatter.format(amount.toInt());
+    });
+  }
+
+  void _submit() {
+    if (_cashReceived < widget.totalAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Uang tunai kurang dari total tagihan!'),
+          backgroundColor: SolluColors.danger,
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).pop();
+    widget.onConfirm(_cashReceived);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double change = (_cashReceived - widget.totalAmount).clamp(0.0, double.infinity);
+    final presets = _getPresets();
+
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+            _submit();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.of(context).pop();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: SolluColors.neutral, width: 1.5),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SolluColors.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.payments_outlined, color: SolluColors.success, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Bayar Cepat Tunai (F10)',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Total Tagihan Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: SolluColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: SolluColors.neutral, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total Tagihan:', style: TextStyle(fontSize: 14, color: SolluColors.textMuted)),
+                    Text(
+                      CurrencyFormatter.format(widget.totalAmount),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: SolluColors.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Pilihan Cepat / Preset Pecahan
+              const Text(
+                'Pilihan Nominal Cepat',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: presets.map((amount) {
+                  final isExact = amount == widget.totalAmount.toDouble();
+                  final isSelected = _cashReceived == amount;
+                  return InkWell(
+                    onTap: () => _onPresetSelected(amount),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? SolluColors.primary.withValues(alpha: 0.1)
+                            : Colors.white,
+                        border: Border.all(
+                          color: isSelected ? SolluColors.primary : SolluColors.neutral,
+                          width: isSelected ? 2.0 : 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isExact ? 'Uang Pas (${CurrencyFormatter.format(amount.toInt())})' : CurrencyFormatter.format(amount.toInt()),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? SolluColors.primary : SolluColors.textDark,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // Input Diterima
+              const Text(
+                'Uang Diterima (Rp)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _cashController,
+                focusNode: _focusNode,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  CurrencyInputFormatter(),
+                ],
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.textDark),
+                decoration: InputDecoration(
+                  prefixText: 'Rp ',
+                  prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: SolluColors.textMuted),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SolluColors.neutral, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SolluColors.primary, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                onChanged: (val) {
+                  final parsed = CurrencyInputFormatter.parse(val);
+                  setState(() {
+                    _cashReceived = parsed;
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Kembalian
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: change > 0 ? SolluColors.success.withValues(alpha: 0.08) : SolluColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: change > 0 ? SolluColors.success.withValues(alpha: 0.4) : SolluColors.neutral,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Kembalian:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: change > 0 ? SolluColors.success : SolluColors.textMuted,
+                      ),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(change.toInt()),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: change > 0 ? SolluColors.success : SolluColors.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Batal (Esc)'),
+          ),
+          ElevatedButton(
+            onPressed: _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SolluColors.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text('Selesaikan Pembayaran (Enter)', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

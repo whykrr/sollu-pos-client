@@ -105,7 +105,12 @@ class _CartPanelState extends ConsumerState<CartPanel> {
     }
 
     return Container(
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          left: BorderSide(color: SolluColors.neutral, width: 1.5),
+        ),
+      ),
       child: Column(
         children: [
           // Header
@@ -228,6 +233,8 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                               0,
                               cart.length - 1,
                             );
+                            ref.read(selectedCartIndexProvider.notifier).state =
+                                _selectedCartIndex;
                           });
                           _scrollToIndex(_selectedCartIndex);
                           return KeyEventResult.handled;
@@ -237,6 +244,8 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                               0,
                               cart.length - 1,
                             );
+                            ref.read(selectedCartIndexProvider.notifier).state =
+                                _selectedCartIndex;
                           });
                           _scrollToIndex(_selectedCartIndex);
                           return KeyEventResult.handled;
@@ -297,8 +306,8 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                             border: Border.all(
                               color: isSelected
                                   ? SolluColors.primary
-                                  : Colors.transparent,
-                              width: 1.5,
+                                  : const Color(0xFFE2E8F0),
+                              width: isSelected ? 2.0 : 1.0,
                             ),
                           ),
                           padding: const EdgeInsets.symmetric(
@@ -309,6 +318,8 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                             onTap: () {
                               setState(() {
                                 _selectedCartIndex = index;
+                                ref.read(selectedCartIndexProvider.notifier).state =
+                                    index;
                               });
                               _openEditItemDialog(item);
                             },

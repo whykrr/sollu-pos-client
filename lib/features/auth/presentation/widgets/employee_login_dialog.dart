@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,10 +44,29 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
     final storedPin = _selectedEmployee?.pin;
     if (_selectedEmployee != null && _isValidPin(inputPin, storedPin)) {
       // PIN Benar
+      List<String> perms = [];
+      if (_selectedEmployee!.permissions != null) {
+        try {
+          final decoded = jsonDecode(_selectedEmployee!.permissions!);
+          if (decoded is List) {
+            perms = decoded.map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+      }
+
+      final isRoot =
+          _selectedEmployee!.isRootUser ||
+          _selectedEmployee!.role == 'Akun Utama';
+      final roleLabel = isRoot
+          ? 'Akun Utama'
+          : (_selectedEmployee!.role ?? 'Kasir');
+
       final mapEmployee = {
         'id': _selectedEmployee!.id,
         'name': _selectedEmployee!.name,
-        'role': _selectedEmployee!.role ?? 'Kasir',
+        'role': roleLabel,
+        'is_root_user': isRoot,
+        'permissions': perms,
       };
       ref.read(activeEmployeeProvider.notifier).login(mapEmployee);
       Navigator.of(context).pop();
@@ -61,12 +81,14 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Container(
-        width: 420,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: _selectedEmployee == null
-            ? _buildEmployeeSelection()
-            : _buildPinVerification(),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: _selectedEmployee == null
+              ? _buildEmployeeSelection()
+              : _buildPinVerification(),
+        ),
       ),
     );
   }
@@ -104,15 +126,17 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
                               .syncEmployees();
                           ref.invalidate(employeeListProvider);
                         } catch (e) {
-                          if (context.mounted) {
+                          if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(e.toString())),
                             );
                           }
                         } finally {
-                          setState(() {
-                            _isSyncing = false;
-                          });
+                          if (mounted) {
+                            setState(() {
+                              _isSyncing = false;
+                            });
+                          }
                         }
                       },
                 icon: _isSyncing
@@ -159,9 +183,16 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final emp = employees[index];
+                  final isRoot = emp.isRootUser || emp.role == 'Akun Utama';
+                  final roleLabel = isRoot
+                      ? 'Akun Utama'
+                      : (emp.role ?? 'Kasir');
+
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: SolluColors.primaryLight,
+                      backgroundColor: isRoot
+                          ? SolluColors.primary
+                          : SolluColors.primaryLight,
                       child: Text(
                         emp.name[0].toUpperCase(),
                         style: const TextStyle(
@@ -170,11 +201,39 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
                         ),
                       ),
                     ),
-                    title: Text(
-                      emp.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    title: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            emp.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isRoot) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: SolluColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Akun Utama',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: SolluColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    subtitle: Text(emp.role ?? 'Kasir'),
+                    subtitle: Text(roleLabel),
                     onTap: () {
                       setState(() {
                         _selectedEmployee = emp;
@@ -246,7 +305,10 @@ class _EmployeeLoginDialogState extends ConsumerState<EmployeeLoginDialog> {
           ),
         ),
         Text(
-          _selectedEmployee!.role ?? 'Kasir',
+          (_selectedEmployee!.isRootUser ||
+                  _selectedEmployee!.role == 'Akun Utama')
+              ? 'Akun Utama'
+              : (_selectedEmployee!.role ?? 'Kasir'),
           style: const TextStyle(color: Colors.grey, fontSize: 13),
         ),
         const SizedBox(height: 28),
@@ -393,14 +455,17 @@ class _PinSingleCharFormState extends State<_PinSingleCharForm> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (int i = 0; i < 6; i++) ...[
-              _buildSingleBox(i),
-              if (i < 5) const SizedBox(width: 8),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (int i = 0; i < 6; i++) ...[
+                _buildSingleBox(i),
+                if (i < 5) const SizedBox(width: 8),
+              ],
             ],
-          ],
+          ),
         ),
         if (widget.errorMessage.isNotEmpty) ...[
           const SizedBox(height: 12),

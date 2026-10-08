@@ -94,13 +94,8 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
       // Update the timestamp so it knows when the last sync happened
       await ref.read(lastSyncProvider.notifier).updateTimestamp();
 
-      // Optionally sync employees as well
-      try {
-        final employeeRepository = ref.read(employeeRepositoryProvider);
-        await employeeRepository.syncEmployees();
-      } catch (_) {
-        // Ignore employee sync error as it's secondary
-      }
+      // Invalidate employee list so UI reflects newly synced employees from master data
+      ref.invalidate(employeeListProvider);
 
       state = state.copyWith(
         status: AutoSyncStatus.success,

@@ -13,8 +13,11 @@ import 'package:sollu_pos_client/features/settings/presentation/pages/printer_se
 import 'package:sollu_pos_client/features/settings/presentation/pages/payment_method_settings_screen.dart';
 import 'package:sollu_pos_client/features/pos/presentation/pages/products_screen.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     routes: [
       GoRoute(

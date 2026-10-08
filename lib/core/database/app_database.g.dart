@@ -81,6 +81,28 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _productTypeMeta = const VerificationMeta(
+    'productType',
+  );
+  @override
+  late final GeneratedColumn<String> productType = GeneratedColumn<String>(
+    'product_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('basic'),
+  );
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+    'unit',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Pcs'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -90,6 +112,8 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     barcode,
     price,
     isAvailable,
+    productType,
+    unit,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -151,6 +175,21 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         ),
       );
     }
+    if (data.containsKey('product_type')) {
+      context.handle(
+        _productTypeMeta,
+        productType.isAcceptableOrUnknown(
+          data['product_type']!,
+          _productTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unit')) {
+      context.handle(
+        _unitMeta,
+        unit.isAcceptableOrUnknown(data['unit']!, _unitMeta),
+      );
+    }
     return context;
   }
 
@@ -188,6 +227,14 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_available'],
       )!,
+      productType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_type'],
+      )!,
+      unit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit'],
+      )!,
     );
   }
 
@@ -205,6 +252,8 @@ class Product extends DataClass implements Insertable<Product> {
   final String? barcode;
   final double price;
   final bool isAvailable;
+  final String productType;
+  final String unit;
   const Product({
     required this.id,
     required this.name,
@@ -213,6 +262,8 @@ class Product extends DataClass implements Insertable<Product> {
     this.barcode,
     required this.price,
     required this.isAvailable,
+    required this.productType,
+    required this.unit,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -230,6 +281,8 @@ class Product extends DataClass implements Insertable<Product> {
     }
     map['price'] = Variable<double>(price);
     map['is_available'] = Variable<bool>(isAvailable);
+    map['product_type'] = Variable<String>(productType);
+    map['unit'] = Variable<String>(unit);
     return map;
   }
 
@@ -246,6 +299,8 @@ class Product extends DataClass implements Insertable<Product> {
           : Value(barcode),
       price: Value(price),
       isAvailable: Value(isAvailable),
+      productType: Value(productType),
+      unit: Value(unit),
     );
   }
 
@@ -262,6 +317,8 @@ class Product extends DataClass implements Insertable<Product> {
       barcode: serializer.fromJson<String?>(json['barcode']),
       price: serializer.fromJson<double>(json['price']),
       isAvailable: serializer.fromJson<bool>(json['isAvailable']),
+      productType: serializer.fromJson<String>(json['productType']),
+      unit: serializer.fromJson<String>(json['unit']),
     );
   }
   @override
@@ -275,6 +332,8 @@ class Product extends DataClass implements Insertable<Product> {
       'barcode': serializer.toJson<String?>(barcode),
       'price': serializer.toJson<double>(price),
       'isAvailable': serializer.toJson<bool>(isAvailable),
+      'productType': serializer.toJson<String>(productType),
+      'unit': serializer.toJson<String>(unit),
     };
   }
 
@@ -286,6 +345,8 @@ class Product extends DataClass implements Insertable<Product> {
     Value<String?> barcode = const Value.absent(),
     double? price,
     bool? isAvailable,
+    String? productType,
+    String? unit,
   }) => Product(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -294,6 +355,8 @@ class Product extends DataClass implements Insertable<Product> {
     barcode: barcode.present ? barcode.value : this.barcode,
     price: price ?? this.price,
     isAvailable: isAvailable ?? this.isAvailable,
+    productType: productType ?? this.productType,
+    unit: unit ?? this.unit,
   );
   Product copyWithCompanion(ProductsCompanion data) {
     return Product(
@@ -308,6 +371,10 @@ class Product extends DataClass implements Insertable<Product> {
       isAvailable: data.isAvailable.present
           ? data.isAvailable.value
           : this.isAvailable,
+      productType: data.productType.present
+          ? data.productType.value
+          : this.productType,
+      unit: data.unit.present ? data.unit.value : this.unit,
     );
   }
 
@@ -320,14 +387,25 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('sku: $sku, ')
           ..write('barcode: $barcode, ')
           ..write('price: $price, ')
-          ..write('isAvailable: $isAvailable')
+          ..write('isAvailable: $isAvailable, ')
+          ..write('productType: $productType, ')
+          ..write('unit: $unit')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, categoryId, sku, barcode, price, isAvailable);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    categoryId,
+    sku,
+    barcode,
+    price,
+    isAvailable,
+    productType,
+    unit,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -338,7 +416,9 @@ class Product extends DataClass implements Insertable<Product> {
           other.sku == this.sku &&
           other.barcode == this.barcode &&
           other.price == this.price &&
-          other.isAvailable == this.isAvailable);
+          other.isAvailable == this.isAvailable &&
+          other.productType == this.productType &&
+          other.unit == this.unit);
 }
 
 class ProductsCompanion extends UpdateCompanion<Product> {
@@ -349,6 +429,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String?> barcode;
   final Value<double> price;
   final Value<bool> isAvailable;
+  final Value<String> productType;
+  final Value<String> unit;
   final Value<int> rowid;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -358,6 +440,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.barcode = const Value.absent(),
     this.price = const Value.absent(),
     this.isAvailable = const Value.absent(),
+    this.productType = const Value.absent(),
+    this.unit = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -368,6 +452,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.barcode = const Value.absent(),
     required double price,
     this.isAvailable = const Value.absent(),
+    this.productType = const Value.absent(),
+    this.unit = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -380,6 +466,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? barcode,
     Expression<double>? price,
     Expression<bool>? isAvailable,
+    Expression<String>? productType,
+    Expression<String>? unit,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -390,6 +478,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (barcode != null) 'barcode': barcode,
       if (price != null) 'price': price,
       if (isAvailable != null) 'is_available': isAvailable,
+      if (productType != null) 'product_type': productType,
+      if (unit != null) 'unit': unit,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -402,6 +492,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String?>? barcode,
     Value<double>? price,
     Value<bool>? isAvailable,
+    Value<String>? productType,
+    Value<String>? unit,
     Value<int>? rowid,
   }) {
     return ProductsCompanion(
@@ -412,6 +504,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       barcode: barcode ?? this.barcode,
       price: price ?? this.price,
       isAvailable: isAvailable ?? this.isAvailable,
+      productType: productType ?? this.productType,
+      unit: unit ?? this.unit,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -440,6 +534,12 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (isAvailable.present) {
       map['is_available'] = Variable<bool>(isAvailable.value);
     }
+    if (productType.present) {
+      map['product_type'] = Variable<String>(productType.value);
+    }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -456,6 +556,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('barcode: $barcode, ')
           ..write('price: $price, ')
           ..write('isAvailable: $isAvailable, ')
+          ..write('productType: $productType, ')
+          ..write('unit: $unit, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1400,6 +1502,16 @@ class $InventoriesTable extends Inventories
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+    'unit',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Pcs'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1410,6 +1522,7 @@ class $InventoriesTable extends Inventories
     trackInventory,
     isActive,
     stock,
+    unit,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1477,6 +1590,12 @@ class $InventoriesTable extends Inventories
         stock.isAcceptableOrUnknown(data['stock']!, _stockMeta),
       );
     }
+    if (data.containsKey('unit')) {
+      context.handle(
+        _unitMeta,
+        unit.isAcceptableOrUnknown(data['unit']!, _unitMeta),
+      );
+    }
     return context;
   }
 
@@ -1518,6 +1637,10 @@ class $InventoriesTable extends Inventories
         DriftSqlType.double,
         data['${effectivePrefix}stock'],
       )!,
+      unit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit'],
+      )!,
     );
   }
 
@@ -1536,6 +1659,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
   final bool trackInventory;
   final bool isActive;
   final double stock;
+  final String unit;
   const Inventory({
     required this.id,
     required this.productId,
@@ -1545,6 +1669,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
     required this.trackInventory,
     required this.isActive,
     required this.stock,
+    required this.unit,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1561,6 +1686,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
     map['track_inventory'] = Variable<bool>(trackInventory);
     map['is_active'] = Variable<bool>(isActive);
     map['stock'] = Variable<double>(stock);
+    map['unit'] = Variable<String>(unit);
     return map;
   }
 
@@ -1576,6 +1702,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
       trackInventory: Value(trackInventory),
       isActive: Value(isActive),
       stock: Value(stock),
+      unit: Value(unit),
     );
   }
 
@@ -1593,6 +1720,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
       trackInventory: serializer.fromJson<bool>(json['trackInventory']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       stock: serializer.fromJson<double>(json['stock']),
+      unit: serializer.fromJson<String>(json['unit']),
     );
   }
   @override
@@ -1607,6 +1735,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
       'trackInventory': serializer.toJson<bool>(trackInventory),
       'isActive': serializer.toJson<bool>(isActive),
       'stock': serializer.toJson<double>(stock),
+      'unit': serializer.toJson<String>(unit),
     };
   }
 
@@ -1619,6 +1748,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
     bool? trackInventory,
     bool? isActive,
     double? stock,
+    String? unit,
   }) => Inventory(
     id: id ?? this.id,
     productId: productId ?? this.productId,
@@ -1628,6 +1758,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
     trackInventory: trackInventory ?? this.trackInventory,
     isActive: isActive ?? this.isActive,
     stock: stock ?? this.stock,
+    unit: unit ?? this.unit,
   );
   Inventory copyWithCompanion(InventoriesCompanion data) {
     return Inventory(
@@ -1641,6 +1772,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
           : this.trackInventory,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       stock: data.stock.present ? data.stock.value : this.stock,
+      unit: data.unit.present ? data.unit.value : this.unit,
     );
   }
 
@@ -1654,7 +1786,8 @@ class Inventory extends DataClass implements Insertable<Inventory> {
           ..write('barcode: $barcode, ')
           ..write('trackInventory: $trackInventory, ')
           ..write('isActive: $isActive, ')
-          ..write('stock: $stock')
+          ..write('stock: $stock, ')
+          ..write('unit: $unit')
           ..write(')'))
         .toString();
   }
@@ -1669,6 +1802,7 @@ class Inventory extends DataClass implements Insertable<Inventory> {
     trackInventory,
     isActive,
     stock,
+    unit,
   );
   @override
   bool operator ==(Object other) =>
@@ -1681,7 +1815,8 @@ class Inventory extends DataClass implements Insertable<Inventory> {
           other.barcode == this.barcode &&
           other.trackInventory == this.trackInventory &&
           other.isActive == this.isActive &&
-          other.stock == this.stock);
+          other.stock == this.stock &&
+          other.unit == this.unit);
 }
 
 class InventoriesCompanion extends UpdateCompanion<Inventory> {
@@ -1693,6 +1828,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
   final Value<bool> trackInventory;
   final Value<bool> isActive;
   final Value<double> stock;
+  final Value<String> unit;
   final Value<int> rowid;
   const InventoriesCompanion({
     this.id = const Value.absent(),
@@ -1703,6 +1839,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
     this.trackInventory = const Value.absent(),
     this.isActive = const Value.absent(),
     this.stock = const Value.absent(),
+    this.unit = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InventoriesCompanion.insert({
@@ -1714,6 +1851,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
     this.trackInventory = const Value.absent(),
     this.isActive = const Value.absent(),
     this.stock = const Value.absent(),
+    this.unit = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        productId = Value(productId),
@@ -1727,6 +1865,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
     Expression<bool>? trackInventory,
     Expression<bool>? isActive,
     Expression<double>? stock,
+    Expression<String>? unit,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1738,6 +1877,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
       if (trackInventory != null) 'track_inventory': trackInventory,
       if (isActive != null) 'is_active': isActive,
       if (stock != null) 'stock': stock,
+      if (unit != null) 'unit': unit,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1751,6 +1891,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
     Value<bool>? trackInventory,
     Value<bool>? isActive,
     Value<double>? stock,
+    Value<String>? unit,
     Value<int>? rowid,
   }) {
     return InventoriesCompanion(
@@ -1762,6 +1903,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
       trackInventory: trackInventory ?? this.trackInventory,
       isActive: isActive ?? this.isActive,
       stock: stock ?? this.stock,
+      unit: unit ?? this.unit,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1793,6 +1935,9 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
     if (stock.present) {
       map['stock'] = Variable<double>(stock.value);
     }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1810,6 +1955,7 @@ class InventoriesCompanion extends UpdateCompanion<Inventory> {
           ..write('trackInventory: $trackInventory, ')
           ..write('isActive: $isActive, ')
           ..write('stock: $stock, ')
+          ..write('unit: $unit, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9311,8 +9457,43 @@ class $EmployeesTable extends Employees
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _permissionsMeta = const VerificationMeta(
+    'permissions',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, email, pin, photo, role];
+  late final GeneratedColumn<String> permissions = GeneratedColumn<String>(
+    'permissions',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isRootUserMeta = const VerificationMeta(
+    'isRootUser',
+  );
+  @override
+  late final GeneratedColumn<bool> isRootUser = GeneratedColumn<bool>(
+    'is_root_user',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_root_user" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    email,
+    pin,
+    photo,
+    role,
+    permissions,
+    isRootUser,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -9362,6 +9543,24 @@ class $EmployeesTable extends Employees
         role.isAcceptableOrUnknown(data['role']!, _roleMeta),
       );
     }
+    if (data.containsKey('permissions')) {
+      context.handle(
+        _permissionsMeta,
+        permissions.isAcceptableOrUnknown(
+          data['permissions']!,
+          _permissionsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_root_user')) {
+      context.handle(
+        _isRootUserMeta,
+        isRootUser.isAcceptableOrUnknown(
+          data['is_root_user']!,
+          _isRootUserMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -9395,6 +9594,14 @@ class $EmployeesTable extends Employees
         DriftSqlType.string,
         data['${effectivePrefix}role'],
       ),
+      permissions: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}permissions'],
+      ),
+      isRootUser: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_root_user'],
+      )!,
     );
   }
 
@@ -9411,6 +9618,8 @@ class Employee extends DataClass implements Insertable<Employee> {
   final String? pin;
   final String? photo;
   final String? role;
+  final String? permissions;
+  final bool isRootUser;
   const Employee({
     required this.id,
     required this.name,
@@ -9418,6 +9627,8 @@ class Employee extends DataClass implements Insertable<Employee> {
     this.pin,
     this.photo,
     this.role,
+    this.permissions,
+    required this.isRootUser,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9436,6 +9647,10 @@ class Employee extends DataClass implements Insertable<Employee> {
     if (!nullToAbsent || role != null) {
       map['role'] = Variable<String>(role);
     }
+    if (!nullToAbsent || permissions != null) {
+      map['permissions'] = Variable<String>(permissions);
+    }
+    map['is_root_user'] = Variable<bool>(isRootUser);
     return map;
   }
 
@@ -9451,6 +9666,10 @@ class Employee extends DataClass implements Insertable<Employee> {
           ? const Value.absent()
           : Value(photo),
       role: role == null && nullToAbsent ? const Value.absent() : Value(role),
+      permissions: permissions == null && nullToAbsent
+          ? const Value.absent()
+          : Value(permissions),
+      isRootUser: Value(isRootUser),
     );
   }
 
@@ -9466,6 +9685,8 @@ class Employee extends DataClass implements Insertable<Employee> {
       pin: serializer.fromJson<String?>(json['pin']),
       photo: serializer.fromJson<String?>(json['photo']),
       role: serializer.fromJson<String?>(json['role']),
+      permissions: serializer.fromJson<String?>(json['permissions']),
+      isRootUser: serializer.fromJson<bool>(json['isRootUser']),
     );
   }
   @override
@@ -9478,6 +9699,8 @@ class Employee extends DataClass implements Insertable<Employee> {
       'pin': serializer.toJson<String?>(pin),
       'photo': serializer.toJson<String?>(photo),
       'role': serializer.toJson<String?>(role),
+      'permissions': serializer.toJson<String?>(permissions),
+      'isRootUser': serializer.toJson<bool>(isRootUser),
     };
   }
 
@@ -9488,6 +9711,8 @@ class Employee extends DataClass implements Insertable<Employee> {
     Value<String?> pin = const Value.absent(),
     Value<String?> photo = const Value.absent(),
     Value<String?> role = const Value.absent(),
+    Value<String?> permissions = const Value.absent(),
+    bool? isRootUser,
   }) => Employee(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -9495,6 +9720,8 @@ class Employee extends DataClass implements Insertable<Employee> {
     pin: pin.present ? pin.value : this.pin,
     photo: photo.present ? photo.value : this.photo,
     role: role.present ? role.value : this.role,
+    permissions: permissions.present ? permissions.value : this.permissions,
+    isRootUser: isRootUser ?? this.isRootUser,
   );
   Employee copyWithCompanion(EmployeesCompanion data) {
     return Employee(
@@ -9504,6 +9731,12 @@ class Employee extends DataClass implements Insertable<Employee> {
       pin: data.pin.present ? data.pin.value : this.pin,
       photo: data.photo.present ? data.photo.value : this.photo,
       role: data.role.present ? data.role.value : this.role,
+      permissions: data.permissions.present
+          ? data.permissions.value
+          : this.permissions,
+      isRootUser: data.isRootUser.present
+          ? data.isRootUser.value
+          : this.isRootUser,
     );
   }
 
@@ -9515,13 +9748,16 @@ class Employee extends DataClass implements Insertable<Employee> {
           ..write('email: $email, ')
           ..write('pin: $pin, ')
           ..write('photo: $photo, ')
-          ..write('role: $role')
+          ..write('role: $role, ')
+          ..write('permissions: $permissions, ')
+          ..write('isRootUser: $isRootUser')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, email, pin, photo, role);
+  int get hashCode =>
+      Object.hash(id, name, email, pin, photo, role, permissions, isRootUser);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -9531,7 +9767,9 @@ class Employee extends DataClass implements Insertable<Employee> {
           other.email == this.email &&
           other.pin == this.pin &&
           other.photo == this.photo &&
-          other.role == this.role);
+          other.role == this.role &&
+          other.permissions == this.permissions &&
+          other.isRootUser == this.isRootUser);
 }
 
 class EmployeesCompanion extends UpdateCompanion<Employee> {
@@ -9541,6 +9779,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
   final Value<String?> pin;
   final Value<String?> photo;
   final Value<String?> role;
+  final Value<String?> permissions;
+  final Value<bool> isRootUser;
   final Value<int> rowid;
   const EmployeesCompanion({
     this.id = const Value.absent(),
@@ -9549,6 +9789,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
     this.pin = const Value.absent(),
     this.photo = const Value.absent(),
     this.role = const Value.absent(),
+    this.permissions = const Value.absent(),
+    this.isRootUser = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EmployeesCompanion.insert({
@@ -9558,6 +9800,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
     this.pin = const Value.absent(),
     this.photo = const Value.absent(),
     this.role = const Value.absent(),
+    this.permissions = const Value.absent(),
+    this.isRootUser = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -9568,6 +9812,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
     Expression<String>? pin,
     Expression<String>? photo,
     Expression<String>? role,
+    Expression<String>? permissions,
+    Expression<bool>? isRootUser,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9577,6 +9823,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
       if (pin != null) 'pin': pin,
       if (photo != null) 'photo': photo,
       if (role != null) 'role': role,
+      if (permissions != null) 'permissions': permissions,
+      if (isRootUser != null) 'is_root_user': isRootUser,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9588,6 +9836,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
     Value<String?>? pin,
     Value<String?>? photo,
     Value<String?>? role,
+    Value<String?>? permissions,
+    Value<bool>? isRootUser,
     Value<int>? rowid,
   }) {
     return EmployeesCompanion(
@@ -9597,6 +9847,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
       pin: pin ?? this.pin,
       photo: photo ?? this.photo,
       role: role ?? this.role,
+      permissions: permissions ?? this.permissions,
+      isRootUser: isRootUser ?? this.isRootUser,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9622,6 +9874,12 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
     if (role.present) {
       map['role'] = Variable<String>(role.value);
     }
+    if (permissions.present) {
+      map['permissions'] = Variable<String>(permissions.value);
+    }
+    if (isRootUser.present) {
+      map['is_root_user'] = Variable<bool>(isRootUser.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9637,6 +9895,8 @@ class EmployeesCompanion extends UpdateCompanion<Employee> {
           ..write('pin: $pin, ')
           ..write('photo: $photo, ')
           ..write('role: $role, ')
+          ..write('permissions: $permissions, ')
+          ..write('isRootUser: $isRootUser, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10067,6 +10327,8 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<String?> barcode,
       required double price,
       Value<bool> isAvailable,
+      Value<String> productType,
+      Value<String> unit,
       Value<int> rowid,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -10078,6 +10340,8 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<String?> barcode,
       Value<double> price,
       Value<bool> isAvailable,
+      Value<String> productType,
+      Value<String> unit,
       Value<int> rowid,
     });
 
@@ -10206,6 +10470,16 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<bool> get isAvailable => $composableBuilder(
     column: $table.isAvailable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productType => $composableBuilder(
+    column: $table.productType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unit => $composableBuilder(
+    column: $table.unit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10354,6 +10628,16 @@ class $$ProductsTableOrderingComposer
     column: $table.isAvailable,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get productType => $composableBuilder(
+    column: $table.productType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProductsTableAnnotationComposer
@@ -10389,6 +10673,14 @@ class $$ProductsTableAnnotationComposer
     column: $table.isAvailable,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get productType => $composableBuilder(
+    column: $table.productType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
 
   Expression<T> variantGroupsRefs<T extends Object>(
     Expression<T> Function($$VariantGroupsTableAnnotationComposer a) f,
@@ -10532,6 +10824,8 @@ class $$ProductsTableTableManager
                 Value<String?> barcode = const Value.absent(),
                 Value<double> price = const Value.absent(),
                 Value<bool> isAvailable = const Value.absent(),
+                Value<String> productType = const Value.absent(),
+                Value<String> unit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -10541,6 +10835,8 @@ class $$ProductsTableTableManager
                 barcode: barcode,
                 price: price,
                 isAvailable: isAvailable,
+                productType: productType,
+                unit: unit,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10552,6 +10848,8 @@ class $$ProductsTableTableManager
                 Value<String?> barcode = const Value.absent(),
                 required double price,
                 Value<bool> isAvailable = const Value.absent(),
+                Value<String> productType = const Value.absent(),
+                Value<String> unit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -10561,6 +10859,8 @@ class $$ProductsTableTableManager
                 barcode: barcode,
                 price: price,
                 isAvailable: isAvailable,
+                productType: productType,
+                unit: unit,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11710,6 +12010,7 @@ typedef $$InventoriesTableCreateCompanionBuilder =
       Value<bool> trackInventory,
       Value<bool> isActive,
       Value<double> stock,
+      Value<String> unit,
       Value<int> rowid,
     });
 typedef $$InventoriesTableUpdateCompanionBuilder =
@@ -11722,6 +12023,7 @@ typedef $$InventoriesTableUpdateCompanionBuilder =
       Value<bool> trackInventory,
       Value<bool> isActive,
       Value<double> stock,
+      Value<String> unit,
       Value<int> rowid,
     });
 
@@ -11836,6 +12138,11 @@ class $$InventoriesTableFilterComposer
 
   ColumnFilters<double> get stock => $composableBuilder(
     column: $table.stock,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unit => $composableBuilder(
+    column: $table.unit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11961,6 +12268,11 @@ class $$InventoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ProductsTableOrderingComposer get productId {
     final $$ProductsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -12016,6 +12328,9 @@ class $$InventoriesTableAnnotationComposer
 
   GeneratedColumn<double> get stock =>
       $composableBuilder(column: $table.stock, builder: (column) => column);
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
 
   $$ProductsTableAnnotationComposer get productId {
     final $$ProductsTableAnnotationComposer composer = $composerBuilder(
@@ -12135,6 +12450,7 @@ class $$InventoriesTableTableManager
                 Value<bool> trackInventory = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<double> stock = const Value.absent(),
+                Value<String> unit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InventoriesCompanion(
                 id: id,
@@ -12145,6 +12461,7 @@ class $$InventoriesTableTableManager
                 trackInventory: trackInventory,
                 isActive: isActive,
                 stock: stock,
+                unit: unit,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12157,6 +12474,7 @@ class $$InventoriesTableTableManager
                 Value<bool> trackInventory = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<double> stock = const Value.absent(),
+                Value<String> unit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => InventoriesCompanion.insert(
                 id: id,
@@ -12167,6 +12485,7 @@ class $$InventoriesTableTableManager
                 trackInventory: trackInventory,
                 isActive: isActive,
                 stock: stock,
+                unit: unit,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -18832,6 +19151,8 @@ typedef $$EmployeesTableCreateCompanionBuilder =
       Value<String?> pin,
       Value<String?> photo,
       Value<String?> role,
+      Value<String?> permissions,
+      Value<bool> isRootUser,
       Value<int> rowid,
     });
 typedef $$EmployeesTableUpdateCompanionBuilder =
@@ -18842,6 +19163,8 @@ typedef $$EmployeesTableUpdateCompanionBuilder =
       Value<String?> pin,
       Value<String?> photo,
       Value<String?> role,
+      Value<String?> permissions,
+      Value<bool> isRootUser,
       Value<int> rowid,
     });
 
@@ -18881,6 +19204,16 @@ class $$EmployeesTableFilterComposer
 
   ColumnFilters<String> get role => $composableBuilder(
     column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get permissions => $composableBuilder(
+    column: $table.permissions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRootUser => $composableBuilder(
+    column: $table.isRootUser,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -18923,6 +19256,16 @@ class $$EmployeesTableOrderingComposer
     column: $table.role,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get permissions => $composableBuilder(
+    column: $table.permissions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isRootUser => $composableBuilder(
+    column: $table.isRootUser,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EmployeesTableAnnotationComposer
@@ -18951,6 +19294,16 @@ class $$EmployeesTableAnnotationComposer
 
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get permissions => $composableBuilder(
+    column: $table.permissions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isRootUser => $composableBuilder(
+    column: $table.isRootUser,
+    builder: (column) => column,
+  );
 }
 
 class $$EmployeesTableTableManager
@@ -18987,6 +19340,8 @@ class $$EmployeesTableTableManager
                 Value<String?> pin = const Value.absent(),
                 Value<String?> photo = const Value.absent(),
                 Value<String?> role = const Value.absent(),
+                Value<String?> permissions = const Value.absent(),
+                Value<bool> isRootUser = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EmployeesCompanion(
                 id: id,
@@ -18995,6 +19350,8 @@ class $$EmployeesTableTableManager
                 pin: pin,
                 photo: photo,
                 role: role,
+                permissions: permissions,
+                isRootUser: isRootUser,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -19005,6 +19362,8 @@ class $$EmployeesTableTableManager
                 Value<String?> pin = const Value.absent(),
                 Value<String?> photo = const Value.absent(),
                 Value<String?> role = const Value.absent(),
+                Value<String?> permissions = const Value.absent(),
+                Value<bool> isRootUser = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EmployeesCompanion.insert(
                 id: id,
@@ -19013,6 +19372,8 @@ class $$EmployeesTableTableManager
                 pin: pin,
                 photo: photo,
                 role: role,
+                permissions: permissions,
+                isRootUser: isRootUser,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

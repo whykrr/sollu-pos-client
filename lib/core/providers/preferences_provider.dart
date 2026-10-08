@@ -101,3 +101,26 @@ class FullscreenKioskNotifier extends Notifier<bool> {
     state = enable;
   }
 }
+
+final productsViewModeProvider =
+    NotifierProvider<ProductsViewModeNotifier, String>(
+      ProductsViewModeNotifier.new,
+    );
+
+class ProductsViewModeNotifier extends Notifier<String> {
+  static const _key = 'products_screen_view_mode';
+
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getString(_key) ?? 'list';
+  }
+
+  Future<void> setMode(String mode) async {
+    if (mode == 'list' || mode == 'card') {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await prefs.setString(_key, mode);
+      state = mode;
+    }
+  }
+}

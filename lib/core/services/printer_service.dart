@@ -202,8 +202,13 @@ class PrinterService {
     }
   }
 
-  /// Menghasilkan byte untuk Test Print ESC/POS (Bluetooth & Network)
-  Future<List<int>> generateTestReceiptBytes(PrinterConfig config) async {
+  /// Menghasilkan byte untuk Live Setup Test Print ESC/POS sesuai format riil toko
+  Future<List<int>> generateTestReceiptBytes(
+    PrinterConfig config, {
+    Map<String, dynamic>? outletProfile,
+    Map<String, dynamic>? outletSetting,
+    Uint8List? logoBytes,
+  }) async {
     final profile = await _getProfile();
     final paperSize = config.paperSize == PrinterPaperSize.mm58
         ? PaperSize.mm58
@@ -231,20 +236,100 @@ class PrinterService {
 
     bytes += generator.reset();
 
+    // 1. Banner Test Print
     bytes += generator.text(
-      (config.storeName ?? 'NAMA OUTLET KASIR').toUpperCase(),
-      styles: header,
+      '*** TEST PRINT / UJI STRUK ***',
+      styles: const PosStyles(
+        fontType: PosFontType.fontB,
+        align: PosAlign.center,
+        bold: true,
+      ),
     );
+    bytes += generator.feed(1);
 
-    bytes += generator.text('Alamat Outlet Uji Coba', styles: center);
-    bytes += generator.text('Telp: 08123456789', styles: center);
-    bytes += generator.text('Email: test@sollu.id', styles: center);
-    bytes += generator.text('Uji Coba Cetak Struk', styles: center);
+    // 2. Logo Toko Riil
+    final rawShowLogo =
+        outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
+    final bool showLogo =
+        rawShowLogo == true ||
+        rawShowLogo == 1 ||
+        rawShowLogo == '1' ||
+        rawShowLogo == null;
+    if (showLogo && logoBytes != null) {
+      try {
+        final paperWidthDots = config.paperSize == PrinterPaperSize.mm58
+            ? 384
+            : 576;
+        final rasterBytes = await _getLogoRasterBytes(
+          logoBytes,
+          paperWidthDots,
+          generator,
+        );
+        if (rasterBytes != null) {
+          bytes += rasterBytes;
+        }
+      } catch (e) {
+        debugPrint('Error rasterizing logo in test print: $e');
+      }
+    }
+
+    // 3. Nama Toko Riil
+    final String customHeader =
+        outletSetting?['custom_header_title']?.toString() ??
+        outletSetting?['customHeaderTitle']?.toString() ??
+        '';
+    final String profileName = outletProfile?['name']?.toString() ?? '';
+    final displayName = customHeader.isNotEmpty
+        ? customHeader
+        : (profileName.isNotEmpty
+            ? profileName
+            : (config.storeName ?? 'SOLLU POS STORE'));
+    bytes += generator.text(displayName.toUpperCase(), styles: header);
+
+    // 4. Detail Alamat & Kontak Riil
+    final String address =
+        outletProfile?['address']?.toString() ?? 'Alamat Outlet Toko';
+    final String phone = outletProfile?['phone']?.toString() ?? '';
+    final String email = outletProfile?['email']?.toString() ?? '';
+
+    bool showAddress =
+        (outletSetting?['show_address'] as bool?) ??
+        (outletSetting?['showAddress'] as bool?) ??
+        true;
+    if (showAddress && address.isNotEmpty) {
+      bytes += generator.text(address, styles: center);
+    }
+
+    bool showPhone =
+        (outletSetting?['show_phone'] as bool?) ??
+        (outletSetting?['showPhone'] as bool?) ??
+        true;
+    if (showPhone && phone.isNotEmpty) {
+      bytes += generator.text('Telp: $phone', styles: center);
+    }
+
+    bool showEmail =
+        (outletSetting?['show_email'] as bool?) ??
+        (outletSetting?['showEmail'] as bool?) ??
+        false;
+    if (showEmail && email.isNotEmpty) {
+      bytes += generator.text('Email: $email', styles: center);
+    }
+
+    // 5. Header Notes Riil
+    final headerNote =
+        (outletSetting?['header_notes']?.toString()) ??
+        (outletSetting?['headerNotes']?.toString()) ??
+        config.headerNote;
+    if (headerNote != null && headerNote.isNotEmpty) {
+      bytes += generator.text(headerNote, styles: center);
+    }
 
     bytes += generator.hr();
 
+    // 6. Metadata Transaksi Simulasi
     bytes += generator.row([
-      PosColumn(text: 'No: INV/TEST/0001', width: 7, styles: regular),
+      PosColumn(text: 'No: SIMULASI/TEST/01', width: 7, styles: regular),
       PosColumn(
         text: DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
         width: 5,
@@ -252,64 +337,132 @@ class PrinterService {
       ),
     ]);
     bytes += generator.row([
-      PosColumn(text: 'Kasir: Test User', width: 7, styles: regular),
+      PosColumn(text: 'Kasir: Kasir Uji Coba', width: 7, styles: regular),
       PosColumn(text: 'Dine In', width: 5, styles: rightBold),
     ]);
-    bytes += generator.text('Pelanggan: Test Customer', styles: regular);
+    bytes += generator.text('Pelanggan: Tamu Umum', styles: regular);
 
     bytes += generator.hr();
 
-    bytes += generator.text('Kopi Susu Aren', styles: regular);
+    // 7. Item Belanja Simulasi
+    bytes += generator.text('Kopi Susu Aren (Reguler)', styles: regular);
     bytes += generator.row([
       PosColumn(text: '2 x Rp 25.000', width: 7, styles: regular),
       PosColumn(text: 'Rp 50.000', width: 5, styles: right),
     ]);
-    bytes += generator.text(
-      '  + Less Sugar, Extra Shot (+Rp 5.000)',
-      styles: regular,
-    );
-    bytes += generator.text('  * Sedikit es', styles: regular);
+    bytes += generator.text('  + Less Sugar, Extra Shot', styles: regular);
 
-    bytes += generator.text('Croissant Butter', styles: regular);
+    bytes += generator.text('Croissant Butter Pastry', styles: regular);
     bytes += generator.row([
-      PosColumn(text: '1 x Rp 25.000', width: 7, styles: regular),
-      PosColumn(text: 'Rp 25.000', width: 5, styles: right),
+      PosColumn(text: '1 x Rp 28.000', width: 7, styles: regular),
+      PosColumn(text: 'Rp 28.000', width: 5, styles: right),
     ]);
 
     bytes += generator.hr();
+
+    // 8. Kalkulasi Pajak & Service Charge Riil
+    const double subtotal = 78000;
+    final double taxPct = double.tryParse(
+      (outletSetting?['tax_percentage'] ??
+              outletSetting?['taxPercentage'] ??
+              11)
+          .toString(),
+    ) ?? 11.0;
+    final double servicePct = double.tryParse(
+      (outletSetting?['service_charge_percentage'] ??
+              outletSetting?['serviceChargePercentage'] ??
+              5)
+          .toString(),
+    ) ?? 5.0;
+
+    final double taxAmount = subtotal * (taxPct / 100);
+    final double serviceAmount = subtotal * (servicePct / 100);
+    final double totalAmount = subtotal + taxAmount + serviceAmount;
 
     bytes += generator.row([
       PosColumn(text: 'Subtotal', width: 6, styles: regular),
-      PosColumn(text: 'Rp 75.000', width: 6, styles: right),
+      PosColumn(
+        text: CurrencyFormatter.format(subtotal.toInt()),
+        width: 6,
+        styles: right,
+      ),
     ]);
-    bytes += generator.row([
-      PosColumn(text: 'Diskon', width: 6, styles: regular),
-      PosColumn(text: '-Rp 5.000', width: 6, styles: right),
-    ]);
-    bytes += generator.row([
-      PosColumn(text: 'Pajak (PB1/PPN)', width: 6, styles: regular),
-      PosColumn(text: 'Rp 7.000', width: 6, styles: right),
-    ]);
-    bytes += generator.row([
-      PosColumn(text: 'Service Charge', width: 6, styles: regular),
-      PosColumn(text: 'Rp 3.500', width: 6, styles: right),
-    ]);
+
+    if (serviceAmount > 0) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Service Fee (${servicePct.toInt()}%)',
+          width: 7,
+          styles: regular,
+        ),
+        PosColumn(
+          text: CurrencyFormatter.format(serviceAmount.toInt()),
+          width: 5,
+          styles: right,
+        ),
+      ]);
+    }
+
+    if (taxAmount > 0) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Pajak PPN (${taxPct.toInt()}%)',
+          width: 7,
+          styles: regular,
+        ),
+        PosColumn(
+          text: CurrencyFormatter.format(taxAmount.toInt()),
+          width: 5,
+          styles: right,
+        ),
+      ]);
+    }
+
     bytes += generator.hr();
     bytes += generator.row([
       PosColumn(text: 'TOTAL', width: 6, styles: bold),
-      PosColumn(text: 'Rp 80.500', width: 6, styles: rightBold),
+      PosColumn(
+        text: CurrencyFormatter.format(totalAmount.toInt()),
+        width: 6,
+        styles: rightBold,
+      ),
     ]);
     bytes += generator.row([
-      PosColumn(text: 'Tunai', width: 6, styles: regular),
-      PosColumn(text: 'Rp 100.000', width: 6, styles: right),
+      PosColumn(text: 'Tunai (Pas)', width: 6, styles: regular),
+      PosColumn(
+        text: CurrencyFormatter.format(totalAmount.toInt()),
+        width: 6,
+        styles: right,
+      ),
     ]);
     bytes += generator.row([
       PosColumn(text: 'Kembalian', width: 6, styles: regular),
-      PosColumn(text: 'Rp 19.500', width: 6, styles: right),
+      PosColumn(text: 'Rp 0', width: 6, styles: right),
     ]);
 
+    // 9. Footer Notes Riil
+    final footerNote =
+        (outletSetting?['footer_notes']?.toString()) ??
+        (outletSetting?['footerNotes']?.toString()) ??
+        config.footerNote ??
+        'Terima kasih atas kunjungan Anda!';
+    bytes += generator.text(footerNote, styles: center);
+
+    bytes += generator.hr();
+
+    // 10. Diagnostik Teknis Hardware
     bytes += generator.text(
-      config.footerNote ?? 'Printer siap digunakan untuk transaksi!',
+      'DIAGNOSTIK HARDWARE PRINTER:',
+      styles: const PosStyles(
+        fontType: PosFontType.fontB,
+        bold: true,
+        align: PosAlign.center,
+      ),
+    );
+    bytes += generator.text('Lebar Kertas: ${config.paperSize.label}', styles: center);
+    bytes += generator.text('Tipe Koneksi: ${config.connectionType.label}', styles: center);
+    bytes += generator.text(
+      'Waktu Uji   : ${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())}',
       styles: center,
     );
 
@@ -317,6 +470,10 @@ class PrinterService {
 
     if (config.autoCut) {
       bytes += generator.cut();
+    }
+
+    if (config.openCashDrawer) {
+      bytes += [0x1B, 0x70, 0x00, 0x19, 0xFA]; // Pin 2 kick
     }
 
     return bytes;
@@ -668,8 +825,11 @@ class PrinterService {
 
   /// Eksekusi Test Print Multiplatform (Bluetooth, System Spooler OS, atau Network TCP)
   Future<({bool success, String message})> printTest(
-    PrinterConfig config,
-  ) async {
+    PrinterConfig config, {
+    Map<String, dynamic>? outletProfile,
+    Map<String, dynamic>? outletSetting,
+    Uint8List? logoBytes,
+  }) async {
     if (config.address.isEmpty &&
         (config.ipAddress == null || config.ipAddress!.isEmpty)) {
       return (
@@ -681,7 +841,12 @@ class PrinterService {
     // A. Mode SYSTEM (Windows / macOS Print Spooler)
     if (config.connectionType == PrinterConnectionType.system) {
       try {
-        final bytes = await generateTestReceiptBytes(config);
+        final bytes = await generateTestReceiptBytes(
+          config,
+          outletProfile: outletProfile,
+          outletSetting: outletSetting,
+          logoBytes: logoBytes,
+        );
         return await DesktopRawPrinter.printRawBytes(
           printerName: config.name,
           bytes: bytes,
@@ -696,7 +861,12 @@ class PrinterService {
     // B. Mode NETWORK (LAN / WiFi Socket TCP Port 9100)
     if (config.connectionType == PrinterConnectionType.network) {
       final ip = config.ipAddress ?? config.address;
-      final bytes = await generateTestReceiptBytes(config);
+      final bytes = await generateTestReceiptBytes(
+        config,
+        outletProfile: outletProfile,
+        outletSetting: outletSetting,
+        logoBytes: logoBytes,
+      );
       return await sendToNetworkPrinter(
         ipAddress: ip,
         port: config.port,
@@ -718,7 +888,12 @@ class PrinterService {
       );
     }
 
-    final bytes = await generateTestReceiptBytes(config);
+    final bytes = await generateTestReceiptBytes(
+      config,
+      outletProfile: outletProfile,
+      outletSetting: outletSetting,
+      logoBytes: logoBytes,
+    );
     final printSuccess = await _writeBluetoothBytesChunked(bytes);
 
     if (printSuccess) {

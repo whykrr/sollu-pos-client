@@ -14,6 +14,7 @@ import 'package:sollu_pos_client/features/auth/presentation/widgets/change_pin_d
 import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/widgets/device_unpair_dialog.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/window_service.dart';
 
@@ -89,6 +90,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final bool isDevMode = kDebugMode || AppConfig.appEnv == 'development';
     final bool showDeviceInfo = isDevMode || _showHiddenDeviceInfo;
+    final activeEmployee = ref.watch(activeEmployeeProvider);
+    final bool hasDevicePermission = activeEmployee != null &&
+        activeEmployee.hasPermission('setting.device');
 
     return Focus(
       focusNode: _focusNode,
@@ -417,6 +421,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
+                if (hasDevicePermission) ...[
+                  const Divider(height: 24),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: SolluColors.danger.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.link_off_rounded,
+                        color: SolluColors.danger,
+                      ),
+                    ),
+                    title: const Text(
+                      'Putuskan Sambungan Perangkat',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: SolluColors.danger,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Putus otorisasi API outlet dan reset data kasir lokal di perangkat ini',
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: SolluColors.danger,
+                    ),
+                    onTap: () => DeviceUnpairDialog.show(context),
+                  ),
+                ],
               ],
             ),
           ),
@@ -432,11 +467,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
 
     try {
-      // Sinkronisasi data karyawan
-      final employeeRepository = ref.read(employeeRepositoryProvider);
-      await employeeRepository.syncEmployees();
-
-      // Sinkronisasi data master (Produk, Inventory, dll)
+      // Sinkronisasi data master (Produk, Inventory, Karyawan, dll)
       final syncRepository = ref.read(syncRepositoryProvider);
       await syncRepository.syncMasterData();
 

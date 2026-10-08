@@ -9,6 +9,8 @@ class Products extends Table {
   TextColumn get barcode => text().nullable()();
   RealColumn get price => real()();
   BoolColumn get isAvailable => boolean().withDefault(const Constant(true))();
+  TextColumn get productType => text().withDefault(const Constant('basic'))();
+  TextColumn get unit => text().withDefault(const Constant('Pcs'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -112,6 +114,7 @@ class Inventories extends Table {
   RealColumn get stock => real().withDefault(
     const Constant(0.0),
   )(); // Saldo dari inventory_balances
+  TextColumn get unit => text().withDefault(const Constant('Pcs'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -130,7 +133,6 @@ class PaymentMethods extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-
 @DataClassName('Employee')
 class Employees extends Table {
   TextColumn get id => text()(); // UUID
@@ -139,6 +141,8 @@ class Employees extends Table {
   TextColumn get pin => text().nullable()();
   TextColumn get photo => text().nullable()();
   TextColumn get role => text().nullable()();
+  TextColumn get permissions => text().nullable()();
+  BoolColumn get isRootUser => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

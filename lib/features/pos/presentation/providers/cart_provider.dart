@@ -49,6 +49,7 @@ class CartItem {
   }
 
   CartItem copyWith({
+    double? price,
     int? qty,
     String? discountType,
     double? discountValue,
@@ -61,7 +62,7 @@ class CartItem {
       inventoryItemId: inventoryItemId,
       variantGroupOptionId: variantGroupOptionId ?? this.variantGroupOptionId,
       name: name,
-      price: price,
+      price: price ?? this.price,
       qty: qty ?? this.qty,
       discountType: discountType ?? this.discountType,
       discountValue: discountValue ?? this.discountValue,
@@ -157,6 +158,18 @@ class CartNotifier extends Notifier<List<CartItem>> {
     state = newState;
   }
 
+  void updatePrice(String id, double newPrice) {
+    final newState = <CartItem>[];
+    for (final item in state) {
+      if (item.id == id) {
+        newState.add(item.copyWith(price: newPrice));
+      } else {
+        newState.add(item);
+      }
+    }
+    state = newState;
+  }
+
   void removeItem(String id) {
     state = state.where((item) => item.id != id).toList();
   }
@@ -169,3 +182,20 @@ class CartNotifier extends Notifier<List<CartItem>> {
 final cartProvider = NotifierProvider<CartNotifier, List<CartItem>>(
   CartNotifier.new,
 );
+
+class SelectedCartIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  // Setter publik agar pemanggilan ref.read(selectedCartIndexProvider.notifier).state = ... tetap valid
+  @override
+  set state(int value) => super.state = value;
+
+  void select(int index) => state = index;
+}
+
+final selectedCartIndexProvider =
+    NotifierProvider<SelectedCartIndexNotifier, int>(
+  SelectedCartIndexNotifier.new,
+);
+

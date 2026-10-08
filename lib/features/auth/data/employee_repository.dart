@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import '../../../core/network/dio_client.dart';
@@ -22,6 +23,17 @@ class EmployeeRepository {
 
           // Insert new employees
           for (final item in data) {
+            final rawPerms = item['permissions'];
+            final String? permsJson = rawPerms is List
+                ? jsonEncode(rawPerms)
+                : (rawPerms is String ? rawPerms : null);
+            final bool isRoot =
+                item['is_root_user'] == true ||
+                item['is_root_user'] == 1 ||
+                item['role'] == 'Akun Utama';
+            final String role =
+                item['role'] ?? (isRoot ? 'Akun Utama' : 'Kasir');
+
             await _database
                 .into(_database.employees)
                 .insert(
@@ -31,7 +43,9 @@ class EmployeeRepository {
                     email: Value(item['email']),
                     pin: Value(item['pin']),
                     photo: Value(item['photo']),
-                    role: Value(item['role']),
+                    role: Value(role),
+                    permissions: Value(permsJson),
+                    isRootUser: Value(isRoot),
                   ),
                 );
           }

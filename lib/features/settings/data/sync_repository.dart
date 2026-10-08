@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -25,6 +26,7 @@ class SyncRepository {
         final List<dynamic> products = data['products'] ?? [];
         final List<dynamic> productPrices = data['product_prices'] ?? [];
         final List<dynamic> paymentMethods = data['payment_methods'] ?? [];
+        final List<dynamic> rawEmployees = data['employees'] ?? [];
         final List<dynamic> outletSettings = data['outlet_settings'] ?? [];
         final List<dynamic> outletProducts = data['outlet_products'] ?? [];
         final List<dynamic> inventoryItems = data['inventory_items'] ?? [];
@@ -44,11 +46,6 @@ class SyncRepository {
             data['inventory_item_variant_group_options'] ?? [];
         final List<dynamic> promos = data['promos'] ?? [];
         final List<dynamic> customers = data['customers'] ?? [];
-        final List<dynamic> transactions = data['transactions'] ?? [];
-        final List<dynamic> transactionItems = data['transaction_items'] ?? [];
-        final List<dynamic> transactionItemModifiers = data['transaction_item_modifiers'] ?? [];
-        final List<dynamic> transactionPayments = data['transaction_payments'] ?? [];
-        final List<dynamic> transactionPromos = data['transaction_promos'] ?? [];
 
         // Helper map to quickly find price by product_id
         final Map<String, double> priceMap = {};
@@ -104,7 +101,8 @@ class SyncRepository {
         };
 
         final existingOutletProfile = _outletSettingsService.getOutletProfile();
-        final String? existingLocalLogoPath = existingOutletProfile?['local_logo_path']?.toString();
+        final String? existingLocalLogoPath =
+            existingOutletProfile?['local_logo_path']?.toString();
 
         await _database.transaction(() async {
           // Clear old data (order matters due to foreign keys)
@@ -121,13 +119,8 @@ class SyncRepository {
           await _database.delete(_database.products).go();
           await _database.delete(_database.productCategories).go();
           await _database.delete(_database.paymentMethods).go();
-                    await _database.delete(_database.promos).go();
+          await _database.delete(_database.promos).go();
           await _database.delete(_database.customers).go();
-          await _database.delete(_database.transactionItemModifiers).go();
-          await _database.delete(_database.transactionItems).go();
-          await _database.delete(_database.transactionPayments).go();
-          await _database.delete(_database.transactionPromos).go();
-          await _database.delete(_database.transactions).go();
 
           // Insert Products
           for (final item in products) {
@@ -156,6 +149,14 @@ class SyncRepository {
                     barcode: Value(item['barcode']),
                     price: priceMap[productId] ?? 0.0,
                     isAvailable: Value(isAvailable),
+                    productType: Value(
+                      item['product_type']?.toString() ?? 'basic',
+                    ),
+                    unit: Value(
+                      item['unit']?.toString() ??
+                          item['uom']?.toString() ??
+                          'Pcs',
+                    ),
                   ),
                 );
           }
@@ -182,6 +183,38 @@ class SyncRepository {
                     ),
                   ),
                 );
+          }
+
+          // Insert Employees if provided in initial master data
+          if (rawEmployees.isNotEmpty) {
+            await _database.delete(_database.employees).go();
+            for (final emp in rawEmployees) {
+              final rawPerms = emp['permissions'];
+              final String? permsJson = rawPerms is List
+                  ? jsonEncode(rawPerms)
+                  : (rawPerms is String ? rawPerms : null);
+              final bool isRoot =
+                  emp['is_root_user'] == true ||
+                  emp['is_root_user'] == 1 ||
+                  emp['role'] == 'Akun Utama';
+              final String role =
+                  emp['role'] ?? (isRoot ? 'Akun Utama' : 'Kasir');
+
+              await _database
+                  .into(_database.employees)
+                  .insert(
+                    EmployeesCompanion.insert(
+                      id: emp['id'],
+                      name: emp['name'],
+                      email: Value(emp['email']),
+                      pin: Value(emp['pin']),
+                      photo: Value(emp['photo']),
+                      role: Value(role),
+                      permissions: Value(permsJson),
+                      isRootUser: Value(isRoot),
+                    ),
+                  );
+            }
           }
 
           // Insert Outlet Settings
@@ -347,7 +380,7 @@ class SyncRepository {
             outletData['local_logo_path'] = localLogoPath;
           }
           await _outletSettingsService.saveOutletProfile(outletData);
-          
+
           final settingsToSave = {
             'taxPercentage': parsedTax,
             'serviceChargePercentage': parsedService,
@@ -404,6 +437,11 @@ class SyncRepository {
                     ),
                     isActive: Value(isInvActive),
                     stock: Value(stockByItemId[itemId] ?? 0.0),
+                    unit: Value(
+                      item['unit']?.toString() ??
+                          item['uom']?.toString() ??
+                          'Pcs',
+                    ),
                   ),
                 );
           }
@@ -575,101 +613,6 @@ class SyncRepository {
                     phone: Value(item['phone'] ?? item['phone_number']),
                     email: Value(item['email']),
                     code: Value(item['code'] ?? item['customer_code']),
-                  ),
-                );
-          }
-
-          // Insert Transactions
-          for (final item in transactions) {
-            await _database.into(_database.transactions).insert(
-                  TransactionsCompanion.insert(
-                    id: item['id'],
-                    outletId: item['outlet_id'],
-                    shiftId: Value(item['shift_id']),
-                    customerId: Value(item['customer_id']),
-                    channel: Value(item['channel']?.toString() ?? 'pos'),
-                    transactionNumber: item['transaction_number'] ?? item['receipt_number'] ?? '',
-                    subtotal: double.tryParse(item['subtotal']?.toString() ?? '0') ?? 0.0,
-                    discountAmount: Value(double.tryParse(item['discount_amount']?.toString() ?? '0') ?? 0.0),
-                    discountType: Value(item['discount_type']?.toString()),
-                    discountValue: Value(item['discount_value'] != null ? double.tryParse(item['discount_value'].toString()) : null),
-                    promoName: Value(item['promo_name']?.toString()),
-                    taxAmount: Value(double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0),
-                    serviceChargeAmount: Value(double.tryParse(item['service_charge_amount']?.toString() ?? '0') ?? 0.0),
-                    shippingFee: Value(double.tryParse(item['shipping_fee']?.toString() ?? '0') ?? 0.0),
-                    total: double.tryParse(item['total']?.toString() ?? '0') ?? 0.0,
-                    paymentStatus: item['payment_status']?.toString() ?? 'unpaid',
-                    status: item['status']?.toString() ?? 'completed',
-                    notes: Value(item['notes']?.toString()),
-                    isOffline: const Value(false),
-                    offlineId: Value(item['offline_id']),
-                    createdAt: Value(item['created_at'] != null ? (DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now()) : DateTime.now()),
-                    updatedAt: Value<DateTime?>(item['updated_at'] != null ? DateTime.tryParse(item['updated_at'].toString()) : null),
-                  ),
-                );
-          }
-
-          for (final item in transactionItems) {
-            await _database.into(_database.transactionItems).insert(
-                  TransactionItemsCompanion.insert(
-                    id: item['id'],
-                    transactionId: item['transaction_id'],
-                    productId: Value(item['product_id']),
-                    inventoryItemId: Value(item['inventory_item_id']),
-                    variantGroupOptionId: Value(item['variant_group_option_id']),
-                    productName: item['product_name'] ?? item['name'] ?? '',
-                    price: double.tryParse(item['price']?.toString() ?? '0') ?? 0.0,
-                    qty: double.tryParse(item['qty']?.toString() ?? '0') ?? 0.0,
-                    discountType: Value(item['discount_type']?.toString()),
-                    discountValue: Value(item['discount_value'] != null ? double.tryParse(item['discount_value'].toString()) : null),
-                    discountAmount: Value(double.tryParse(item['discount_amount']?.toString() ?? '0') ?? 0.0),
-                    promoName: Value(item['promo_name']?.toString()),
-                    subtotal: double.tryParse(item['subtotal']?.toString() ?? '0') ?? 0.0,
-                    notes: Value(item['notes']?.toString()),
-                    createdAt: Value(item['created_at'] != null ? (DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now()) : DateTime.now()),
-                  ),
-                );
-          }
-
-          for (final item in transactionItemModifiers) {
-            await _database.into(_database.transactionItemModifiers).insert(
-                  TransactionItemModifiersCompanion.insert(
-                    id: item['id'],
-                    transactionItemId: item['transaction_item_id'],
-                    modifierOptionId: Value(item['modifier_option_id']),
-                    modifierName: item['modifier_name'] ?? item['name'] ?? '',
-                    price: Value(double.tryParse(item['price']?.toString() ?? '0') ?? 0.0),
-                    qty: Value(double.tryParse(item['qty']?.toString() ?? '1') ?? 1.0),
-                  ),
-                );
-          }
-
-          for (final item in transactionPayments) {
-            await _database.into(_database.transactionPayments).insert(
-                  TransactionPaymentsCompanion.insert(
-                    id: item['id'],
-                    transactionId: item['transaction_id'],
-                    paymentMethodId: Value(item['payment_method_id']),
-                    amount: double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0,
-                    changeAmount: Value(double.tryParse(item['change_amount']?.toString() ?? '0') ?? 0.0),
-                    paymentReference: Value(item['payment_reference']?.toString()),
-                    paidAt: Value(item['paid_at'] != null ? (DateTime.tryParse(item['paid_at'].toString()) ?? DateTime.now()) : DateTime.now()),
-                  ),
-                );
-          }
-
-          for (final item in transactionPromos) {
-            await _database.into(_database.transactionPromos).insert(
-                  TransactionPromosCompanion.insert(
-                    id: item['id'],
-                    transactionId: item['transaction_id'],
-                    promoId: Value(item['promo_id']),
-                    promoName: item['promo_name'] ?? '',
-                    promoCode: Value(item['promo_code']?.toString()),
-                    discountType: item['discount_type'] ?? 'fixed',
-                    discountValue: Value(double.tryParse(item['discount_value']?.toString() ?? '0') ?? 0.0),
-                    discountAmount: Value(double.tryParse(item['discount_amount']?.toString() ?? '0') ?? 0.0),
-                    createdAt: Value(item['created_at'] != null ? (DateTime.tryParse(item['created_at'].toString()) ?? DateTime.now()) : DateTime.now()),
                   ),
                 );
           }

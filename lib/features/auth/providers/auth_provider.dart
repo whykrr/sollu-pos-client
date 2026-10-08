@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/database/database_provider.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/providers/auto_sync_provider.dart';
 import '../../../core/services/device_info_service.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../data/auth_repository.dart';
@@ -24,8 +26,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final dioClient = ref.watch(dioClientProvider);
   final deviceInfoService = ref.watch(deviceInfoServiceProvider);
   final secureStorage = ref.watch(secureStorageProvider);
+  final database = ref.watch(databaseProvider);
 
-  return AuthRepository(dioClient, deviceInfoService, secureStorage);
+  return AuthRepository(
+    dioClient,
+    deviceInfoService,
+    secureStorage,
+    database,
+  );
 });
 
 // --- State Management ---
@@ -71,6 +79,8 @@ class AuthNotifier extends Notifier<AuthState> {
       final success = await repo.connectDevice(otp);
       if (success) {
         state = AuthState.authenticated;
+        // Panggil endpoint initial data
+        ref.read(autoSyncProvider.notifier).forceSync();
       } else {
         errorMessage = 'Failed to connect. Please try again.';
         state = AuthState.error;
@@ -85,6 +95,25 @@ class AuthNotifier extends Notifier<AuthState> {
     final repo = ref.read(authRepositoryProvider);
     await repo.disconnect();
     state = AuthState.unauthenticated;
+  }
+
+  Future<void> unpairDevice({String? userId}) async {
+    state = AuthState.loading;
+    errorMessage = null;
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final success = await repo.unpairDevice(userId: userId);
+      if (success) {
+        state = AuthState.unauthenticated;
+      } else {
+        errorMessage = 'Gagal memutuskan sambungan perangkat.';
+        state = AuthState.error;
+      }
+    } catch (e) {
+      errorMessage = e.toString().replaceFirst('Exception: ', '');
+      state = AuthState.error;
+      rethrow;
+    }
   }
 }
 

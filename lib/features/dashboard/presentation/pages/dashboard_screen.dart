@@ -155,9 +155,50 @@ class DashboardScreen extends ConsumerWidget {
                                     ),
                                     tooltip: 'Keluar',
                                     onPressed: () {
-                                      ref
-                                          .read(activeEmployeeProvider.notifier)
-                                          .logout();
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          title: const Row(
+                                            children: [
+                                              Icon(Icons.logout, color: SolluColors.danger),
+                                              SizedBox(width: 8),
+                                              Text('Keluar Sesi Kasir', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                            ],
+                                          ),
+                                          content: const Text(
+                                            'Apakah Anda yakin ingin keluar dari sesi ini? Anda perlu memasukkan PIN kembali untuk masuk.',
+                                            style: TextStyle(color: SolluColors.textMuted, fontSize: 14),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(context).pop(),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: SolluColors.textMuted,
+                                                minimumSize: const Size(80, 48), // tap target 48x48
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              child: const Text('Batal'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                                ref.read(activeEmployeeProvider.notifier).logout();
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: SolluColors.danger,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                minimumSize: const Size(80, 48), // tap target 48x48
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              child: const Text('Keluar', style: TextStyle(fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
                                     },
                                   ),
                                 ],
@@ -170,44 +211,48 @@ class DashboardScreen extends ConsumerWidget {
                 // Main Content Cards
                 Expanded(
                   child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _DashboardCard(
-                          title: 'Kasir',
-                          subtitle: 'Buka menu POS & transaksi tunai',
-                          icon: Icons.point_of_sale,
-                          color: SolluColors.primary,
-                          onTap: () => _handleMenuClick(context, ref, '/pos'),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 24,
+                          runSpacing: 24,
+                          children: [
+                            _DashboardCard(
+                              title: 'Kasir',
+                              subtitle: 'Buka menu POS & transaksi tunai',
+                              icon: Icons.point_of_sale,
+                              color: SolluColors.primary,
+                              onTap: () => _handleMenuClick(context, ref, '/pos'),
+                            ),
+                            _DashboardCard(
+                              title: 'Data Produk',
+                              subtitle: 'Katalog & stok semua produk',
+                              icon: Icons.inventory_2,
+                              color: SolluColors.success,
+                              onTap: () =>
+                                  _handleMenuClick(context, ref, '/products'),
+                            ),
+                            _DashboardCard(
+                              title: 'Transaksi',
+                              subtitle: 'Lihat daftar & riwayat pesanan',
+                              icon: Icons.receipt_long,
+                              color: SolluColors.secondary,
+                              onTap: () =>
+                                  _handleMenuClick(context, ref, '/history'),
+                            ),
+                            _DashboardCard(
+                              title: 'Pengaturan',
+                              subtitle: 'Konfigurasi printer & struk',
+                              icon: Icons.settings,
+                              color: Colors.orange,
+                              onTap: () =>
+                                  _handleMenuClick(context, ref, '/settings'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 24),
-                        _DashboardCard(
-                          title: 'Data Produk',
-                          subtitle: 'Katalog & stok semua produk',
-                          icon: Icons.inventory_2,
-                          color: SolluColors.success,
-                          onTap: () =>
-                              _handleMenuClick(context, ref, '/products'),
-                        ),
-                        const SizedBox(width: 24),
-                        _DashboardCard(
-                          title: 'Transaksi',
-                          subtitle: 'Lihat daftar & riwayat pesanan',
-                          icon: Icons.receipt_long,
-                          color: SolluColors.secondary,
-                          onTap: () =>
-                              _handleMenuClick(context, ref, '/history'),
-                        ),
-                        const SizedBox(width: 24),
-                        _DashboardCard(
-                          title: 'Pengaturan',
-                          subtitle: 'Konfigurasi printer & struk',
-                          icon: Icons.settings,
-                          color: Colors.orange,
-                          onTap: () =>
-                              _handleMenuClick(context, ref, '/settings'),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

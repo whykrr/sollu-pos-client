@@ -13,7 +13,12 @@ class CategorySidebar extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          right: BorderSide(color: SolluColors.neutral, width: 1.5),
+        ),
+      ),
       child: categoriesAsync.when(
         data: (categories) {
           final rootCategories = categories
