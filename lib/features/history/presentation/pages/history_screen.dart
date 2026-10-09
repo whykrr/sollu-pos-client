@@ -239,12 +239,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                       ),
                                     ),
                                     if (tx.isOffline)
-                                      const Text(
-                                        'Status: Tersimpan Lokal (Offline)',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: SolluColors.secondaryDark,
-                                          fontWeight: FontWeight.bold,
+                                      Flexible(
+                                        child: Text(
+                                          tx.syncStatus == 'failed'
+                                              ? 'Gagal: ${tx.lastSyncError ?? "Server menolak"}'
+                                              : 'Status: Menunggu Sinkronisasi',
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: tx.syncStatus == 'failed'
+                                                ? SolluColors.danger
+                                                : SolluColors.secondaryDark,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       )
                                     else
@@ -283,6 +290,40 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
             ),
             actions: [
+              if (detailAsync.asData?.value?.transaction.isOffline == true)
+                TextButton.icon(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Menyinkronkan transaksi ke server...'),
+                        duration: Duration(seconds: 1),
+                        backgroundColor: SolluColors.primary,
+                      ),
+                    );
+
+                    final success = await ref
+                        .read(transactionRepositoryProvider)
+                        .retryTransaction(transactionId);
+
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Transaksi berhasil disinkronkan ke server!'
+                              : 'Gagal sinkronisasi. Periksa koneksi atau detail error.',
+                        ),
+                        backgroundColor: success
+                            ? SolluColors.success
+                            : SolluColors.danger,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.sync, size: 16),
+                  label: const Text('Sinkron Ulang'),
+                ),
               OutlinedButton.icon(
                 onPressed: () async {
                   Navigator.of(ctx).pop();
@@ -477,7 +518,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     );
                   },
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (err, st) => const SizedBox.shrink(),
                 );
               },
             ),
@@ -917,7 +958,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (err, st) => const SizedBox.shrink(),
             ),
           ],
         ),

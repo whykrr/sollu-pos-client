@@ -57,13 +57,25 @@ final currentShiftTransactionsProvider = StreamProvider<List<Transaction>>((
   );
 });
 
+/// Stream jumlah transaksi yang gagal disinkronkan (Dead-Letter Queue)
+final failedTransactionsCountProvider = StreamProvider<int>((ref) {
+  final repository = ref.watch(transactionRepositoryProvider);
+  return repository.watchFailedTransactionsCount();
+});
+
 /// Filter pencarian riwayat transaksi
 class TransactionFilterState {
   final String query;
   final DateTime? date;
   final String? channel;
+  final String? syncStatus;
 
-  const TransactionFilterState({this.query = '', this.date, this.channel});
+  const TransactionFilterState({
+    this.query = '',
+    this.date,
+    this.channel,
+    this.syncStatus,
+  });
 
   TransactionFilterState copyWith({
     String? query,
@@ -71,11 +83,14 @@ class TransactionFilterState {
     bool clearDate = false,
     String? channel,
     bool clearChannel = false,
+    String? syncStatus,
+    bool clearSyncStatus = false,
   }) {
     return TransactionFilterState(
       query: query ?? this.query,
       date: clearDate ? null : (date ?? this.date),
       channel: clearChannel ? null : (channel ?? this.channel),
+      syncStatus: clearSyncStatus ? null : (syncStatus ?? this.syncStatus),
     );
   }
 }
@@ -103,6 +118,14 @@ class TransactionFilterNotifier extends Notifier<TransactionFilterState> {
       state = state.copyWith(channel: channel);
     }
   }
+
+  void setSyncStatus(String? syncStatus) {
+    if (syncStatus == null || syncStatus.isEmpty) {
+      state = state.copyWith(clearSyncStatus: true);
+    } else {
+      state = state.copyWith(syncStatus: syncStatus);
+    }
+  }
 }
 
 final transactionFilterProvider =
@@ -110,7 +133,7 @@ final transactionFilterProvider =
       TransactionFilterNotifier.new,
     );
 
-/// Stream seluruh transaksi dengan filter pencarian dan tanggal
+/// Stream seluruh transaksi dengan filter pencarian, tanggal, dan status sinkronisasi
 final allTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final repository = ref.watch(transactionRepositoryProvider);
   final filter = ref.watch(transactionFilterProvider);
@@ -119,6 +142,7 @@ final allTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
     searchQuery: filter.query.trim().isEmpty ? null : filter.query.trim(),
     date: filter.date,
     channel: filter.channel,
+    syncStatus: filter.syncStatus,
   );
 });
 

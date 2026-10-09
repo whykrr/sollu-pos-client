@@ -70,6 +70,11 @@ class Transactions extends Table {
   // Offline Sync
   BoolColumn get isOffline => boolean().withDefault(const Constant(true))();
   TextColumn get offlineId => text().nullable()();
+  TextColumn get syncStatus =>
+      text().withDefault(const Constant('pending'))(); // 'pending', 'syncing', 'synced', 'failed'
+  IntColumn get syncAttempts => integer().withDefault(const Constant(0))();
+  TextColumn get lastSyncError => text().nullable()();
+  DateTimeColumn get lastSyncAttemptAt => dateTime().nullable()();
   DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().nullable()();

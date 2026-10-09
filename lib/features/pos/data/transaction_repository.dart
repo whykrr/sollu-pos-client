@@ -1,10 +1,37 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/enums/transaction_enums.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../presentation/providers/cart_provider.dart';
+
+enum SyncOutcome {
+  success,
+  networkOffline,
+  serverError,
+}
+
+class SyncResult {
+  final SyncOutcome outcome;
+  final String? errorMessage;
+  final int? statusCode;
+
+  const SyncResult.success()
+      : outcome = SyncOutcome.success,
+        errorMessage = null,
+        statusCode = 200;
+
+  const SyncResult.networkOffline([this.errorMessage])
+      : outcome = SyncOutcome.networkOffline,
+        statusCode = null;
+
+  const SyncResult.serverError(this.statusCode, this.errorMessage)
+      : outcome = SyncOutcome.serverError;
+}
 
 class TransactionDetailData {
   final Transaction transaction;
@@ -93,11 +120,13 @@ class TransactionRepository {
               serviceChargeAmount: Value(serviceChargeAmount),
               shippingFee: const Value(0.0),
               total: total,
-              paymentStatus: 'paid',
-              status: 'completed',
+              paymentStatus: TransactionPaymentStatus.paid.value,
+              status: TransactionStatus.completed.value,
               notes: Value(notes),
               isOffline: const Value(true),
               offlineId: Value(txId),
+              syncStatus: const Value('pending'),
+              syncAttempts: const Value(0),
               createdAt: Value(now),
             ),
           );
@@ -420,8 +449,8 @@ class TransactionRepository {
     });
   }
 
-  /// Sinkronisasi transaksi ke API backend Laravel
-  Future<bool> _syncTransactionOnline({
+  /// Sinkronisasi transaksi ke API backend Laravel dengan deteksi status & fallback
+  Future<SyncResult> _syncTransactionOnline({
     required String txId,
     required String txNumber,
     String? shiftId,
@@ -441,6 +470,14 @@ class TransactionRepository {
     required double changeAmount,
     String? notes,
   }) async {
+    final now = DateTime.now();
+    await (_database.update(_database.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .write(TransactionsCompanion(
+          syncStatus: const Value('syncing'),
+          lastSyncAttemptAt: Value(now),
+        ));
+
     try {
       final response = await _dioClient.dio.post(
         ApiEndpoints.transactions,
@@ -457,8 +494,8 @@ class TransactionRepository {
           'tax_amount': taxAmount,
           'service_charge_amount': serviceChargeAmount,
           'total': total,
-          'payment_status': 'paid',
-          'status': 'completed',
+          'payment_status': TransactionPaymentStatus.paid.value,
+          'status': TransactionStatus.completed.value,
           'notes': notes,
           'items': itemsPayload,
           'payments': [
@@ -485,13 +522,90 @@ class TransactionRepository {
         // Tandai transaksi lokal sebagai tersinkronisasi
         await (_database.update(_database.transactions)
               ..where((t) => t.id.equals(txId)))
-            .write(const TransactionsCompanion(isOffline: Value(false)));
-        return true;
+            .write(const TransactionsCompanion(
+              isOffline: Value(false),
+              syncStatus: Value('synced'),
+              lastSyncError: Value(null),
+            ));
+        return const SyncResult.success();
       }
-      return false;
+
+      final err = 'Server mengembalikan status ${response.statusCode}';
+      await _recordSyncFailure(txId: txId, error: err, statusCode: response.statusCode);
+      return SyncResult.serverError(response.statusCode, err);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError ||
+          e.error is SocketException) {
+        // Transient network offline: jangan jadikan failed permanen
+        await (_database.update(_database.transactions)
+              ..where((t) => t.id.equals(txId)))
+            .write(const TransactionsCompanion(syncStatus: Value('pending')));
+        return SyncResult.networkOffline(e.message);
+      }
+
+      final statusCode = e.response?.statusCode ?? 500;
+      String errorMessage = 'Error $statusCode';
+      if (e.response?.data is Map) {
+        final data = e.response!.data as Map;
+        errorMessage = data['message']?.toString() ??
+            data['error']?.toString() ??
+            'Error $statusCode: ${e.response?.statusMessage}';
+      } else if (e.response?.statusMessage != null) {
+        errorMessage = 'Error $statusCode: ${e.response?.statusMessage}';
+      } else {
+        errorMessage = e.message ?? 'Unknown server error';
+      }
+
+      await _recordSyncFailure(txId: txId, error: errorMessage, statusCode: statusCode);
+      _logErrorToBackend(txNumber: txNumber, error: errorMessage, statusCode: statusCode);
+      return SyncResult.serverError(statusCode, errorMessage);
+    } catch (e) {
+      final err = e.toString();
+      await _recordSyncFailure(txId: txId, error: err, statusCode: 500);
+      return SyncResult.serverError(500, err);
+    }
+  }
+
+  Future<void> _recordSyncFailure({
+    required String txId,
+    required String error,
+    int? statusCode,
+  }) async {
+    final tx = await (_database.select(_database.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .getSingleOrNull();
+    final currentAttempts = (tx?.syncAttempts ?? 0) + 1;
+    final isPermanentFailure = statusCode == 422 || currentAttempts >= 3;
+
+    await (_database.update(_database.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .write(TransactionsCompanion(
+          syncStatus: Value(isPermanentFailure ? 'failed' : 'pending'),
+          syncAttempts: Value(currentAttempts),
+          lastSyncError: Value(error),
+          lastSyncAttemptAt: Value(DateTime.now()),
+        ));
+  }
+
+  Future<void> _logErrorToBackend({
+    required String txNumber,
+    required String error,
+    int? statusCode,
+  }) async {
+    try {
+      await _dioClient.dio.post(
+        ApiEndpoints.logsError,
+        data: {
+          'error': 'Gagal sinkronisasi transaksi $txNumber (HTTP $statusCode): $error',
+          'app_version': '1.0.0',
+          'device_info': {'transaction_number': txNumber, 'status_code': statusCode},
+        },
+      );
     } catch (_) {
-      // Jika offline, data transaksi tetap aman tersimpan di SQLite lokal
-      return false;
+      // Ignore background diagnostic logging failure
     }
   }
 
@@ -524,13 +638,37 @@ class TransactionRepository {
     )..where((t) => t.isOffline.equals(true))).get();
   }
 
-  /// Mencoba menyinkronkan seluruh transaksi yang pending
-  Future<int> syncPendingTransactions({bool force = false}) async {
-    final unsynced = await getUnsyncedTransactions();
-    if (unsynced.isEmpty) return 0;
+  /// Mendapatkan daftar transaksi yang gagal sinkron (Dead-Letter Queue)
+  Future<List<Transaction>> getFailedTransactions() async {
+    return await (_database.select(
+      _database.transactions,
+    )..where((t) => t.isOffline.equals(true) & t.syncStatus.equals('failed'))).get();
+  }
 
-    // Syarat sinkronisasi: jika lebih dari 10 atau dipaksa
-    if (!force && unsynced.length <= 10) return 0;
+  /// Memantau jumlah transaksi yang gagal sinkron secara realtime
+  Stream<int> watchFailedTransactionsCount() {
+    return (_database.select(_database.transactions)
+          ..where((t) => t.isOffline.equals(true) & t.syncStatus.equals('failed')))
+        .watch()
+        .map((rows) => rows.length);
+  }
+
+  /// Mencoba menyinkronkan seluruh transaksi yang pending (Anti Head-of-Line Blocking)
+  Future<int> syncPendingTransactions({bool force = false}) async {
+    final unsynced = await (_database.select(_database.transactions)
+          ..where((t) {
+            final isOfflineMatch = t.isOffline.equals(true);
+            if (force) {
+              return isOfflineMatch;
+            }
+            return isOfflineMatch & t.syncStatus.isNotValue('failed');
+          })
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+          ]))
+        .get();
+
+    if (unsynced.isEmpty) return 0;
 
     int successCount = 0;
     for (final tx in unsynced) {
@@ -571,7 +709,7 @@ class TransactionRepository {
           : null;
       if (payment == null) continue;
 
-      final success = await _syncTransactionOnline(
+      final result = await _syncTransactionOnline(
         txId: tx.id,
         txNumber: tx.transactionNumber,
         shiftId: tx.shiftId,
@@ -592,14 +730,87 @@ class TransactionRepository {
         notes: tx.notes,
       );
 
-      if (success) {
+      if (result.outcome == SyncOutcome.success) {
         successCount++;
-      } else {
-        // Jika satu gagal, asumsi sedang offline, hentikan antrean
+      } else if (result.outcome == SyncOutcome.networkOffline) {
+        // Hentikan pemrosesan batch saat jaringan offline
         break;
+      } else {
+        // Anti Head-of-Line Blocking:
+        // Jika server menolak transaksi ini (422/500), lanjutkan ke transaksi berikutnya!
+        continue;
       }
     }
     return successCount;
+  }
+
+  /// Manual retry untuk transaksi tertentu yang sebelumnya gagal sinkron
+  Future<bool> retryTransaction(String transactionId) async {
+    await (_database.update(_database.transactions)
+          ..where((t) => t.id.equals(transactionId)))
+        .write(const TransactionsCompanion(
+          syncStatus: Value('pending'),
+          syncAttempts: Value(0),
+        ));
+
+    final details = await getTransactionDetails(transactionId);
+    if (details == null) return false;
+
+    final tx = details.transaction;
+    final itemsPayload = <Map<String, dynamic>>[];
+    for (final item in details.items) {
+      final mods = details.modifiersByItemId[item.id] ?? [];
+      final modPayload = mods
+          .map(
+            (m) => {
+              'modifier_option_id': null,
+              'modifier_name': m.modifierName,
+              'price': m.price,
+              'qty': m.qty,
+            },
+          )
+          .toList();
+
+      itemsPayload.add({
+        'product_id': item.productId,
+        'inventory_item_id': item.inventoryItemId,
+        'variant_group_option_id': item.variantGroupOptionId,
+        'product_name': item.productName,
+        'price': item.price,
+        'qty': item.qty,
+        'discount_type': item.discountType,
+        'discount_value': item.discountValue,
+        'discount_amount': item.discountAmount,
+        'subtotal': item.subtotal,
+        'modifiers': modPayload,
+      });
+    }
+
+    final payment = details.payments.isNotEmpty ? details.payments.first : null;
+    if (payment == null) return false;
+
+    final result = await _syncTransactionOnline(
+      txId: tx.id,
+      txNumber: tx.transactionNumber,
+      shiftId: tx.shiftId,
+      customerId: tx.customerId,
+      subtotal: tx.subtotal,
+      discountAmount: tx.discountAmount,
+      discountType: tx.discountType,
+      discountValue: tx.discountValue,
+      promoName: tx.promoName,
+      promoId: details.promo?.promoId,
+      taxAmount: tx.taxAmount,
+      serviceChargeAmount: tx.serviceChargeAmount,
+      total: tx.total,
+      itemsPayload: itemsPayload,
+      paymentMethodId: payment.paymentMethodId ?? 'cash',
+      paymentAmount: payment.amount,
+      changeAmount: payment.changeAmount,
+      notes: tx.notes,
+    );
+
+    return result.outcome == SyncOutcome.success;
   }
 
   /// Memantau transaksi pada shift yang sedang aktif
@@ -618,6 +829,7 @@ class TransactionRepository {
     String? searchQuery,
     DateTime? date,
     String? channel,
+    String? syncStatus,
   }) {
     return (_database.select(_database.transactions)
           ..where((t) {
@@ -643,6 +855,15 @@ class TransactionRepository {
             }
             if (channel != null && channel.isNotEmpty) {
               predicate = predicate & t.channel.equals(channel);
+            }
+            if (syncStatus != null && syncStatus.isNotEmpty) {
+              if (syncStatus == 'synced') {
+                predicate = predicate & t.isOffline.equals(false);
+              } else if (syncStatus == 'failed') {
+                predicate = predicate & t.syncStatus.equals('failed');
+              } else if (syncStatus == 'pending') {
+                predicate = predicate & t.isOffline.equals(true) & t.syncStatus.isNotValue('failed');
+              }
             }
             return predicate;
           })

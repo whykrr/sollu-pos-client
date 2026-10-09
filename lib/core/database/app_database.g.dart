@@ -5275,6 +5275,53 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _syncAttemptsMeta = const VerificationMeta(
+    'syncAttempts',
+  );
+  @override
+  late final GeneratedColumn<int> syncAttempts = GeneratedColumn<int>(
+    'sync_attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastSyncErrorMeta = const VerificationMeta(
+    'lastSyncError',
+  );
+  @override
+  late final GeneratedColumn<String> lastSyncError = GeneratedColumn<String>(
+    'last_sync_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSyncAttemptAtMeta = const VerificationMeta(
+    'lastSyncAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncAttemptAt =
+      GeneratedColumn<DateTime>(
+        'last_sync_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _dueDateMeta = const VerificationMeta(
     'dueDate',
   );
@@ -5331,6 +5378,10 @@ class $TransactionsTable extends Transactions
     notes,
     isOffline,
     offlineId,
+    syncStatus,
+    syncAttempts,
+    lastSyncError,
+    lastSyncAttemptAt,
     dueDate,
     createdAt,
     updatedAt,
@@ -5499,6 +5550,39 @@ class $TransactionsTable extends Transactions
         offlineId.isAcceptableOrUnknown(data['offline_id']!, _offlineIdMeta),
       );
     }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('sync_attempts')) {
+      context.handle(
+        _syncAttemptsMeta,
+        syncAttempts.isAcceptableOrUnknown(
+          data['sync_attempts']!,
+          _syncAttemptsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_sync_error')) {
+      context.handle(
+        _lastSyncErrorMeta,
+        lastSyncError.isAcceptableOrUnknown(
+          data['last_sync_error']!,
+          _lastSyncErrorMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_sync_attempt_at')) {
+      context.handle(
+        _lastSyncAttemptAtMeta,
+        lastSyncAttemptAt.isAcceptableOrUnknown(
+          data['last_sync_attempt_at']!,
+          _lastSyncAttemptAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('due_date')) {
       context.handle(
         _dueDateMeta,
@@ -5606,6 +5690,22 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}offline_id'],
       ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
+      syncAttempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sync_attempts'],
+      )!,
+      lastSyncError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_sync_error'],
+      ),
+      lastSyncAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_sync_attempt_at'],
+      ),
       dueDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}due_date'],
@@ -5648,6 +5748,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? notes;
   final bool isOffline;
   final String? offlineId;
+  final String syncStatus;
+  final int syncAttempts;
+  final String? lastSyncError;
+  final DateTime? lastSyncAttemptAt;
   final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -5672,6 +5776,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.notes,
     required this.isOffline,
     this.offlineId,
+    required this.syncStatus,
+    required this.syncAttempts,
+    this.lastSyncError,
+    this.lastSyncAttemptAt,
     this.dueDate,
     required this.createdAt,
     this.updatedAt,
@@ -5712,6 +5820,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['is_offline'] = Variable<bool>(isOffline);
     if (!nullToAbsent || offlineId != null) {
       map['offline_id'] = Variable<String>(offlineId);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    map['sync_attempts'] = Variable<int>(syncAttempts);
+    if (!nullToAbsent || lastSyncError != null) {
+      map['last_sync_error'] = Variable<String>(lastSyncError);
+    }
+    if (!nullToAbsent || lastSyncAttemptAt != null) {
+      map['last_sync_attempt_at'] = Variable<DateTime>(lastSyncAttemptAt);
     }
     if (!nullToAbsent || dueDate != null) {
       map['due_date'] = Variable<DateTime>(dueDate);
@@ -5759,6 +5875,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       offlineId: offlineId == null && nullToAbsent
           ? const Value.absent()
           : Value(offlineId),
+      syncStatus: Value(syncStatus),
+      syncAttempts: Value(syncAttempts),
+      lastSyncError: lastSyncError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncError),
+      lastSyncAttemptAt: lastSyncAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncAttemptAt),
       dueDate: dueDate == null && nullToAbsent
           ? const Value.absent()
           : Value(dueDate),
@@ -5797,6 +5921,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       notes: serializer.fromJson<String?>(json['notes']),
       isOffline: serializer.fromJson<bool>(json['isOffline']),
       offlineId: serializer.fromJson<String?>(json['offlineId']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      syncAttempts: serializer.fromJson<int>(json['syncAttempts']),
+      lastSyncError: serializer.fromJson<String?>(json['lastSyncError']),
+      lastSyncAttemptAt: serializer.fromJson<DateTime?>(
+        json['lastSyncAttemptAt'],
+      ),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
@@ -5826,6 +5956,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'notes': serializer.toJson<String?>(notes),
       'isOffline': serializer.toJson<bool>(isOffline),
       'offlineId': serializer.toJson<String?>(offlineId),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'syncAttempts': serializer.toJson<int>(syncAttempts),
+      'lastSyncError': serializer.toJson<String?>(lastSyncError),
+      'lastSyncAttemptAt': serializer.toJson<DateTime?>(lastSyncAttemptAt),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -5853,6 +5987,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> notes = const Value.absent(),
     bool? isOffline,
     Value<String?> offlineId = const Value.absent(),
+    String? syncStatus,
+    int? syncAttempts,
+    Value<String?> lastSyncError = const Value.absent(),
+    Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
     Value<DateTime?> dueDate = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
@@ -5879,6 +6017,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     notes: notes.present ? notes.value : this.notes,
     isOffline: isOffline ?? this.isOffline,
     offlineId: offlineId.present ? offlineId.value : this.offlineId,
+    syncStatus: syncStatus ?? this.syncStatus,
+    syncAttempts: syncAttempts ?? this.syncAttempts,
+    lastSyncError: lastSyncError.present
+        ? lastSyncError.value
+        : this.lastSyncError,
+    lastSyncAttemptAt: lastSyncAttemptAt.present
+        ? lastSyncAttemptAt.value
+        : this.lastSyncAttemptAt,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
@@ -5921,6 +6067,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       notes: data.notes.present ? data.notes.value : this.notes,
       isOffline: data.isOffline.present ? data.isOffline.value : this.isOffline,
       offlineId: data.offlineId.present ? data.offlineId.value : this.offlineId,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      syncAttempts: data.syncAttempts.present
+          ? data.syncAttempts.value
+          : this.syncAttempts,
+      lastSyncError: data.lastSyncError.present
+          ? data.lastSyncError.value
+          : this.lastSyncError,
+      lastSyncAttemptAt: data.lastSyncAttemptAt.present
+          ? data.lastSyncAttemptAt.value
+          : this.lastSyncAttemptAt,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -5950,6 +6108,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
           ..write('offlineId: $offlineId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('syncAttempts: $syncAttempts, ')
+          ..write('lastSyncError: $lastSyncError, ')
+          ..write('lastSyncAttemptAt: $lastSyncAttemptAt, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -5979,6 +6141,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     notes,
     isOffline,
     offlineId,
+    syncStatus,
+    syncAttempts,
+    lastSyncError,
+    lastSyncAttemptAt,
     dueDate,
     createdAt,
     updatedAt,
@@ -6007,6 +6173,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.notes == this.notes &&
           other.isOffline == this.isOffline &&
           other.offlineId == this.offlineId &&
+          other.syncStatus == this.syncStatus &&
+          other.syncAttempts == this.syncAttempts &&
+          other.lastSyncError == this.lastSyncError &&
+          other.lastSyncAttemptAt == this.lastSyncAttemptAt &&
           other.dueDate == this.dueDate &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -6033,6 +6203,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> notes;
   final Value<bool> isOffline;
   final Value<String?> offlineId;
+  final Value<String> syncStatus;
+  final Value<int> syncAttempts;
+  final Value<String?> lastSyncError;
+  final Value<DateTime?> lastSyncAttemptAt;
   final Value<DateTime?> dueDate;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
@@ -6058,6 +6232,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
     this.offlineId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.syncAttempts = const Value.absent(),
+    this.lastSyncError = const Value.absent(),
+    this.lastSyncAttemptAt = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6084,6 +6262,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.notes = const Value.absent(),
     this.isOffline = const Value.absent(),
     this.offlineId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.syncAttempts = const Value.absent(),
+    this.lastSyncError = const Value.absent(),
+    this.lastSyncAttemptAt = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6116,6 +6298,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? notes,
     Expression<bool>? isOffline,
     Expression<String>? offlineId,
+    Expression<String>? syncStatus,
+    Expression<int>? syncAttempts,
+    Expression<String>? lastSyncError,
+    Expression<DateTime>? lastSyncAttemptAt,
     Expression<DateTime>? dueDate,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -6143,6 +6329,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (notes != null) 'notes': notes,
       if (isOffline != null) 'is_offline': isOffline,
       if (offlineId != null) 'offline_id': offlineId,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (syncAttempts != null) 'sync_attempts': syncAttempts,
+      if (lastSyncError != null) 'last_sync_error': lastSyncError,
+      if (lastSyncAttemptAt != null) 'last_sync_attempt_at': lastSyncAttemptAt,
       if (dueDate != null) 'due_date': dueDate,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -6171,6 +6361,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? notes,
     Value<bool>? isOffline,
     Value<String?>? offlineId,
+    Value<String>? syncStatus,
+    Value<int>? syncAttempts,
+    Value<String?>? lastSyncError,
+    Value<DateTime?>? lastSyncAttemptAt,
     Value<DateTime?>? dueDate,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
@@ -6197,6 +6391,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       notes: notes ?? this.notes,
       isOffline: isOffline ?? this.isOffline,
       offlineId: offlineId ?? this.offlineId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      syncAttempts: syncAttempts ?? this.syncAttempts,
+      lastSyncError: lastSyncError ?? this.lastSyncError,
+      lastSyncAttemptAt: lastSyncAttemptAt ?? this.lastSyncAttemptAt,
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -6269,6 +6467,18 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (offlineId.present) {
       map['offline_id'] = Variable<String>(offlineId.value);
     }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (syncAttempts.present) {
+      map['sync_attempts'] = Variable<int>(syncAttempts.value);
+    }
+    if (lastSyncError.present) {
+      map['last_sync_error'] = Variable<String>(lastSyncError.value);
+    }
+    if (lastSyncAttemptAt.present) {
+      map['last_sync_attempt_at'] = Variable<DateTime>(lastSyncAttemptAt.value);
+    }
     if (dueDate.present) {
       map['due_date'] = Variable<DateTime>(dueDate.value);
     }
@@ -6307,6 +6517,10 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('notes: $notes, ')
           ..write('isOffline: $isOffline, ')
           ..write('offlineId: $offlineId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('syncAttempts: $syncAttempts, ')
+          ..write('lastSyncError: $lastSyncError, ')
+          ..write('lastSyncAttemptAt: $lastSyncAttemptAt, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -16599,6 +16813,10 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> notes,
       Value<bool> isOffline,
       Value<String?> offlineId,
+      Value<String> syncStatus,
+      Value<int> syncAttempts,
+      Value<String?> lastSyncError,
+      Value<DateTime?> lastSyncAttemptAt,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
@@ -16626,6 +16844,10 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<bool> isOffline,
       Value<String?> offlineId,
+      Value<String> syncStatus,
+      Value<int> syncAttempts,
+      Value<String?> lastSyncError,
+      Value<DateTime?> lastSyncAttemptAt,
       Value<DateTime?> dueDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
@@ -16820,6 +17042,26 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get offlineId => $composableBuilder(
     column: $table.offlineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncAttempts => $composableBuilder(
+    column: $table.syncAttempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastSyncError => $composableBuilder(
+    column: $table.lastSyncError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncAttemptAt => $composableBuilder(
+    column: $table.lastSyncAttemptAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17041,6 +17283,26 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncAttempts => $composableBuilder(
+    column: $table.syncAttempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastSyncError => $composableBuilder(
+    column: $table.lastSyncError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncAttemptAt => $composableBuilder(
+    column: $table.lastSyncAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get dueDate => $composableBuilder(
     column: $table.dueDate,
     builder: (column) => ColumnOrderings(column),
@@ -17161,6 +17423,26 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get offlineId =>
       $composableBuilder(column: $table.offlineId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get syncAttempts => $composableBuilder(
+    column: $table.syncAttempts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastSyncError => $composableBuilder(
+    column: $table.lastSyncError,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastSyncAttemptAt => $composableBuilder(
+    column: $table.lastSyncAttemptAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get dueDate =>
       $composableBuilder(column: $table.dueDate, builder: (column) => column);
@@ -17325,6 +17607,10 @@ class $$TransactionsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int> syncAttempts = const Value.absent(),
+                Value<String?> lastSyncError = const Value.absent(),
+                Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -17350,6 +17636,10 @@ class $$TransactionsTableTableManager
                 notes: notes,
                 isOffline: isOffline,
                 offlineId: offlineId,
+                syncStatus: syncStatus,
+                syncAttempts: syncAttempts,
+                lastSyncError: lastSyncError,
+                lastSyncAttemptAt: lastSyncAttemptAt,
                 dueDate: dueDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -17377,6 +17667,10 @@ class $$TransactionsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isOffline = const Value.absent(),
                 Value<String?> offlineId = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int> syncAttempts = const Value.absent(),
+                Value<String?> lastSyncError = const Value.absent(),
+                Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -17402,6 +17696,10 @@ class $$TransactionsTableTableManager
                 notes: notes,
                 isOffline: isOffline,
                 offlineId: offlineId,
+                syncStatus: syncStatus,
+                syncAttempts: syncAttempts,
+                lastSyncError: lastSyncError,
+                lastSyncAttemptAt: lastSyncAttemptAt,
                 dueDate: dueDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
