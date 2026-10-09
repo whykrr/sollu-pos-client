@@ -96,6 +96,11 @@ final filteredPosItemsProvider = Provider<AsyncValue<List<PosItem>>>((ref) {
         return matchesCategory && matchesSearch;
       }).toList();
 
+      // Urutkan produk berdasarkan Nama secara Ascending (A-Z)
+      filteredItems.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+
       return AsyncValue.data(filteredItems);
     },
   );

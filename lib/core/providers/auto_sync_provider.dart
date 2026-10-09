@@ -166,7 +166,7 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
   }
 
   /// Trigger delta sync secara langsung (misal saat sinyal WebSocket Reverb diterima)
-  Future<void> triggerDeltaSync() async {
+  Future<void> triggerDeltaSync({List<String>? entities}) async {
     if (state.status == AutoSyncStatus.syncing) return;
 
     try {
@@ -177,7 +177,7 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
       }
 
       final deltaService = ref.read(deltaSyncServiceProvider);
-      final syncedAt = await deltaService.syncDeltaCatalog();
+      final syncedAt = await deltaService.syncDeltaCatalog(entities: entities);
       await ref.read(lastSyncProvider.notifier).updateWithTimestamp(syncedAt);
     } catch (e) {
       debugPrint('[AutoSync] Error triggering delta sync: $e');

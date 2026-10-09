@@ -407,9 +407,12 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
                         // Reset cart & diskon
                         ref.read(cartProvider.notifier).clearCart();
                         ref.read(appliedDiscountProvider.notifier).clearDiscount();
+                        // Reset filter kategori dan pencarian produk ke kondisi normal
+                        ref.read(posSelectedCategoryProvider.notifier).setCategory(null);
+                        ref.read(posSearchQueryProvider.notifier).setQuery('');
                         context.go('/pos');
                       },
-                      child: const Text('Transaksi Baru'),
+                      child: const Text('Selesai'),
                     ),
                   ),
                 ],

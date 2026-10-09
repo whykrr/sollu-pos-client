@@ -153,7 +153,11 @@ class InitialSyncService {
                   ),
                   sku: Value(item['sku']),
                   barcode: Value(item['barcode']),
-                  price: priceMap[productId] ?? 0.0,
+                  price: (item['price'] != null
+                          ? double.tryParse(item['price'].toString())
+                          : null) ??
+                      priceMap[productId] ??
+                      0.0,
                   isAvailable: Value(isAvailable),
                   productType: Value(
                     item['product_type']?.toString() ?? 'basic',
@@ -520,7 +524,7 @@ class InitialSyncService {
                 ProductPricesCompanion.insert(
                   id: item['id'],
                   productId: item['product_id'],
-                  inventoryItemId: Value(item['inventory_item_id']),
+                  inventoryItemId: Value(item['inventory_item_id'] ?? item['product_item_id']),
                   amount: Value(amountVal),
                 ),
               );

@@ -261,18 +261,22 @@ class TransactionRepository {
           ),
         );
 
-        // Potong stok lokal jika ada inventoryItemId
+        // Cek status track inventory dari database lokal jika ada inventoryItemId
+        bool isTrackInventory = false;
         if (resolvedInventoryItemId != null) {
           final inventory =
               await (_database.select(_database.inventories)
                     ..where((i) => i.id.equals(resolvedInventoryItemId!)))
-                  .getSingleOrNull();
+                    .getSingleOrNull();
 
-          if (inventory != null && inventory.trackInventory) {
-            final newStock = inventory.stock - cartItem.qty;
-            await (_database.update(_database.inventories)
-                  ..where((i) => i.id.equals(resolvedInventoryItemId!)))
-                .write(InventoriesCompanion(stock: Value(newStock)));
+          if (inventory != null) {
+            isTrackInventory = inventory.trackInventory;
+            if (inventory.trackInventory) {
+              final newStock = inventory.stock - cartItem.qty;
+              await (_database.update(_database.inventories)
+                    ..where((i) => i.id.equals(resolvedInventoryItemId!)))
+                  .write(InventoriesCompanion(stock: Value(newStock)));
+            }
           }
         }
 
@@ -331,7 +335,8 @@ class TransactionRepository {
 
         itemsPayload.add({
           'product_id': resolvedProductId,
-          'inventory_item_id': resolvedInventoryItemId,
+          'inventory_item_id': isTrackInventory ? resolvedInventoryItemId : null,
+          'track_inventory': isTrackInventory,
           'variant_group_option_id': resolvedVariantGroupOptionId,
           'product_name': cartItem.name,
           'price': cartItem.price,
@@ -653,6 +658,14 @@ class TransactionRepository {
         .map((rows) => rows.length);
   }
 
+  /// Memantau jumlah transaksi yang belum tersinkron (pending / syncing) secara realtime
+  Stream<int> watchUnsyncedTransactionsCount() {
+    return (_database.select(_database.transactions)
+          ..where((t) => t.isOffline.equals(true) & t.syncStatus.isNotValue('synced')))
+        .watch()
+        .map((rows) => rows.length);
+  }
+
   /// Mencoba menyinkronkan seluruh transaksi yang pending (Anti Head-of-Line Blocking)
   Future<int> syncPendingTransactions({bool force = false}) async {
     final unsynced = await (_database.select(_database.transactions)
@@ -689,9 +702,18 @@ class TransactionRepository {
             )
             .toList();
 
+        bool isTrackInventory = false;
+        if (item.inventoryItemId != null) {
+          final inv = await (_database.select(_database.inventories)
+                ..where((i) => i.id.equals(item.inventoryItemId!)))
+              .getSingleOrNull();
+          isTrackInventory = inv?.trackInventory ?? false;
+        }
+
         itemsPayload.add({
           'product_id': item.productId,
-          'inventory_item_id': item.inventoryItemId,
+          'inventory_item_id': isTrackInventory ? item.inventoryItemId : null,
+          'track_inventory': isTrackInventory,
           'variant_group_option_id': item.variantGroupOptionId,
           'product_name': item.productName,
           'price': item.price,
@@ -771,9 +793,18 @@ class TransactionRepository {
           )
           .toList();
 
+      bool isTrackInventory = false;
+      if (item.inventoryItemId != null) {
+        final inv = await (_database.select(_database.inventories)
+              ..where((i) => i.id.equals(item.inventoryItemId!)))
+            .getSingleOrNull();
+        isTrackInventory = inv?.trackInventory ?? false;
+      }
+
       itemsPayload.add({
         'product_id': item.productId,
-        'inventory_item_id': item.inventoryItemId,
+        'inventory_item_id': isTrackInventory ? item.inventoryItemId : null,
+        'track_inventory': isTrackInventory,
         'variant_group_option_id': item.variantGroupOptionId,
         'product_name': item.productName,
         'price': item.price,

@@ -77,14 +77,14 @@ Future<({bool success, String message})> printTransactionReceiptAction({
     );
   }
 
-  // Load cached logo bytes if showLogo is enabled
+  // Load cached logo bytes if showLogo is enabled from Portal App settings
   Uint8List? logoBytes;
   final rawShowLogo =
       outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
   final bool showLogo = rawShowLogo == true ||
       rawShowLogo == 1 ||
       rawShowLogo == '1' ||
-      rawShowLogo == null;
+      (rawShowLogo == null && (outletSetting?['logoUrl'] != null || outletProfile?['logo_url'] != null));
 
   if (showLogo) {
     final logoPath = outletSetting?['localLogoPath'] ??
@@ -100,17 +100,6 @@ Future<({bool success, String message})> printTransactionReceiptAction({
         }
       } catch (e) {
         debugPrint('Error reading local logo file: $e');
-      }
-    }
-
-    // Fallback: Load default asset logo if local logo is not available
-    if (logoBytes == null || logoBytes.isEmpty) {
-      try {
-        final ByteData assetData =
-            await rootBundle.load('img/logo-colored.png');
-        logoBytes = assetData.buffer.asUint8List();
-      } catch (e) {
-        debugPrint('Error loading asset logo fallback: $e');
       }
     }
   }
@@ -300,14 +289,14 @@ Future<({bool success, String message})> printTestReceiptAction({
     );
   }
 
-  // Load cached logo bytes if showLogo is enabled
+  // Load cached logo bytes if showLogo is enabled from Portal App settings
   Uint8List? logoBytes;
   final rawShowLogo =
       outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
   final bool showLogo = rawShowLogo == true ||
       rawShowLogo == 1 ||
       rawShowLogo == '1' ||
-      rawShowLogo == null;
+      (rawShowLogo == null && (outletSetting?['logoUrl'] != null || outletProfile?['logo_url'] != null));
 
   if (showLogo) {
     final logoPath = outletSetting?['localLogoPath'] ??
@@ -323,16 +312,6 @@ Future<({bool success, String message})> printTestReceiptAction({
         }
       } catch (e) {
         debugPrint('Error reading local logo file for test: $e');
-      }
-    }
-
-    if (logoBytes == null || logoBytes.isEmpty) {
-      try {
-        final ByteData assetData =
-            await rootBundle.load('img/logo-colored.png');
-        logoBytes = assetData.buffer.asUint8List();
-      } catch (e) {
-        debugPrint('Error loading asset logo fallback for test: $e');
       }
     }
   }

@@ -240,7 +240,7 @@ class VariantDialog extends ConsumerWidget {
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       productId: posItem.isProductMode
                           ? posItem.id
-                          : posItem.inventory!.productId,
+                          : (posItem.inventory?.productId ?? posItem.product?.id ?? posItem.id),
                       inventoryItemId: posItem.isProductMode ? '' : posItem.id,
                       variantGroupOptionId: selectedVariantOptionId,
                       name: posItem.name,

@@ -12,6 +12,7 @@ import 'package:sollu_pos_client/features/settings/presentation/providers/printe
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
 import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 
 class PaymentDialog extends ConsumerStatefulWidget {
@@ -174,9 +175,11 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
             : null,
       );
 
-      // Bersihkan keranjang dan promo
+      // Bersihkan keranjang, promo, dan filter katalog produk
       ref.read(cartProvider.notifier).clearCart();
       ref.read(appliedDiscountProvider.notifier).clearDiscount();
+      ref.read(posSelectedCategoryProvider.notifier).setCategory(null);
+      ref.read(posSearchQueryProvider.notifier).setQuery('');
 
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);

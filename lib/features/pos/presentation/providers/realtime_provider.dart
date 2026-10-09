@@ -12,9 +12,9 @@ final posReverbClientProvider = Provider<PosReverbClient>((ref) {
   final client = PosReverbClient(
     dioClient: dioClient,
     outletSettingsService: outletSettings,
-    onNudge: (entityType) {
-      debugPrint('[RealtimeProvider] Received pos.catalog.nudge ($entityType). Triggering delta sync...');
-      ref.read(autoSyncProvider.notifier).triggerDeltaSync();
+    onNudge: (entities) {
+      debugPrint('[RealtimeProvider] Received pos.catalog.nudge ($entities). Triggering delta sync...');
+      ref.read(autoSyncProvider.notifier).triggerDeltaSync(entities: entities);
     },
   );
 

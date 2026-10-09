@@ -97,6 +97,7 @@ class PosRepository {
         1 as is_pure_product
       FROM products p
       WHERE (p.product_type = 'service' OR (SELECT COUNT(id) FROM inventories WHERE product_id = p.id) = 0)
+      ORDER BY name COLLATE NOCASE ASC
       ''',
           readsFrom: {
             _database.inventories,
@@ -200,6 +201,7 @@ class PosRepository {
           0.0
         ) as base_price
       FROM products p
+      ORDER BY p.name COLLATE NOCASE ASC
       ''',
           readsFrom: {
             _database.products,
@@ -450,6 +452,16 @@ class PosRepository {
     final Map<String, String> itemNamesByInvId = {};
 
     for (final item in items) {
+      // Lewati pengecekan stok jika item adalah tipe jasa / service
+      if (item.productId != null && item.productId.toString().isNotEmpty) {
+        final prod = await (_database.select(_database.products)
+              ..where((p) => p.id.equals(item.productId.toString())))
+            .getSingleOrNull();
+        if (prod != null && prod.productType == 'service') {
+          continue;
+        }
+      }
+
       String? resolvedInvId = (item.inventoryItemId != null && item.inventoryItemId.toString().isNotEmpty)
           ? item.inventoryItemId.toString()
           : null;

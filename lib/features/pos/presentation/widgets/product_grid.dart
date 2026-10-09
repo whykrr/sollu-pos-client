@@ -8,6 +8,7 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provide
 import 'package:sollu_pos_client/features/pos/data/pos_repository.dart';
 
 import 'package:flutter/services.dart';
+import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 
 class ProductGrid extends ConsumerStatefulWidget {
@@ -94,16 +95,18 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
       return;
     }
 
+    final displayMode = ref.read(posDisplayModeProvider);
+    final isProductMode = displayMode == 'product';
     final hasVariantsOrModifiers = product.hasVariants || product.hasModifiers;
 
-    if (hasVariantsOrModifiers) {
+    if (isProductMode && hasVariantsOrModifiers) {
       VariantDialog.show(context, product);
     } else {
       final cartItem = CartItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         productId: product.isProductMode
             ? product.id
-            : product.inventory!.productId,
+            : (product.inventory?.productId ?? product.product?.id ?? product.id),
         inventoryItemId: product.isProductMode ? '' : product.id,
         name: product.name,
         price: product.price,
@@ -181,9 +184,11 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
               itemBuilder: (context, index) {
                 final product = filteredItems[index];
                 final isSelected = isGridFocused && (_currentIndex == index);
+                final isProductMode = ref.watch(posDisplayModeProvider) == 'product';
                 return _ProductCard(
                   posItem: product,
                   isSelected: isSelected,
+                  showOptionsBadge: isProductMode,
                   onTap: () => _handleSelectItem(product),
                 );
               },
@@ -198,11 +203,13 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
 class _ProductCard extends StatelessWidget {
   final PosItem posItem;
   final bool isSelected;
+  final bool showOptionsBadge;
   final VoidCallback onTap;
 
   const _ProductCard({
     required this.posItem,
     this.isSelected = false,
+    this.showOptionsBadge = true,
     required this.onTap,
   });
 
@@ -313,7 +320,7 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (hasVariantsOrModifiers && isActive)
+              if (showOptionsBadge && hasVariantsOrModifiers && isActive)
                 Positioned(
                   top: 12,
                   right: 12,

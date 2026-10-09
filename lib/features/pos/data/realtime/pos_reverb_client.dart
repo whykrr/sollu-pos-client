@@ -6,7 +6,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/services/outlet_settings_service.dart';
 
-typedef PosNudgeCallback = void Function(String entityType);
+typedef PosNudgeCallback = void Function(List<String> entities);
 
 class PosReverbClient {
   final DioClient dioClient;
@@ -15,7 +15,6 @@ class PosReverbClient {
 
   WebSocket? _socket;
   Timer? _reconnectTimer;
-  Timer? _debounceTimer;
   bool _isDisposed = false;
   int _reconnectAttempts = 0;
   String? _currentSocketId;
@@ -110,16 +109,29 @@ class PosReverbClient {
     Map<String, dynamic> data =
         rawData is String ? jsonDecode(rawData) : (rawData is Map ? Map<String, dynamic>.from(rawData) : {});
 
-    final entityType = data['entity_type']?.toString() ?? 'product';
-    debugPrint('[PosReverb] Sinyal pos.catalog.nudge diterima (entity: $entityType). Debouncing...');
+    List<String> entities = [];
+    if (data['entities'] is List) {
+      entities = (data['entities'] as List)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (data['entity_type'] != null) {
+      entities = data['entity_type']
+          .toString()
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    if (entities.isEmpty) {
+      entities = ['product'];
+    }
 
-    // Debounce nudge signal (200ms) agar mutasi batch tidak memicu multiple delta syncs serentak
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
-      if (onNudge != null && !_isDisposed) {
-        onNudge!(entityType);
-      }
-    });
+    debugPrint('[PosReverb] Sinyal pos.catalog.nudge diterima (entities: $entities). Memanggil sync...');
+
+    if (onNudge != null && !_isDisposed) {
+      onNudge!(entities);
+    }
   }
 
   Future<void> _subscribeChannel(String socketId, String outletId) async {
@@ -168,7 +180,6 @@ class PosReverbClient {
   /// Tutup koneksi WebSocket
   void disconnect() {
     _reconnectTimer?.cancel();
-    _debounceTimer?.cancel();
     _socket?.close();
     _socket = null;
   }

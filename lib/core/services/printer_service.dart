@@ -250,11 +250,10 @@ class PrinterService {
     // 2. Logo Toko Riil
     final rawShowLogo =
         outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
-    final bool showLogo =
-        rawShowLogo == true ||
+    final bool showLogo = rawShowLogo == true ||
         rawShowLogo == 1 ||
         rawShowLogo == '1' ||
-        rawShowLogo == null;
+        (rawShowLogo == null && (outletSetting?['logoUrl'] != null || outletProfile?['logo_url'] != null));
     if (showLogo && logoBytes != null) {
       try {
         final paperWidthDots = config.paperSize == PrinterPaperSize.mm58
@@ -466,7 +465,8 @@ class PrinterService {
       styles: center,
     );
 
-    bytes += generator.feed(2);
+    // Berikan 5 baris umpan kertas agar footer struk terdorong keluar melewati pisau robek manual
+    bytes += generator.feed(5);
 
     if (config.autoCut) {
       bytes += generator.cut();
@@ -520,11 +520,10 @@ class PrinterService {
     // Logo Toko
     final rawShowLogo =
         outletSetting?['show_logo'] ?? outletSetting?['showLogo'];
-    final bool showLogo =
-        rawShowLogo == true ||
+    final bool showLogo = rawShowLogo == true ||
         rawShowLogo == 1 ||
         rawShowLogo == '1' ||
-        rawShowLogo == null;
+        (rawShowLogo == null && (outletSetting?['logoUrl'] != null || outletSetting?['localLogoPath'] != null));
     if (showLogo && logoBytes != null) {
       try {
         final paperWidthDots = config.paperSize == PrinterPaperSize.mm58
@@ -814,7 +813,8 @@ class PrinterService {
       bytes += generator.text('Scan untuk detail transaksi', styles: center);
     }
 
-    bytes += generator.feed(2);
+    // Berikan 5 baris umpan kertas agar footer struk terdorong keluar melewati pisau robek manual
+    bytes += generator.feed(5);
 
     if (config.autoCut) {
       bytes += generator.cut();
@@ -1160,7 +1160,8 @@ class PrinterService {
       styles: center,
     );
 
-    bytes += generator.feed(2);
+    // Berikan 5 baris umpan kertas agar footer struk terdorong keluar melewati pisau robek manual
+    bytes += generator.feed(5);
 
     if (config.autoCut) {
       bytes += generator.cut();

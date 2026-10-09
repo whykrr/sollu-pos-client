@@ -143,7 +143,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         productId: matchedItem.isProductMode
             ? matchedItem.id
-            : matchedItem.inventory!.productId,
+            : (matchedItem.inventory?.productId ?? matchedItem.product?.id ?? matchedItem.id),
         inventoryItemId: matchedItem.isProductMode ? '' : matchedItem.id,
         name: matchedItem.name,
         price: matchedItem.price,
@@ -537,12 +537,83 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     }
   }
 
+  Future<void> _handleBackToDashboard() async {
+    final cart = ref.read(cartProvider);
+    if (cart.isNotEmpty) {
+      final shouldLeave = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: SolluColors.warning),
+              SizedBox(width: 10),
+              Text(
+                'Tinggalkan Layar Kasir?',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Text(
+            'Terdapat ${cart.length} jenis item di keranjang belanja. Pesanan akan tetap tersimpan sementara di kasir ini.',
+            style: const TextStyle(fontSize: 14, color: SolluColors.textMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  color: SolluColors.textMuted,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SolluColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Ya, ke Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldLeave != true) return;
+    }
+
+    if (mounted) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/dashboard');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeShiftAsync = ref.watch(activeShiftProvider);
 
     // Initialize auto-sync watcher
     ref.watch(autoSyncProvider);
+
+    // Sync search text field when searchQuery provider is reset externally (e.g. after checkout)
+    ref.listen<String>(posSearchQueryProvider, (prev, next) {
+      if (next.isEmpty && _searchController.text.isNotEmpty) {
+        _searchController.clear();
+      }
+    });
 
     // Optimasi Riverpod: ref.listen tidak memicu rebuild UI, cukup merespons event shortcut
     ref.listen<String?>(shortcutProvider, (previous, next) {
@@ -642,14 +713,38 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
         child: Scaffold(
           backgroundColor: SolluColors.background,
           appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 1,
-          titleSpacing: 16,
-          title: Row(
+            backgroundColor: Colors.white,
+            elevation: 1,
+            automaticallyImplyLeading: false,
+            titleSpacing: 16,
+            title: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Tooltip(
+                message: 'Kembali ke Dashboard',
+                child: InkWell(
+                  onTap: _handleBackToDashboard,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: SolluColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: SolluColors.neutral),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: SolluColors.textDark,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
               Image.asset('img/logo-colored.png', height: 32),
-              const SizedBox(width: 20),
+              const SizedBox(width: 18),
               Expanded(
                 child: SizedBox(
                   height: 40,
@@ -672,7 +767,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
                           productId: matchedItem.isProductMode
                               ? matchedItem.id
-                              : matchedItem.inventory!.productId,
+                              : (matchedItem.inventory?.productId ?? matchedItem.product?.id ?? matchedItem.id),
                           inventoryItemId: matchedItem.isProductMode
                               ? ''
                               : matchedItem.id,
@@ -947,87 +1042,176 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             ),
             const SizedBox(width: 8),
             Center(
-              child: Tooltip(
-                message: 'Sinkronisasi Cepat (Delta)',
-                child: InkWell(
-                  onTap: _isSyncing
-                      ? null
-                      : () async {
-                          setState(() {
-                            _isSyncing = true;
-                          });
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final unsyncedCountAsync =
+                      ref.watch(unsyncedTransactionsCountProvider);
+                  final failedCountAsync =
+                      ref.watch(failedTransactionsCountProvider);
+                  final unsyncedCount = unsyncedCountAsync.value ?? 0;
+                  final failedCount = failedCountAsync.value ?? 0;
 
-                          final messenger = ScaffoldMessenger.of(context);
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Menyingkronkan Data Perubahan (Delta)...'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
+                  return Tooltip(
+                    message: 'Sinkronkan Transaksi & Data',
+                    child: InkWell(
+                      onTap: _isSyncing
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isSyncing = true;
+                              });
 
-                          try {
-                            final syncRepository = ref.read(
-                              syncRepositoryProvider,
-                            );
-                            await syncRepository.syncDeltaData();
-
-                            ref.invalidate(employeeListProvider);
-                            ref.invalidate(posItemsProvider);
-                            ref.invalidate(posCategoriesProvider);
-
-                            // Simpan timestamp sinkronisasi terakhir
-                            ref.read(lastSyncProvider.notifier).updateTimestamp();
-
-                            if (mounted) {
+                              final messenger = ScaffoldMessenger.of(context);
                               messenger.showSnackBar(
                                 const SnackBar(
-                                  content: Text('Sinkronisasi delta selesai!'),
-                                  backgroundColor: Colors.green,
+                                  content: Text(
+                                    'Menyinkronkan transaksi dan pembaruan data...',
+                                  ),
+                                  duration: Duration(seconds: 1),
                                 ),
                               );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Gagal sinkronisasi: $e'),
-                                  backgroundColor: SolluColors.danger,
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() {
-                                _isSyncing = false;
-                              });
-                            }
-                          }
-                        },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: SolluColors.secondary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: _isSyncing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+
+                              try {
+                                final syncCoordinator = ref.read(
+                                  syncCoordinatorServiceProvider,
+                                );
+                                final result =
+                                    await syncCoordinator.synchronizeAll();
+
+                                ref.invalidate(employeeListProvider);
+                                ref.invalidate(posItemsProvider);
+                                ref.invalidate(posCategoriesProvider);
+                                ref.invalidate(
+                                  currentShiftTransactionsProvider,
+                                );
+                                ref.invalidate(allTransactionsProvider);
+                                ref.invalidate(heldTransactionsStreamProvider);
+
+                                ref
+                                    .read(lastSyncProvider.notifier)
+                                    .updateTimestamp();
+
+                                if (mounted) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        result.userFriendlyMessage,
+                                      ),
+                                      backgroundColor: result.hasFailures
+                                          ? SolluColors.warning
+                                          : Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Tidak dapat terhubung ke server. Data transaksi tetap aman di perangkat kasir.',
+                                      ),
+                                      backgroundColor: SolluColors.danger,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isSyncing = false;
+                                  });
+                                }
+                              }
+                            },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: SolluColors.secondary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: _isSyncing
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.sync,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
                             ),
-                          )
-                        : const Icon(
-                            Icons.sync,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                  ),
-                ),
+                            if (!_isSyncing && failedCount > 0)
+                              Positioned(
+                                top: -4,
+                                right: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: SolluColors.danger,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    '$failedCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              )
+                            else if (!_isSyncing && unsyncedCount > 0)
+                              Positioned(
+                                top: -4,
+                                right: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: SolluColors.warning,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    '$unsyncedCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),

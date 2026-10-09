@@ -22,7 +22,7 @@ class DeltaSyncService {
 
   /// Jalankan Delta Sync berbasis timestamp terakhir.
   /// Jika belum pernah sinkronisasi, secara otomatis melakukan fallback ke InitialSyncService.
-  Future<DateTime> syncDeltaCatalog({DateTime? since}) async {
+  Future<DateTime> syncDeltaCatalog({DateTime? since, List<String>? entities}) async {
     final DateTime? effectiveSince = since ?? _getLastSyncedAt();
 
     if (effectiveSince == null) {
@@ -34,11 +34,16 @@ class DeltaSyncService {
     }
 
     try {
+      final queryParams = <String, dynamic>{
+        'updated_since': effectiveSince.toIso8601String(),
+      };
+      if (entities != null && entities.isNotEmpty) {
+        queryParams['entities'] = entities.join(',');
+      }
+
       final response = await _dioClient.dio.get(
         ApiEndpoints.syncDelta,
-        queryParameters: {
-          'updated_since': effectiveSince.toIso8601String(),
-        },
+        queryParameters: queryParams,
       );
 
       if (response.statusCode != 200) {
@@ -174,7 +179,7 @@ class DeltaSyncService {
 
           final rawAmount = p['amount'] ?? p['price'];
           final amountVal = double.tryParse(rawAmount?.toString() ?? '0') ?? 0.0;
-          final invItemId = p['inventory_item_id']?.toString();
+          final invItemId = p['inventory_item_id']?.toString() ?? p['product_item_id']?.toString();
 
           await _database.into(_database.productPrices).insertOnConflictUpdate(
                 ProductPricesCompanion(

@@ -165,3 +165,10 @@ final transactionDetailProvider =
       final repository = ref.watch(transactionRepositoryProvider);
       return repository.getTransactionDetails(transactionId);
     });
+
+/// Stream jumlah transaksi pending yang belum tersinkron
+final unsyncedTransactionsCountProvider = StreamProvider<int>((ref) {
+  final repository = ref.watch(transactionRepositoryProvider);
+  return repository.watchUnsyncedTransactionsCount();
+});
+
