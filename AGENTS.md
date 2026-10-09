@@ -33,3 +33,8 @@ Before designing or modifying code, ensure compliance with the standing rules:
 - **Code Generation:** `flutter pub run build_runner build --delete-conflicting-outputs`
 - **Linter:** `flutter analyze`
 - **Testing:** `flutter test`
+
+## 5. Scratchpad / Planning / Context & Active Clarification
+
+- Untuk tugas yang memodifikasi lebih dari satu komponen atau melibatkan logika bisnis baru, buat planning/spec artifact terlebih dahulu. Tuliskan asumsi, dependency yang terdampak, dan batasan arsitektur sebelum menghasilkan implementasi.
+- Jika ada informasi kritis, API contract, atau edge case yang ambigu, jangan menebak atau mengasumsikan implementasi. Kumpulkan pertanyaan tersebut dalam daftar poin terstruktur dan berikan rekomendasi opsi terbaik untuk dikonfirmasi sebelum melanjutkan. 
