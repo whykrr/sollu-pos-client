@@ -10,7 +10,13 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   final database = ref.watch(databaseProvider);
   final dioClient = ref.watch(dioClientProvider);
   final outletSettings = ref.watch(outletSettingsServiceProvider);
-  return TransactionRepository(database, dioClient, outletSettings);
+  final shiftRepository = ref.watch(shiftRepositoryProvider);
+  return TransactionRepository(
+    database,
+    dioClient,
+    outletSettings,
+    shiftRepository,
+  );
 });
 
 /// Stream metode pembayaran aktif dari SQLite lokal (diurutkan berdasarkan kolom localSortOrder jika dikustomisasi per device, fallback ke sortOrder pusat)

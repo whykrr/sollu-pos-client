@@ -1,10 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
@@ -44,7 +40,6 @@ class InitialSyncService {
       final List<dynamic> productPrices = data['product_prices'] ?? [];
       final List<dynamic> paymentMethods = data['payment_methods'] ?? [];
       final List<dynamic> rawEmployees = data['employees'] ?? [];
-      final List<dynamic> outletSettings = data['outlet_settings'] ?? [];
       final List<dynamic> outletProducts = data['outlet_products'] ?? [];
       final List<dynamic> inventoryItems = data['inventory_items'] ?? [];
       final List<dynamic> inventoryBalances = data['inventory_balances'] ?? [];
@@ -109,10 +104,6 @@ class InitialSyncService {
         for (var pm in existingPaymentMethods)
           if (pm.localSortOrder != null) pm.id: pm.localSortOrder,
       };
-
-      final existingOutletProfile = _outletSettingsService.getOutletProfile();
-      final String? existingLocalLogoPath =
-          existingOutletProfile?['local_logo_path']?.toString();
 
       await _database.transaction(() async {
         // Clear old catalog data in FK safe order
@@ -224,187 +215,10 @@ class InitialSyncService {
         }
 
         // 4. Insert Outlet Settings & Receipts
-        final dynamic rawSettings = data['settings'];
-        final Map<String, dynamic> structuredSettings =
-            rawSettings is Map<String, dynamic> ? rawSettings : {};
-        final dynamic rawReceipt = structuredSettings['receipt'];
-        final Map<String, dynamic> receiptObj =
-            rawReceipt is Map<String, dynamic> ? rawReceipt : {};
-
-        double parsedTax =
-            double.tryParse(structuredSettings['tax_percentage']?.toString() ?? '') ?? 0.0;
-        double parsedService =
-            double.tryParse(structuredSettings['service_charge_percentage']?.toString() ?? '') ?? 0.0;
-        bool parsedTaxIncluded =
-            structuredSettings['tax_included_in_price'] == true ||
-            structuredSettings['tax_included_in_price'] == 1;
-        bool parsedRoundingEnabled =
-            structuredSettings['rounding_enabled'] == true ||
-            structuredSettings['rounding_enabled'] == 1;
-        String parsedRoundingMode =
-            structuredSettings['rounding_mode']?.toString() ?? 'nearest';
-
-        Map<String, dynamic> parsedReceipt = Map<String, dynamic>.from(receiptObj);
-        if (parsedReceipt.isEmpty && outletSettings.isNotEmpty) {
-          for (final row in outletSettings) {
-            if (row['key'] == 'tax') {
-              parsedTax = double.tryParse(row['value']?.toString() ?? '0') ?? 0.0;
-            } else if (row['key'] == 'service_fee') {
-              parsedService = double.tryParse(row['value']?.toString() ?? '0') ?? 0.0;
-            } else if (row['key'] == 'tax_included_in_price') {
-              parsedTaxIncluded = row['value'] == true || row['value'] == 1;
-            } else if (row['key'] == 'rounding_enabled') {
-              parsedRoundingEnabled = row['value'] == true || row['value'] == 1;
-            } else if (row['key'] == 'rounding_mode') {
-              parsedRoundingMode = row['value']?.toString() ?? 'nearest';
-            } else if (row['category'] == 'receipt' &&
-                row['key'] == 'layout_config' &&
-                row['value'] is Map) {
-              parsedReceipt = Map<String, dynamic>.from(row['value']);
-            }
-          }
-        }
-
-        final paperSize = parsedReceipt['paper_size']?.toString() ?? '58mm';
-        final autoPrint =
-            parsedReceipt['auto_print'] == true ||
-            parsedReceipt['auto_print'] == 1 ||
-            parsedReceipt['auto_print'] == null;
-        final bool allowNegativeStock =
-            structuredSettings['allow_negative_stock'] == true ||
-            structuredSettings['allow_negative_stock'] == 1 ||
-            structuredSettings['allow_negative_stock'] == null;
-        final List<String> posOrderTypes = (structuredSettings['pos_order_types'] is List)
-            ? (structuredSettings['pos_order_types'] as List)
-                .map((e) => e.toString())
-                .toList()
-            : ['walk_in', 'dine_in', 'take_away'];
-        final showLogo =
-            parsedReceipt['show_logo'] == true ||
-            parsedReceipt['show_logo'] == 1 ||
-            parsedReceipt['show_logo'] == null;
-        final customHeaderTitle = parsedReceipt['custom_header_title']?.toString();
-        final headerNotes = parsedReceipt['header_notes']?.toString() ??
-            'Terima kasih atas kunjungan Anda!';
-        final showAddress =
-            parsedReceipt['show_address'] == true ||
-            parsedReceipt['show_address'] == 1 ||
-            parsedReceipt['show_address'] == null;
-        final showPhone =
-            parsedReceipt['show_phone'] == true ||
-            parsedReceipt['show_phone'] == 1 ||
-            parsedReceipt['show_phone'] == null;
-        final showEmail =
-            parsedReceipt['show_email'] == true || parsedReceipt['show_email'] == 1;
-        final showCashierName =
-            parsedReceipt['show_cashier_name'] == true ||
-            parsedReceipt['show_cashier_name'] == 1 ||
-            parsedReceipt['show_cashier_name'] == null;
-        final showCustomerName =
-            parsedReceipt['show_customer_name'] == true ||
-            parsedReceipt['show_customer_name'] == 1 ||
-            parsedReceipt['show_customer_name'] == null;
-        final showOrderType =
-            parsedReceipt['show_order_type'] == true ||
-            parsedReceipt['show_order_type'] == 1 ||
-            parsedReceipt['show_order_type'] == null;
-        final showModifiers =
-            parsedReceipt['show_modifiers'] == true ||
-            parsedReceipt['show_modifiers'] == 1 ||
-            parsedReceipt['show_modifiers'] == null;
-        final showItemNotes =
-            parsedReceipt['show_item_notes'] == true ||
-            parsedReceipt['show_item_notes'] == 1 ||
-            parsedReceipt['show_item_notes'] == null;
-        final showTaxDetail =
-            parsedReceipt['show_tax_detail'] == true ||
-            parsedReceipt['show_tax_detail'] == 1 ||
-            parsedReceipt['show_tax_detail'] == null;
-        final showServiceCharge =
-            parsedReceipt['show_service_charge'] == true ||
-            parsedReceipt['show_service_charge'] == 1;
-        final footerNotes = parsedReceipt['footer_notes']?.toString() ??
-            'Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.';
-        final socialMediaInfo = parsedReceipt['social_media_info']?.toString();
-        final wifiInfo = parsedReceipt['wifi_info']?.toString();
-        final showQrCode =
-            parsedReceipt['show_qr_code'] == true || parsedReceipt['show_qr_code'] == 1;
-        final qrType = parsedReceipt['qr_type']?.toString() ?? 'invoice';
-
-        final String? logoUrl = parsedReceipt['logo_url']?.toString() ??
-            (data['outlet'] != null ? data['outlet']['logo_url']?.toString() : null);
-        String? localLogoPath;
-
-        if (logoUrl != null && logoUrl.isNotEmpty) {
-          try {
-            String fullLogoUrl = logoUrl;
-            if (!fullLogoUrl.startsWith('http://') && !fullLogoUrl.startsWith('https://')) {
-              final baseUrl = _dioClient.dio.options.baseUrl;
-              if (baseUrl.isNotEmpty) {
-                final baseUri = Uri.parse(baseUrl);
-                final origin =
-                    '${baseUri.scheme}://${baseUri.host}${baseUri.hasPort ? ':${baseUri.port}' : ''}';
-                fullLogoUrl = fullLogoUrl.startsWith('/')
-                    ? '$origin$fullLogoUrl'
-                    : '$origin/$fullLogoUrl';
-              }
-            }
-
-            final appDir = await getApplicationDocumentsDirectory();
-            final logoFile = File(p.join(appDir.path, 'outlet_logo.png'));
-
-            final imgRes = await _dioClient.dio.get<List<int>>(
-              fullLogoUrl,
-              options: Options(responseType: ResponseType.bytes),
-            );
-            if (imgRes.statusCode == 200 && imgRes.data != null) {
-              await logoFile.writeAsBytes(imgRes.data!);
-              localLogoPath = logoFile.path;
-            }
-          } catch (e) {
-            debugPrint('Error downloading logo: $e');
-            localLogoPath = existingLocalLogoPath;
-          }
-        }
-
-        final outletData = Map<String, dynamic>.from(data['outlet'] ?? {});
-        if (localLogoPath != null) {
-          outletData['local_logo_path'] = localLogoPath;
-        }
-        await _outletSettingsService.saveOutletProfile(outletData);
-
-        final settingsToSave = {
-          'taxPercentage': parsedTax,
-          'serviceChargePercentage': parsedService,
-          'taxIncludedInPrice': parsedTaxIncluded,
-          'roundingEnabled': parsedRoundingEnabled,
-          'roundingMode': parsedRoundingMode,
-          'allowNegativeStock': allowNegativeStock,
-          'posOrderTypes': posOrderTypes,
-          'paperSize': paperSize,
-          'autoPrint': autoPrint,
-          'showLogo': showLogo,
-          'customHeaderTitle': customHeaderTitle,
-          'headerNotes': headerNotes,
-          'showAddress': showAddress,
-          'showPhone': showPhone,
-          'showEmail': showEmail,
-          'showCashierName': showCashierName,
-          'showCustomerName': showCustomerName,
-          'showOrderType': showOrderType,
-          'showModifiers': showModifiers,
-          'showItemNotes': showItemNotes,
-          'showTaxDetail': showTaxDetail,
-          'showServiceCharge': showServiceCharge,
-          'footerNotes': footerNotes,
-          'socialMediaInfo': socialMediaInfo,
-          'wifiInfo': wifiInfo,
-          'showQrCode': showQrCode,
-          'qrType': qrType,
-          'logoUrl': logoUrl,
-          'localLogoPath': localLogoPath,
-        };
-        await _outletSettingsService.saveOutletSettings(settingsToSave);
+        await _outletSettingsService.syncSettingsPayload(
+          data: data,
+          dioClient: _dioClient,
+        );
 
         // 5. Insert Inventories
         for (final item in inventoryItems) {
@@ -588,10 +402,10 @@ class InitialSyncService {
         }
       });
 
-      // Simpan synced_at ke SharedPreferences
+      // Simpan synced_at ke SharedPreferences (SSOT: last_sync_at)
       if (_prefs != null) {
         await _prefs.setString('last_sync_at', syncedAt.toIso8601String());
-        await _prefs.setString('last_synced_at', syncedAt.toIso8601String());
+        await _prefs.remove('last_synced_at');
       }
 
       return syncedAt;

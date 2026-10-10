@@ -6,6 +6,7 @@ import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/auth/presentation/providers/employee_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/shift/presentation/providers/shift_provider.dart';
 
 enum AutoSyncStatus { idle, syncing, success, error }
@@ -69,6 +70,8 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
         final syncedAt = await deltaService.syncDeltaCatalog();
         await ref.read(lastSyncProvider.notifier).updateWithTimestamp(syncedAt);
         ref.invalidate(employeeListProvider);
+        ref.invalidate(outletSettingsProvider);
+        ref.invalidate(outletProfileProvider);
       }
 
       // Step 2: Push pending shifts & cash logs
@@ -138,6 +141,8 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
 
       // Invalidate employee list so UI reflects newly synced employees
       ref.invalidate(employeeListProvider);
+      ref.invalidate(outletSettingsProvider);
+      ref.invalidate(outletProfileProvider);
 
       state = state.copyWith(
         status: AutoSyncStatus.success,
@@ -179,6 +184,8 @@ class AutoSyncNotifier extends Notifier<AutoSyncState> {
       final deltaService = ref.read(deltaSyncServiceProvider);
       final syncedAt = await deltaService.syncDeltaCatalog(entities: entities);
       await ref.read(lastSyncProvider.notifier).updateWithTimestamp(syncedAt);
+      ref.invalidate(outletSettingsProvider);
+      ref.invalidate(outletProfileProvider);
     } catch (e) {
       debugPrint('[AutoSync] Error triggering delta sync: $e');
     }

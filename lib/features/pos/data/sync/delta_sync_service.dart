@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/outlet_settings_service.dart';
 import 'initial_sync_service.dart';
 
 class DeltaSyncService {
@@ -12,12 +13,14 @@ class DeltaSyncService {
   final AppDatabase _database;
   final SharedPreferences? _prefs;
   final InitialSyncService? _initialSyncService;
+  final OutletSettingsService? _outletSettingsService;
 
   DeltaSyncService(
     this._dioClient,
     this._database, [
     this._prefs,
     this._initialSyncService,
+    this._outletSettingsService,
   ]);
 
   /// Jalankan Delta Sync berbasis timestamp terakhir.
@@ -209,10 +212,21 @@ class DeltaSyncService {
         }
       });
 
-      // Simpan synced_at baru ke SharedPreferences
+      // 7. Perbarui Pengaturan Outlet jika disertakan dalam delta sync
+      if (_outletSettingsService != null &&
+          (data['settings'] != null ||
+              data['outlet_settings'] != null ||
+              data['outlet'] != null)) {
+        await _outletSettingsService.syncSettingsPayload(
+          data: data,
+          dioClient: _dioClient,
+        );
+      }
+
+      // Simpan synced_at baru ke SharedPreferences (SSOT: last_sync_at)
       if (_prefs != null) {
         await _prefs.setString('last_sync_at', syncedAt.toIso8601String());
-        await _prefs.setString('last_synced_at', syncedAt.toIso8601String());
+        await _prefs.remove('last_synced_at');
       }
 
       return syncedAt;
@@ -229,6 +243,10 @@ class DeltaSyncService {
     if (_prefs == null) return null;
     final stored = _prefs.getString('last_sync_at') ?? _prefs.getString('last_synced_at');
     if (stored != null) {
+      if (!_prefs.containsKey('last_sync_at')) {
+        _prefs.setString('last_sync_at', stored);
+        _prefs.remove('last_synced_at');
+      }
       return DateTime.tryParse(stored);
     }
     return null;

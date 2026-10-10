@@ -31,6 +31,7 @@ class SyncRepository {
       _database,
       _prefs,
       _initialSyncService,
+      _outletSettingsService,
     );
   }
 

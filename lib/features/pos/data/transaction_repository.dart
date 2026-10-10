@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
@@ -8,6 +10,7 @@ import '../../../core/enums/transaction_enums.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/outlet_settings_service.dart';
+import '../../shift/data/shift_repository.dart';
 import '../presentation/providers/cart_provider.dart';
 
 enum SyncOutcome {
@@ -58,12 +61,18 @@ class TransactionRepository {
   final AppDatabase _database;
   final DioClient _dioClient;
   final OutletSettingsService? _outletSettingsService;
+  final ShiftRepository? _shiftRepository;
   final Uuid _uuid = const Uuid();
+
+  bool _isSyncQueueRunning = false;
+  bool get isSyncQueueRunning => _isSyncQueueRunning;
+  Completer<int>? _activeSyncCompleter;
 
   TransactionRepository(
     this._database,
     this._dioClient, [
     this._outletSettingsService,
+    this._shiftRepository,
   ]);
 
   /// Helper untuk mendapatkan inisial outlet
@@ -135,8 +144,7 @@ class TransactionRepository {
     final txId = _uuid.v4();
     final txNumber = await generateTransactionNumber();
     final now = DateTime.now();
-
-    return await _database.transaction(() async {
+    final result = await _database.transaction(() async {
       // 1. Simpan Transaksi Utama
       await _database
           .into(_database.transactions)
@@ -170,7 +178,6 @@ class TransactionRepository {
           );
 
       // 2. Simpan Item Transaksi & Potong Stok Lokal
-      final List<Map<String, dynamic>> itemsPayload = [];
       final List<TransactionItem> createdItems = [];
       final Map<String, List<TransactionItemModifier>>
       createdModifiersByItemId = {};
@@ -299,27 +306,21 @@ class TransactionRepository {
           ),
         );
 
-        // Cek status track inventory dari database lokal jika ada inventoryItemId
-        bool isTrackInventory = false;
+        // Potong stok dari database lokal jika produk melacak stok
         if (resolvedInventoryItemId != null) {
           final inventory =
               await (_database.select(_database.inventories)
                     ..where((i) => i.id.equals(resolvedInventoryItemId!)))
                     .getSingleOrNull();
 
-          if (inventory != null) {
-            isTrackInventory = inventory.trackInventory;
-            if (inventory.trackInventory) {
-              final newStock = inventory.stock - cartItem.qty;
-              await (_database.update(_database.inventories)
-                    ..where((i) => i.id.equals(resolvedInventoryItemId!)))
-                  .write(InventoriesCompanion(stock: Value(newStock)));
-            }
+          if (inventory != null && inventory.trackInventory) {
+            final newStock = inventory.stock - cartItem.qty;
+            await (_database.update(_database.inventories)
+                  ..where((i) => i.id.equals(resolvedInventoryItemId!)))
+                .write(InventoriesCompanion(stock: Value(newStock)));
           }
         }
 
-        // Siapkan payload sync untuk item
-        final List<Map<String, dynamic>> modPayload = [];
         final List<TransactionItemModifier> itemMods = [];
         if (cartItem.selectedModifiers.isNotEmpty) {
           for (final entry in cartItem.selectedModifiers.entries) {
@@ -359,32 +360,10 @@ class TransactionRepository {
                   qty: 1.0,
                 ),
               );
-
-              modPayload.add({
-                'modifier_option_id': modOptionId,
-                'modifier_name': modName,
-                'price': modPrice,
-                'qty': 1,
-              });
             }
           }
         }
         createdModifiersByItemId[itemId] = itemMods;
-
-        itemsPayload.add({
-          'product_id': resolvedProductId,
-          'inventory_item_id': isTrackInventory ? resolvedInventoryItemId : null,
-          'track_inventory': isTrackInventory,
-          'variant_group_option_id': resolvedVariantGroupOptionId,
-          'product_name': cartItem.name,
-          'price': cartItem.price,
-          'qty': cartItem.qty,
-          'discount_type': itemDiscountType,
-          'discount_value': itemDiscountValue,
-          'discount_amount': itemDiscountAmount,
-          'subtotal': itemSubtotal,
-          'modifiers': modPayload,
-        });
       }
 
       // 3. Simpan Pembayaran Transaksi
@@ -466,32 +445,13 @@ class TransactionRepository {
         customer: resolvedCustomer,
       );
 
-      // 5. Coba sinkronkan ke backend jika online di background
-      _syncTransactionOnline(
-        txId: txId,
-        txNumber: txNumber,
-        shiftId: shiftId,
-        customerId: customerId,
-        subtotal: subtotal,
-        discountAmount: discountAmount,
-        discountType: discountType,
-        discountValue: discountValue,
-        promoName: promoName,
-        promoId: promoId,
-        taxAmount: taxAmount,
-        serviceChargeAmount: serviceChargeAmount,
-        total: total,
-        itemsPayload: itemsPayload,
-        paymentMethodId: paymentMethod.id,
-        paymentAmount: paymentAmount,
-        changeAmount: changeAmount,
-        notes: notes,
-        channel: 'pos',
-        type: type,
-      );
-
       return (transaction: createdTx, detail: detailData);
     });
+
+    // 5. Trigger pemrosesan antrean sinkronisasi latar belakang (FIFO) secara non-blocking
+    enqueueSyncQueue();
+
+    return result;
   }
 
   /// Sinkronisasi transaksi ke API backend Laravel dengan deteksi status & fallback
@@ -710,8 +670,83 @@ class TransactionRepository {
         .map((rows) => rows.length);
   }
 
-  /// Mencoba menyinkronkan seluruh transaksi yang pending (Anti Head-of-Line Blocking)
+  /// Memasukkan pemrosesan antrean transaksi ke latar belakang secara non-blocking (FIFO).
+  /// Memastikan UI kasir tetap responsif (< 20 ms commit SQLite) untuk mendukung kasir cepat.
+  void enqueueSyncQueue() {
+    if (_isSyncQueueRunning) {
+      debugPrint('[TransactionQueue] Antrean sinkronisasi sudah sedang berjalan di background.');
+      return;
+    }
+    unawaited(syncPendingTransactions());
+  }
+
+  /// Mendapatkan jumlah transaksi yang berstatus pending (antrean aktif yang siap dikirim)
+  Future<int> getUnsyncedPendingCount({bool includeFailed = false}) async {
+    final rows = await (_database.select(_database.transactions)
+          ..where((t) {
+            final isOfflineMatch = t.isOffline.equals(true);
+            if (includeFailed) {
+              return isOfflineMatch;
+            }
+            return isOfflineMatch & t.syncStatus.isNotValue('failed');
+          }))
+        .get();
+    return rows.length;
+  }
+
+  /// Sinkronisasi seluruh antrean transaksi lokal pending secara berurutan (FIFO).
+  /// Dilindungi mutex (_isSyncQueueRunning & _activeSyncCompleter) untuk mencegah
+  /// pemrosesan ganda / race condition saat banyak transaksi terjadi cepat.
   Future<int> syncPendingTransactions({bool force = false}) async {
+    if (_isSyncQueueRunning) {
+      if (_activeSyncCompleter != null) {
+        return await _activeSyncCompleter!.future;
+      }
+      return 0;
+    }
+
+    _isSyncQueueRunning = true;
+    final completer = Completer<int>();
+    _activeSyncCompleter = completer;
+
+    int totalSynced = 0;
+    try {
+      // 1. Sinkronkan antrean shift & cash log terlebih dahulu jika ShiftRepository tersedia
+      if (_shiftRepository != null) {
+        try {
+          await _shiftRepository.syncPendingShifts();
+          await _shiftRepository.syncPendingCashLogs();
+        } catch (e) {
+          debugPrint('[TransactionQueue] Gagal menyinkronkan shift/cash log: $e');
+        }
+      }
+
+      // 2. Loop memproses antrean transaksi pending secara berurutan (FIFO: ORDER BY createdAt ASC).
+      // Jika saat proses ada transaksi baru yang masuk ke database SQLite lokal,
+      // loop ini akan otomatis memprosesnya hingga antrean pending habis atau jaringan offline.
+      while (true) {
+        final syncedCount = await _executePendingTransactionsBatch(force: force);
+        totalSynced += syncedCount;
+
+        final remainingPending = await getUnsyncedPendingCount(includeFailed: force);
+        if (remainingPending == 0 || syncedCount == 0) {
+          break;
+        }
+      }
+
+      completer.complete(totalSynced);
+      return totalSynced;
+    } catch (e, stack) {
+      completer.completeError(e, stack);
+      rethrow;
+    } finally {
+      _isSyncQueueRunning = false;
+      _activeSyncCompleter = null;
+    }
+  }
+
+  /// Eksekusi satu batch transaksi pending terurut createdAt ASC (FIFO)
+  Future<int> _executePendingTransactionsBatch({bool force = false}) async {
     final unsynced = await (_database.select(_database.transactions)
           ..where((t) {
             final isOfflineMatch = t.isOffline.equals(true);

@@ -14,9 +14,13 @@ import 'package:sollu_pos_client/features/auth/presentation/widgets/change_pin_d
 import 'package:sollu_pos_client/features/auth/presentation/widgets/employee_login_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/sync_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/widgets/device_unpair_dialog.dart';
 import 'package:sollu_pos_client/core/providers/preferences_provider.dart';
 import 'package:sollu_pos_client/core/services/window_service.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -466,31 +470,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _isSyncing = true;
     });
 
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Menyinkronkan transaksi dan pembaruan data...',
+        ),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
     try {
-      // Sinkronisasi data master (Produk, Inventory, Karyawan, dll)
-      final syncRepository = ref.read(syncRepositoryProvider);
-      await syncRepository.syncMasterData();
+      final syncCoordinator = ref.read(
+        syncCoordinatorServiceProvider,
+      );
+      final result = await syncCoordinator.synchronizeAll();
 
-      // Refresh state yang diperlukan
       ref.invalidate(employeeListProvider);
+      ref.invalidate(posItemsProvider);
+      ref.invalidate(posCategoriesProvider);
+      ref.invalidate(
+        currentShiftTransactionsProvider,
+      );
+      ref.invalidate(allTransactionsProvider);
+      ref.invalidate(heldTransactionsStreamProvider);
+      ref.invalidate(outletSettingsProvider);
+      ref.invalidate(outletProfileProvider);
 
-      // Simpan timestamp sinkronisasi terakhir
       ref.read(lastSyncProvider.notifier).updateTimestamp();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sinkronisasi data master & karyawan berhasil'),
-            backgroundColor: Colors.green,
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              result.userFriendlyMessage,
+            ),
+            backgroundColor: result.hasFailures
+                ? SolluColors.warning
+                : Colors.green,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal sinkronisasi data: $e'),
-            backgroundColor: Colors.red,
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Tidak dapat terhubung ke server. Data transaksi tetap aman di perangkat kasir.',
+            ),
+            backgroundColor: SolluColors.danger,
           ),
         );
       }
