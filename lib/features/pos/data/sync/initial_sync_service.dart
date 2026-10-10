@@ -274,6 +274,11 @@ class InitialSyncService {
             structuredSettings['allow_negative_stock'] == true ||
             structuredSettings['allow_negative_stock'] == 1 ||
             structuredSettings['allow_negative_stock'] == null;
+        final List<String> posOrderTypes = (structuredSettings['pos_order_types'] is List)
+            ? (structuredSettings['pos_order_types'] as List)
+                .map((e) => e.toString())
+                .toList()
+            : ['walk_in', 'dine_in', 'take_away'];
         final showLogo =
             parsedReceipt['show_logo'] == true ||
             parsedReceipt['show_logo'] == 1 ||
@@ -375,6 +380,7 @@ class InitialSyncService {
           'roundingEnabled': parsedRoundingEnabled,
           'roundingMode': parsedRoundingMode,
           'allowNegativeStock': allowNegativeStock,
+          'posOrderTypes': posOrderTypes,
           'paperSize': paperSize,
           'autoPrint': autoPrint,
           'showLogo': showLogo,

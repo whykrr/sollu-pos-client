@@ -45,7 +45,9 @@ class Transactions extends Table {
   TextColumn get shiftId => text().nullable().references(Shifts, #id)();
   TextColumn get customerId => text().nullable()();
   TextColumn get channel =>
-      text().withDefault(const Constant('pos'))(); // 'pos', 'direct', 'invoice'
+      text().withDefault(const Constant('pos'))(); // 'pos', 'wholesale'
+  TextColumn get type =>
+      text().withDefault(const Constant('walk_in'))(); // 'walk_in', 'dine_in', 'take_away', 'invoice'
   TextColumn get transactionNumber => text()();
 
   // Financials

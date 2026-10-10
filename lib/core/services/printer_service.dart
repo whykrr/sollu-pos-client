@@ -327,19 +327,22 @@ class PrinterService {
     bytes += generator.hr();
 
     // 6. Metadata Transaksi Simulasi
+    bytes += generator.text(
+      'No: TRX/2026.08.14/OUT.POS/0001',
+      styles: bold,
+    );
     bytes += generator.row([
-      PosColumn(text: 'No: SIMULASI/TEST/01', width: 7, styles: regular),
       PosColumn(
         text: DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
-        width: 5,
-        styles: right,
+        width: 7,
+        styles: regular,
       ),
+      PosColumn(text: 'Walk In', width: 5, styles: rightBold),
     ]);
     bytes += generator.row([
       PosColumn(text: 'Kasir: Kasir Uji Coba', width: 7, styles: regular),
-      PosColumn(text: 'Dine In', width: 5, styles: rightBold),
+      PosColumn(text: 'Pelanggan: Tamu', width: 5, styles: right),
     ]);
-    bytes += generator.text('Pelanggan: Tamu Umum', styles: regular);
 
     bytes += generator.hr();
 
@@ -588,17 +591,34 @@ class PrinterService {
 
     // Meta Info
     final tx = detail.transaction;
+    bytes += generator.text(
+      'No: ${tx.transactionNumber.trim()}',
+      styles: bold,
+    );
+
+    bool showOrderType =
+        (outletSetting?['show_order_type'] as bool?) ??
+        (outletSetting?['showOrderType'] as bool?) ??
+        true;
+    String orderTypeText = '';
+    if (showOrderType) {
+      final t = tx.type.toLowerCase();
+      orderTypeText = t == 'walk_in'
+          ? 'Walk In'
+          : t == 'dine_in'
+              ? 'Dine In'
+              : t == 'take_away'
+                  ? 'Take Away'
+                  : 'Faktur';
+    }
+
     bytes += generator.row([
       PosColumn(
-        text: 'No: ${tx.transactionNumber.trim()}',
+        text: DateFormat('dd/MM/yyyy HH:mm').format(tx.createdAt),
         width: 7,
         styles: regular,
       ),
-      PosColumn(
-        text: DateFormat('dd/MM/yyyy HH:mm').format(tx.createdAt),
-        width: 5,
-        styles: right,
-      ),
+      PosColumn(text: orderTypeText, width: 5, styles: rightBold),
     ]);
 
     bool showCashier =
@@ -610,28 +630,24 @@ class PrinterService {
         ? 'Kasir: $cashierName'
         : '';
 
-    bool showOrderType =
-        (outletSetting?['show_order_type'] as bool?) ??
-        (outletSetting?['showOrderType'] as bool?) ??
-        true;
-    String orderTypeText = showOrderType ? 'Dine In' : ''; // Placeholder
-
-    if (cashierText.isNotEmpty || orderTypeText.isNotEmpty) {
-      bytes += generator.row([
-        PosColumn(text: cashierText, width: 7, styles: regular),
-        PosColumn(text: orderTypeText, width: 5, styles: rightBold),
-      ]);
-    }
-
     bool showCustomer =
         (outletSetting?['show_customer_name'] as bool?) ??
         (outletSetting?['showCustomerName'] as bool?) ??
         true;
-    if (showCustomer && detail.customer != null) {
-      bytes += generator.text(
-        'Pelanggan: ${detail.customer!.name}',
-        styles: regular,
-      );
+    String customerText =
+        (showCustomer && detail.customer != null)
+        ? 'Pelanggan: ${detail.customer!.name}'
+        : '';
+
+    if (cashierText.isNotEmpty && customerText.isNotEmpty) {
+      bytes += generator.row([
+        PosColumn(text: cashierText, width: 6, styles: regular),
+        PosColumn(text: customerText, width: 6, styles: right),
+      ]);
+    } else if (cashierText.isNotEmpty) {
+      bytes += generator.text(cashierText, styles: regular);
+    } else if (customerText.isNotEmpty) {
+      bytes += generator.text(customerText, styles: regular);
     }
 
     bytes += generator.hr();

@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/enums/transaction_enums.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/services/outlet_settings_service.dart';
 import '../presentation/providers/cart_provider.dart';
 
 enum SyncOutcome {
@@ -56,21 +57,56 @@ class TransactionDetailData {
 class TransactionRepository {
   final AppDatabase _database;
   final DioClient _dioClient;
+  final OutletSettingsService? _outletSettingsService;
   final Uuid _uuid = const Uuid();
 
-  TransactionRepository(this._database, this._dioClient);
+  TransactionRepository(
+    this._database,
+    this._dioClient, [
+    this._outletSettingsService,
+  ]);
 
-  /// Menghasilkan nomor transaksi unik TRX/YYYY/MM/XXXX
-  Future<String> generateTransactionNumber() async {
+  /// Helper untuk mendapatkan inisial outlet
+  String resolveOutletInitial(String outletName) {
+    final clean = outletName.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (clean.isEmpty) return 'POS';
+    final words = clean.split(' ');
+    if (words.length >= 2) {
+      return words.map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
+    }
+    return clean.length >= 3
+        ? clean.substring(0, 3).toUpperCase()
+        : clean.toUpperCase().padRight(3, 'X');
+  }
+
+  /// Menghasilkan nomor transaksi unik TRX/YYYY.MM.DD/{Inisial Outlet}.POS/XXXX
+  Future<String> generateTransactionNumber({String? outletName}) async {
     final now = DateTime.now();
-    final datePrefix = 'TRX/${DateFormat('yyyy/MM').format(now)}/';
+    final dateStr = DateFormat('yyyy.MM.dd').format(now);
+
+    String outletInit = 'POS';
+    if (_outletSettingsService != null) {
+      final profile = _outletSettingsService.getOutletProfile();
+      if (profile != null && profile['initial'] != null && profile['initial'].toString().isNotEmpty) {
+        outletInit = profile['initial'].toString().toUpperCase();
+      } else if (profile != null && profile['name'] != null) {
+        outletInit = resolveOutletInitial(profile['name'].toString());
+      } else if (outletName != null) {
+        outletInit = resolveOutletInitial(outletName);
+      }
+    } else if (outletName != null) {
+      outletInit = resolveOutletInitial(outletName);
+    }
+
+    final channelInit = 'POS';
+    final prefix = 'TRX/$dateStr/$outletInit.$channelInit/';
 
     final countRows = await (_database.select(
       _database.transactions,
-    )..where((t) => t.transactionNumber.like('$datePrefix%'))).get();
+    )..where((t) => t.transactionNumber.like('$prefix%'))).get();
 
     final nextNumber = countRows.length + 1;
-    return '$datePrefix${nextNumber.toString().padLeft(4, '0')}';
+    return '$prefix${nextNumber.toString().padLeft(4, '0')}';
   }
 
   /// Membuat transaksi lengkap secara offline-first dan potong stok
@@ -94,6 +130,7 @@ class TransactionRepository {
     required double changeAmount,
     String? notes,
     String outletId = 'default-outlet',
+    String type = 'walk_in',
   }) async {
     final txId = _uuid.v4();
     final txNumber = await generateTransactionNumber();
@@ -110,6 +147,7 @@ class TransactionRepository {
               shiftId: Value(shiftId),
               customerId: Value(customerId),
               channel: const Value('pos'),
+              type: Value(type),
               transactionNumber: txNumber,
               subtotal: subtotal,
               discountAmount: Value(discountAmount),
@@ -448,6 +486,8 @@ class TransactionRepository {
         paymentAmount: paymentAmount,
         changeAmount: changeAmount,
         notes: notes,
+        channel: 'pos',
+        type: type,
       );
 
       return (transaction: createdTx, detail: detailData);
@@ -474,6 +514,8 @@ class TransactionRepository {
     required double paymentAmount,
     required double changeAmount,
     String? notes,
+    String channel = 'pos',
+    String type = 'walk_in',
   }) async {
     final now = DateTime.now();
     await (_database.update(_database.transactions)
@@ -489,6 +531,8 @@ class TransactionRepository {
         data: {
           'offline_id': txId,
           'transaction_number': txNumber,
+          'channel': channel,
+          'type': type,
           'shift_id': shiftId,
           'customer_id': customerId,
           'subtotal': subtotal,
@@ -750,6 +794,8 @@ class TransactionRepository {
         paymentAmount: payment.amount,
         changeAmount: payment.changeAmount,
         notes: tx.notes,
+        channel: tx.channel,
+        type: tx.type,
       );
 
       if (result.outcome == SyncOutcome.success) {

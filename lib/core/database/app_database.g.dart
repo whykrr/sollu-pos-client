@@ -5107,6 +5107,16 @@ class $TransactionsTable extends Transactions
     requiredDuringInsert: false,
     defaultValue: const Constant('pos'),
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('walk_in'),
+  );
   static const VerificationMeta _transactionNumberMeta = const VerificationMeta(
     'transactionNumber',
   );
@@ -5363,6 +5373,7 @@ class $TransactionsTable extends Transactions
     shiftId,
     customerId,
     channel,
+    type,
     transactionNumber,
     subtotal,
     discountAmount,
@@ -5427,6 +5438,12 @@ class $TransactionsTable extends Transactions
       context.handle(
         _channelMeta,
         channel.isAcceptableOrUnknown(data['channel']!, _channelMeta),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
       );
     }
     if (data.containsKey('transaction_number')) {
@@ -5630,6 +5647,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}channel'],
       )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
       transactionNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}transaction_number'],
@@ -5733,6 +5754,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? shiftId;
   final String? customerId;
   final String channel;
+  final String type;
   final String transactionNumber;
   final double subtotal;
   final double discountAmount;
@@ -5761,6 +5783,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.shiftId,
     this.customerId,
     required this.channel,
+    required this.type,
     required this.transactionNumber,
     required this.subtotal,
     required this.discountAmount,
@@ -5796,6 +5819,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       map['customer_id'] = Variable<String>(customerId);
     }
     map['channel'] = Variable<String>(channel);
+    map['type'] = Variable<String>(type);
     map['transaction_number'] = Variable<String>(transactionNumber);
     map['subtotal'] = Variable<double>(subtotal);
     map['discount_amount'] = Variable<double>(discountAmount);
@@ -5850,6 +5874,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? const Value.absent()
           : Value(customerId),
       channel: Value(channel),
+      type: Value(type),
       transactionNumber: Value(transactionNumber),
       subtotal: Value(subtotal),
       discountAmount: Value(discountAmount),
@@ -5904,6 +5929,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       shiftId: serializer.fromJson<String?>(json['shiftId']),
       customerId: serializer.fromJson<String?>(json['customerId']),
       channel: serializer.fromJson<String>(json['channel']),
+      type: serializer.fromJson<String>(json['type']),
       transactionNumber: serializer.fromJson<String>(json['transactionNumber']),
       subtotal: serializer.fromJson<double>(json['subtotal']),
       discountAmount: serializer.fromJson<double>(json['discountAmount']),
@@ -5941,6 +5967,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'shiftId': serializer.toJson<String?>(shiftId),
       'customerId': serializer.toJson<String?>(customerId),
       'channel': serializer.toJson<String>(channel),
+      'type': serializer.toJson<String>(type),
       'transactionNumber': serializer.toJson<String>(transactionNumber),
       'subtotal': serializer.toJson<double>(subtotal),
       'discountAmount': serializer.toJson<double>(discountAmount),
@@ -5972,6 +5999,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> shiftId = const Value.absent(),
     Value<String?> customerId = const Value.absent(),
     String? channel,
+    String? type,
     String? transactionNumber,
     double? subtotal,
     double? discountAmount,
@@ -6000,6 +6028,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     shiftId: shiftId.present ? shiftId.value : this.shiftId,
     customerId: customerId.present ? customerId.value : this.customerId,
     channel: channel ?? this.channel,
+    type: type ?? this.type,
     transactionNumber: transactionNumber ?? this.transactionNumber,
     subtotal: subtotal ?? this.subtotal,
     discountAmount: discountAmount ?? this.discountAmount,
@@ -6038,6 +6067,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? data.customerId.value
           : this.customerId,
       channel: data.channel.present ? data.channel.value : this.channel,
+      type: data.type.present ? data.type.value : this.type,
       transactionNumber: data.transactionNumber.present
           ? data.transactionNumber.value
           : this.transactionNumber,
@@ -6093,6 +6123,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('shiftId: $shiftId, ')
           ..write('customerId: $customerId, ')
           ..write('channel: $channel, ')
+          ..write('type: $type, ')
           ..write('transactionNumber: $transactionNumber, ')
           ..write('subtotal: $subtotal, ')
           ..write('discountAmount: $discountAmount, ')
@@ -6126,6 +6157,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     shiftId,
     customerId,
     channel,
+    type,
     transactionNumber,
     subtotal,
     discountAmount,
@@ -6158,6 +6190,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.shiftId == this.shiftId &&
           other.customerId == this.customerId &&
           other.channel == this.channel &&
+          other.type == this.type &&
           other.transactionNumber == this.transactionNumber &&
           other.subtotal == this.subtotal &&
           other.discountAmount == this.discountAmount &&
@@ -6188,6 +6221,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> shiftId;
   final Value<String?> customerId;
   final Value<String> channel;
+  final Value<String> type;
   final Value<String> transactionNumber;
   final Value<double> subtotal;
   final Value<double> discountAmount;
@@ -6217,6 +6251,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.shiftId = const Value.absent(),
     this.customerId = const Value.absent(),
     this.channel = const Value.absent(),
+    this.type = const Value.absent(),
     this.transactionNumber = const Value.absent(),
     this.subtotal = const Value.absent(),
     this.discountAmount = const Value.absent(),
@@ -6247,6 +6282,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.shiftId = const Value.absent(),
     this.customerId = const Value.absent(),
     this.channel = const Value.absent(),
+    this.type = const Value.absent(),
     required String transactionNumber,
     required double subtotal,
     this.discountAmount = const Value.absent(),
@@ -6283,6 +6319,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? shiftId,
     Expression<String>? customerId,
     Expression<String>? channel,
+    Expression<String>? type,
     Expression<String>? transactionNumber,
     Expression<double>? subtotal,
     Expression<double>? discountAmount,
@@ -6313,6 +6350,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (shiftId != null) 'shift_id': shiftId,
       if (customerId != null) 'customer_id': customerId,
       if (channel != null) 'channel': channel,
+      if (type != null) 'type': type,
       if (transactionNumber != null) 'transaction_number': transactionNumber,
       if (subtotal != null) 'subtotal': subtotal,
       if (discountAmount != null) 'discount_amount': discountAmount,
@@ -6346,6 +6384,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? shiftId,
     Value<String?>? customerId,
     Value<String>? channel,
+    Value<String>? type,
     Value<String>? transactionNumber,
     Value<double>? subtotal,
     Value<double>? discountAmount,
@@ -6376,6 +6415,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       shiftId: shiftId ?? this.shiftId,
       customerId: customerId ?? this.customerId,
       channel: channel ?? this.channel,
+      type: type ?? this.type,
       transactionNumber: transactionNumber ?? this.transactionNumber,
       subtotal: subtotal ?? this.subtotal,
       discountAmount: discountAmount ?? this.discountAmount,
@@ -6419,6 +6459,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     }
     if (channel.present) {
       map['channel'] = Variable<String>(channel.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
     }
     if (transactionNumber.present) {
       map['transaction_number'] = Variable<String>(transactionNumber.value);
@@ -6502,6 +6545,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('shiftId: $shiftId, ')
           ..write('customerId: $customerId, ')
           ..write('channel: $channel, ')
+          ..write('type: $type, ')
           ..write('transactionNumber: $transactionNumber, ')
           ..write('subtotal: $subtotal, ')
           ..write('discountAmount: $discountAmount, ')
@@ -16798,6 +16842,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> shiftId,
       Value<String?> customerId,
       Value<String> channel,
+      Value<String> type,
       required String transactionNumber,
       required double subtotal,
       Value<double> discountAmount,
@@ -16829,6 +16874,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> shiftId,
       Value<String?> customerId,
       Value<String> channel,
+      Value<String> type,
       Value<String> transactionNumber,
       Value<double> subtotal,
       Value<double> discountAmount,
@@ -16967,6 +17013,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get channel => $composableBuilder(
     column: $table.channel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17208,6 +17259,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get transactionNumber => $composableBuilder(
     column: $table.transactionNumber,
     builder: (column) => ColumnOrderings(column),
@@ -17364,6 +17420,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get channel =>
       $composableBuilder(column: $table.channel, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
 
   GeneratedColumn<String> get transactionNumber => $composableBuilder(
     column: $table.transactionNumber,
@@ -17592,6 +17651,7 @@ class $$TransactionsTableTableManager
                 Value<String?> shiftId = const Value.absent(),
                 Value<String?> customerId = const Value.absent(),
                 Value<String> channel = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<String> transactionNumber = const Value.absent(),
                 Value<double> subtotal = const Value.absent(),
                 Value<double> discountAmount = const Value.absent(),
@@ -17621,6 +17681,7 @@ class $$TransactionsTableTableManager
                 shiftId: shiftId,
                 customerId: customerId,
                 channel: channel,
+                type: type,
                 transactionNumber: transactionNumber,
                 subtotal: subtotal,
                 discountAmount: discountAmount,
@@ -17652,6 +17713,7 @@ class $$TransactionsTableTableManager
                 Value<String?> shiftId = const Value.absent(),
                 Value<String?> customerId = const Value.absent(),
                 Value<String> channel = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 required String transactionNumber,
                 required double subtotal,
                 Value<double> discountAmount = const Value.absent(),
@@ -17681,6 +17743,7 @@ class $$TransactionsTableTableManager
                 shiftId: shiftId,
                 customerId: customerId,
                 channel: channel,
+                type: type,
                 transactionNumber: transactionNumber,
                 subtotal: subtotal,
                 discountAmount: discountAmount,

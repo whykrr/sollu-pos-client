@@ -39,6 +39,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
   double _cashReceived = 0.0;
   bool _isProcessing = false;
   bool _autoPrintReceipt = true;
+  String? _selectedOrderType;
 
   @override
   void initState() {
@@ -47,6 +48,13 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
     final autoPrint =
         ref.read(outletSettingsServiceProvider).getAutoPrint();
     _autoPrintReceipt = autoPrint;
+
+    final orderTypes = ref.read(posOrderTypesProvider);
+    if (orderTypes.isNotEmpty) {
+      _selectedOrderType = orderTypes.first;
+    } else {
+      _selectedOrderType = 'walk_in';
+    }
   }
 
   @override
@@ -216,6 +224,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
         cashReceived: isCash ? _cashReceived : grandTotal,
         changeAmount: changeAmount,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        type: _selectedOrderType ?? 'walk_in',
       );
 
       if (mounted) {
@@ -489,12 +498,105 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
         final double change = isCash ? (_cashReceived - grandTotal) : 0.0;
         final bool isUnderpaid = isCash && _cashReceived < grandTotal;
 
+        final posOrderTypes = ref.watch(posOrderTypesProvider);
+        if (_selectedOrderType == null || !posOrderTypes.contains(_selectedOrderType)) {
+          if (posOrderTypes.isNotEmpty) {
+            _selectedOrderType = posOrderTypes.first;
+          }
+        }
+
         return Container(
           color: SolluColors.background,
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Selector Tipe Pesanan (hanya tampil jika > 1 opsi aktif)
+              if (posOrderTypes.length > 1) ...[
+                const Text(
+                  'Tipe Pesanan',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: SolluColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: posOrderTypes.map((typeKey) {
+                    final isSelected = _selectedOrderType == typeKey;
+                    final label = typeKey == 'walk_in'
+                        ? 'Walk-In'
+                        : typeKey == 'dine_in'
+                            ? 'Dine-In'
+                            : typeKey == 'take_away'
+                                ? 'Take-Away'
+                                : typeKey;
+                    final icon = typeKey == 'walk_in'
+                        ? Icons.directions_walk
+                        : typeKey == 'dine_in'
+                            ? Icons.restaurant
+                            : Icons.shopping_bag_outlined;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedOrderType = typeKey;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? SolluColors.primary
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? SolluColors.primary
+                                  : SolluColors.neutral,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                icon,
+                                size: 16,
+                                color: isSelected
+                                    ? Colors.white
+                                    : SolluColors.textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : SolluColors.textDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // 1. Selector Metode Pembayaran (Horizontal List / Wrap)
               const Text(
                 'Pilih Metode Pembayaran',

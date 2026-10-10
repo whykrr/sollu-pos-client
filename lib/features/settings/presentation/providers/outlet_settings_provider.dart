@@ -47,3 +47,15 @@ final allowNegativeStockProvider = Provider<bool>((ref) {
   return true;
 });
 
+/// Computed provider for active POS order types (walk_in, dine_in, take_away)
+final posOrderTypesProvider = Provider<List<String>>((ref) {
+  final settings = ref.watch(outletSettingsProvider);
+  if (settings != null && settings['posOrderTypes'] is List) {
+    final list = (settings['posOrderTypes'] as List)
+        .map((e) => e.toString())
+        .toList();
+    if (list.isNotEmpty) return list;
+  }
+  return const ['walk_in', 'dine_in', 'take_away'];
+});
+

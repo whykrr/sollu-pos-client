@@ -55,3 +55,40 @@ enum SyncStatus {
     );
   }
 }
+
+/// Transaction Type Enums - SSOT synchronized with Laravel backend
+enum TransactionType {
+  walkIn('walk_in', 'Walk-In'),
+  dineIn('dine_in', 'Dine-In'),
+  takeAway('take_away', 'Take-Away'),
+  invoice('invoice', 'Faktur / Wholesale');
+
+  final String value;
+  final String label;
+  const TransactionType(this.value, this.label);
+
+  static TransactionType fromValue(String? value) {
+    return TransactionType.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => TransactionType.walkIn,
+    );
+  }
+}
+
+/// Sales Channel Enums - SSOT synchronized with Laravel backend
+enum SalesChannel {
+  pos('pos', 'POS', 'POS'),
+  wholesale('wholesale', 'Wholesale', 'WS');
+
+  final String value;
+  final String label;
+  final String initial;
+  const SalesChannel(this.value, this.label, this.initial);
+
+  static SalesChannel fromValue(String? value) {
+    return SalesChannel.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => SalesChannel.pos,
+    );
+  }
+}

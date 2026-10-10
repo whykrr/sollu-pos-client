@@ -3,12 +3,14 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../shift/presentation/providers/shift_provider.dart';
+import '../../../../core/providers/preferences_provider.dart';
 import '../../data/transaction_repository.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   final database = ref.watch(databaseProvider);
   final dioClient = ref.watch(dioClientProvider);
-  return TransactionRepository(database, dioClient);
+  final outletSettings = ref.watch(outletSettingsServiceProvider);
+  return TransactionRepository(database, dioClient, outletSettings);
 });
 
 /// Stream metode pembayaran aktif dari SQLite lokal (diurutkan berdasarkan kolom localSortOrder jika dikustomisasi per device, fallback ke sortOrder pusat)
