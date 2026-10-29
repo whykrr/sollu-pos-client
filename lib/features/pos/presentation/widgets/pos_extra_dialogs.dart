@@ -939,8 +939,9 @@ class _EditCartItemDialogState extends State<EditCartItemDialog> {
                             ),
                           ],
                           onChanged: (val) {
-                            if (val != null)
+                            if (val != null) {
                               setState(() => _discountType = val);
+                            }
                           },
                         ),
                       ),

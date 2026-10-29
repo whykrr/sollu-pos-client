@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/presentation/widgets/outlet_inactive_dialog.dart';
 import '../routing/app_router.dart';
 import '../services/secure_storage_service.dart';
 
@@ -38,10 +39,12 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
-      final responseData = err.response?.data;
-      final errorCode = responseData is Map ? responseData['error_code'] : null;
+    final responseData = err.response?.data;
+    final errorCode = responseData is Map ? responseData['error_code'] : null;
+    final serverMessage =
+        responseData is Map ? responseData['message'] as String? : null;
 
+    if (err.response?.statusCode == 401) {
       if (errorCode == 'DEVICE_UNPAIRED') {
         // Clear all local credentials and storage
         await _storage.clearAll();
@@ -60,7 +63,27 @@ class AuthInterceptor extends Interceptor {
           context.go('/login');
         }
       }
+    } else if (err.response?.statusCode == 403 && errorCode == 'OUTLET_INACTIVE') {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        OutletInactiveDialog.show(context, message: serverMessage);
+      }
+    } else if (err.response?.statusCode == 402 && errorCode == 'SUBSCRIPTION_EXPIRED') {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              serverMessage ??
+                  'Masa berlaku langganan toko telah berakhir. Silakan hubungi pemilik usaha.',
+            ),
+            backgroundColor: Colors.amber.shade900,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
+
     super.onError(err, handler);
   }
 }

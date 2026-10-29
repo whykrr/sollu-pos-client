@@ -618,7 +618,7 @@ class _CloseShiftDialogState extends ConsumerState<CloseShiftDialog> {
                     cashierName: cashierName,
                   );
 
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(result.message),

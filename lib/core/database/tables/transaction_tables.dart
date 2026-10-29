@@ -90,6 +90,7 @@ class TransactionItems extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get transactionId => text().references(Transactions, #id)();
   TextColumn get productId => text().nullable()();
+  TextColumn get productItemId => text().nullable()();
   TextColumn get inventoryItemId => text().nullable()();
   TextColumn get variantGroupOptionId => text().nullable()();
   TextColumn get productName => text()(); // Denormalized

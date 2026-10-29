@@ -107,8 +107,12 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
         productId: product.isProductMode
             ? product.id
             : (product.inventory?.productId ?? product.product?.id ?? product.id),
+        productItemId: product.productItemId ??
+            (product.isProductMode ? null : product.id),
         inventoryItemId: product.isProductMode ? '' : product.id,
         name: product.name,
+        variantCombination: product.variantCombination,
+        trackInventory: product.trackInventory,
         price: product.price,
         qty: 1,
       );
@@ -213,6 +217,14 @@ class _ProductCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String _formatStock(double? stock) {
+    if (stock == null) return '0';
+    if (stock == stock.roundToDouble()) {
+      return stock.toInt().toString();
+    }
+    return stock.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isActive = posItem.isActive;
@@ -285,6 +297,68 @@ class _ProductCard extends StatelessWidget {
                         style: const TextStyle(
                           color: SolluColors.textMuted,
                           fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Top-left Stock Status Badge
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: !posItem.trackInventory
+                        ? const Color(0xFFF1F5F9)
+                        : (posItem.stock <= 0
+                            ? SolluColors.danger.withValues(alpha: 0.12)
+                            : const Color(0xFFF1F5F9)),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: !posItem.trackInventory
+                          ? const Color(0xFFCBD5E1)
+                          : (posItem.stock <= 0
+                              ? SolluColors.danger.withValues(alpha: 0.3)
+                              : const Color(0xFFE2E8F0)),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        !posItem.trackInventory
+                            ? Icons.all_inclusive_rounded
+                            : (posItem.isService
+                                ? Icons.room_service_rounded
+                                : Icons.inventory_2_outlined),
+                        size: 11,
+                        color: !posItem.trackInventory
+                            ? const Color(0xFF475569)
+                            : (posItem.stock <= 0
+                                ? SolluColors.danger
+                                : const Color(0xFF475569)),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        !posItem.trackInventory
+                            ? 'Stok: ∞'
+                            : (posItem.isService
+                                ? 'Layanan'
+                                : 'Stok: ${_formatStock(posItem.stock)}'),
+                        style: TextStyle(
+                          color: !posItem.trackInventory
+                              ? const Color(0xFF475569)
+                              : (posItem.stock <= 0
+                                  ? SolluColors.danger
+                                  : const Color(0xFF475569)),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
                         ),
                       ),
                     ],

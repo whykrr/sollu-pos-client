@@ -17,6 +17,8 @@ part 'app_database.g.dart';
     ProductCategories,
     VariantGroups,
     VariantGroupOptions,
+    ProductItems,
+    ProductItemVariantGroupOptions,
     InventoryItemVariantGroupOptions,
     ModifierGroups,
     ProductModifierGroups,
@@ -42,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -79,6 +81,17 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 9) {
           await m.addColumn(transactions, transactions.type);
+        }
+        if (from < 10) {
+          await m.createTable(productItems);
+          await m.createTable(productItemVariantGroupOptions);
+          await m.addColumn(products, products.hasVariants);
+          await m.addColumn(products, products.hasModifiers);
+          await m.addColumn(products, products.hasRecipe);
+          await m.addColumn(products, products.trackInventory);
+          await m.addColumn(inventories, inventories.productItemId);
+          await m.addColumn(productPrices, productPrices.productItemId);
+          await m.addColumn(transactionItems, transactionItems.productItemId);
         }
       },
     );

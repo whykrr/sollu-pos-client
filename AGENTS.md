@@ -12,7 +12,7 @@
 Before designing or modifying code, ensure compliance with the standing rules:
 - `01-ux-and-wording.md`: Mobile UX, tap targets, offline states, tone of voice.
 - `02-clean-architecture.md`: Presentation, Domain, Data layers, Riverpod DI.
-- `03-auth-and-enums.md`: Dart Enums SSOT, secure storage, local PIN auth.
+- `03-auth-and-enums.md`: Dart Enums SSOT, secure storage, local PIN auth, synced tiered permissions.
 - `04-ui-standards.md`: SolluColors, Plus Jakarta Sans, widget styling.
 - `05-data-standards.md`: Dio repositories, Drift local database.
 - `06-tooling-and-testing.md`: `flutter_lints`, Mocktail, widget tests.
@@ -23,6 +23,7 @@ Before designing or modifying code, ensure compliance with the standing rules:
 
 ## 3. On-Demand Domain Skills (`.agents/skills/`)
 - `sollu-client`: Main reference for the POS client architecture.
+- `domain-product`: Unified ProductItems Drift SQLite schema v10, pivot variant resolution, multi-key omni-search, aggregative category filter, decoupled stock (∞), and CartItem modifier equality.
 - `riverpod-development`: State management, caching, Riverpod best practices.
 - `drift-database`: SQLite, DAO, and schema migrations.
 - `domain-offline-sync`: Queueing, retry mechanisms, resolving conflicts.

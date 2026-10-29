@@ -11,9 +11,11 @@ import 'package:sollu_pos_client/features/pos/presentation/providers/shortcut_pr
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/product_grid.dart';
+import 'package:sollu_pos_client/features/pos/presentation/widgets/variant_dialog.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/cart_panel.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dialogs.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/insufficient_stock_dialog.dart';
+import 'package:sollu_pos_client/features/pos/data/pos_repository.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
@@ -90,6 +92,11 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
             activeEmployee.isSupervisor());
     if (hasPerm) return true;
 
+    final enableSupervisorPin = ref.read(enableSupervisorPinProvider);
+    if (!enableSupervisorPin) {
+      return true;
+    }
+
     final result = await SupervisorChallengeDialog.authorize(
       context,
       actionTitle: actionTitle,
@@ -102,6 +109,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
   void _handleReprintLastReceipt() {
     final repo = ref.read(transactionRepositoryProvider);
     repo.getLastTransactionId().then((txId) {
+      if (!mounted) return;
       if (txId != null) {
         final messenger = ScaffoldMessenger.of(context);
         messenger.showSnackBar(
@@ -131,25 +139,98 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
     });
   }
 
-  Future<void> _handleBarcodeScanned(String barcode) async {
-    final query = barcode.trim();
+  Future<void> _handleBarcodeOrSearchSubmit(
+    String input, {
+    bool fromSearchField = false,
+  }) async {
+    final query = input.trim();
     if (query.isEmpty) return;
 
     final repository = ref.read(posRepositoryProvider);
     final matchedItem = await repository.findItemByBarcodeOrSku(query);
 
-    if (matchedItem != null && mounted) {
+    if (!mounted) return;
+
+    if (matchedItem == null) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Barcode/SKU "$query" tidak ditemukan dalam katalog'),
+          backgroundColor: SolluColors.danger,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      if (fromSearchField) {
+        _searchController.clear();
+        ref.read(posSearchQueryProvider.notifier).setQuery('');
+        _searchFocusNode.requestFocus();
+      }
+      return;
+    }
+
+    if (!matchedItem.isActive) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${matchedItem.name} sedang dinonaktifkan dari kasir.'),
+          backgroundColor: SolluColors.danger,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      if (fromSearchField) {
+        _searchController.clear();
+        ref.read(posSearchQueryProvider.notifier).setQuery('');
+        _searchFocusNode.requestFocus();
+      }
+      return;
+    }
+
+    // Differentiate: Specific Variant Barcode vs Parent Product Barcode
+    final isVariantBarcode =
+        matchedItem.barcode == query || matchedItem.sku == query;
+    final isParentScan = matchedItem.hasVariants && !isVariantBarcode;
+
+    if (isParentScan) {
+      final parentPosItem = PosItem(
+        id: matchedItem.product?.id ?? matchedItem.id,
+        name: matchedItem.product?.name ?? matchedItem.name,
+        categoryId: matchedItem.categoryId,
+        price: matchedItem.price,
+        stock: matchedItem.stock,
+        unit: matchedItem.unit,
+        productType: matchedItem.productType,
+        isActive: matchedItem.isActive,
+        hasVariants: true,
+        hasModifiers: matchedItem.hasModifiers,
+        isProductMode: true,
+        product: matchedItem.product,
+        trackInventory: matchedItem.trackInventory,
+      );
+
+      if (fromSearchField) {
+        _searchController.clear();
+        ref.read(posSearchQueryProvider.notifier).setQuery('');
+      }
+
+      await VariantDialog.show(context, parentPosItem);
+    } else {
+      // Add specific variant item or single product directly to cart
       final cartItem = CartItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        productId: matchedItem.isProductMode
-            ? matchedItem.id
-            : (matchedItem.inventory?.productId ?? matchedItem.product?.id ?? matchedItem.id),
+        productId: matchedItem.product?.id ??
+            (matchedItem.isProductMode
+                ? matchedItem.id
+                : (matchedItem.inventory?.productId ?? matchedItem.id)),
+        productItemId: matchedItem.productItemId ?? matchedItem.id,
         inventoryItemId: matchedItem.isProductMode ? '' : matchedItem.id,
         name: matchedItem.name,
+        variantCombination: matchedItem.variantCombination,
+        trackInventory: matchedItem.trackInventory,
         price: matchedItem.price,
         qty: 1,
       );
       ref.read(cartProvider.notifier).addItem(cartItem);
+
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -158,16 +239,17 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
           duration: const Duration(seconds: 1),
         ),
       );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Barcode "$query" tidak ditemukan dalam katalog'),
-          backgroundColor: SolluColors.warning,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+
+      if (fromSearchField) {
+        _searchController.clear();
+        ref.read(posSearchQueryProvider.notifier).setQuery('');
+        _searchFocusNode.requestFocus();
+      }
     }
+  }
+
+  void _handleBarcodeScanned(String barcode) {
+    _handleBarcodeOrSearchSubmit(barcode, fromSearchField: false);
   }
 
   Future<void> _handleShortcut(String key) async {
@@ -754,47 +836,8 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                     onChanged: (val) {
                       ref.read(posSearchQueryProvider.notifier).setQuery(val);
                     },
-                    onSubmitted: (val) async {
-                      final query = val.trim();
-                      if (query.isEmpty) return;
-
-                      final repository = ref.read(posRepositoryProvider);
-                      final matchedItem = await repository
-                          .findItemByBarcodeOrSku(query);
-
-                      if (matchedItem != null) {
-                        final cartItem = CartItem(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          productId: matchedItem.isProductMode
-                              ? matchedItem.id
-                              : (matchedItem.inventory?.productId ?? matchedItem.product?.id ?? matchedItem.id),
-                          inventoryItemId: matchedItem.isProductMode
-                              ? ''
-                              : matchedItem.id,
-                          name: matchedItem.name,
-                          price: matchedItem.price,
-                          qty: 1,
-                        );
-                        ref.read(cartProvider.notifier).addItem(cartItem);
-
-                        _searchController.clear();
-                        ref.read(posSearchQueryProvider.notifier).setQuery('');
-                        _searchFocusNode.requestFocus();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Barcode/SKU "$query" tidak ditemukan',
-                            ),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: SolluColors.danger,
-                          ),
-                        );
-                        // Tetap kosongkan dan fokus kembali agar bisa scan ulang
-                        _searchController.clear();
-                        ref.read(posSearchQueryProvider.notifier).setQuery('');
-                        _searchFocusNode.requestFocus();
-                      }
+                    onSubmitted: (val) {
+                      _handleBarcodeOrSearchSubmit(val, fromSearchField: true);
                     },
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
@@ -966,7 +1009,7 @@ class _PosLayoutState extends ConsumerState<PosLayout> {
                             .when(
                               data: (name) => name,
                               loading: () => '...',
-                              error: (_, __) => 'Kasir',
+                              error: (_, _) => 'Kasir',
                             )
                       : '';
                   final shiftText = isShiftOpen

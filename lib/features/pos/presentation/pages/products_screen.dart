@@ -83,6 +83,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     return stock.toStringAsFixed(1);
   }
 
+  String _formatStockDisplay(PosItem item) {
+    if (item.isService) return 'Layanan';
+    if (!item.trackInventory) return 'Stok: ∞';
+    return 'Stok: ${_formatStock(item.stock)} ${item.unit}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final posItemsAsync = ref.watch(posItemsProvider);
@@ -459,13 +465,17 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         break;
       case 'stock_desc':
         filtered.sort((a, b) {
-          final cmp = b.stock.compareTo(a.stock);
+          final stockA = a.trackInventory ? a.stock : double.infinity;
+          final stockB = b.trackInventory ? b.stock : double.infinity;
+          final cmp = stockB.compareTo(stockA);
           return cmp != 0 ? cmp : a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
         break;
       case 'stock_asc':
         filtered.sort((a, b) {
-          final cmp = a.stock.compareTo(b.stock);
+          final stockA = a.trackInventory ? a.stock : double.infinity;
+          final stockB = b.trackInventory ? b.stock : double.infinity;
+          final cmp = stockA.compareTo(stockB);
           return cmp != 0 ? cmp : a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
         break;
@@ -554,7 +564,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         final bool isActive = item.isActive;
         final String itemName = item.name;
         final double price = item.price;
-        final double stock = item.stock;
         final bool isService = item.isService;
 
         return ListTile(
@@ -659,7 +668,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     ),
                   ),
                   Text(
-                    isService ? 'Produk Layanan' : 'Stok: ${_formatStock(stock)} ${item.unit}',
+                    _formatStockDisplay(item),
                     style: TextStyle(
                       color: isService ? const Color(0xFF0284C7) : SolluColors.textMuted,
                       fontSize: 12,
@@ -840,7 +849,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                     ),
                                   ),
                                   Text(
-                                    isService ? 'Layanan' : 'Stok: ${_formatStock(item.stock)} ${item.unit}',
+                                    _formatStockDisplay(item),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isService ? const Color(0xFF0284C7) : SolluColors.textMuted,

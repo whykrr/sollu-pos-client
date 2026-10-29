@@ -37,6 +37,9 @@ class InitialSyncService {
           : DateTime.now();
 
       final List<dynamic> products = data['products'] ?? [];
+      final List<dynamic> productItems = data['product_items'] ?? [];
+      final List<dynamic> productItemVariantGroupOptions =
+          data['product_item_variant_group_options'] ?? [];
       final List<dynamic> productPrices = data['product_prices'] ?? [];
       final List<dynamic> paymentMethods = data['payment_methods'] ?? [];
       final List<dynamic> rawEmployees = data['employees'] ?? [];
@@ -107,6 +110,7 @@ class InitialSyncService {
 
       await _database.transaction(() async {
         // Clear old catalog data in FK safe order
+        await _database.delete(_database.productItemVariantGroupOptions).go();
         await _database.delete(_database.inventoryItemVariantGroupOptions).go();
         await _database.delete(_database.productModifierGroups).go();
         await _database.delete(_database.modifierOptions).go();
@@ -115,6 +119,7 @@ class InitialSyncService {
         await _database.delete(_database.variantGroups).go();
         await _database.delete(_database.productPrices).go();
         await _database.delete(_database.inventories).go();
+        await _database.delete(_database.productItems).go();
         await _database.delete(_database.products).go();
         await _database.delete(_database.productCategories).go();
         await _database.delete(_database.paymentMethods).go();
@@ -144,15 +149,79 @@ class InitialSyncService {
                   ),
                   sku: Value(item['sku']),
                   barcode: Value(item['barcode']),
-                  price: (item['price'] != null
+                  price: Value((item['price'] != null
                           ? double.tryParse(item['price'].toString())
                           : null) ??
                       priceMap[productId] ??
-                      0.0,
+                      0.0),
                   isAvailable: Value(isAvailable),
                   productType: Value(
                     item['product_type']?.toString() ?? 'basic',
                   ),
+                  unit: Value(
+                    item['unit']?.toString() ??
+                        item['uom']?.toString() ??
+                        'Pcs',
+                  ),
+                  hasVariants: Value(
+                    item['has_variant'] == 1 ||
+                        item['has_variant'] == true ||
+                        item['has_variants'] == 1 ||
+                        item['has_variants'] == true,
+                  ),
+                  hasModifiers: Value(
+                    item['has_modifier'] == 1 ||
+                        item['has_modifier'] == true ||
+                        item['has_modifiers'] == 1 ||
+                        item['has_modifiers'] == true,
+                  ),
+                  hasRecipe: Value(
+                    item['has_recipe'] == 1 || item['has_recipe'] == true,
+                  ),
+                  trackInventory: Value(
+                    item['track_inventory'] == 1 ||
+                        item['track_inventory'] == true,
+                  ),
+                ),
+              );
+        }
+
+        // 1b. Insert Product Items
+        for (final item in productItems) {
+          final itemId = item['id']?.toString() ?? '';
+          final prodId = item['product_id']?.toString() ?? '';
+          if (itemId.isEmpty || prodId.isEmpty) continue;
+
+          final isTrack =
+              item['track_inventory'] == 1 || item['track_inventory'] == true;
+          final isShow =
+              item['is_show'] == 1 ||
+              item['is_show'] == true ||
+              item['is_show'] == 'true' ||
+              item['is_show'] == null;
+          final sellable =
+              item['sellable'] == 1 ||
+              item['sellable'] == true ||
+              item['sellable'] == 'true' ||
+              item['sellable'] == null;
+          final isActive =
+              item['is_active'] == 1 ||
+              item['is_active'] == true ||
+              item['is_active'] == 'true' ||
+              item['is_active'] == null;
+
+          await _database.into(_database.productItems).insert(
+                ProductItemsCompanion.insert(
+                  id: itemId,
+                  productId: prodId,
+                  name: item['name']?.toString() ?? '',
+                  variantCombination:
+                      Value(item['variant_combination']?.toString()),
+                  sku: Value(item['sku']?.toString()),
+                  barcode: Value(item['barcode']?.toString()),
+                  trackInventory: Value(isTrack),
+                  isActive: Value(isActive && isShow && sellable),
+                  sellable: Value(sellable),
                   unit: Value(
                     item['unit']?.toString() ??
                         item['uom']?.toString() ??
@@ -233,6 +302,7 @@ class InitialSyncService {
                 InventoriesCompanion.insert(
                   id: itemId,
                   productId: item['product_id'],
+                  productItemId: Value(item['product_item_id']?.toString()),
                   name: item['name'],
                   sku: Value(item['sku']),
                   barcode: Value(item['barcode']),
@@ -286,6 +356,26 @@ class InitialSyncService {
                   name: item['name'],
                 ),
               );
+        }
+
+        // 8b. Insert Product Item Variant Group Options
+        for (final item in productItemVariantGroupOptions) {
+          final pItemId = item['product_item_id']?.toString();
+          final vOptId = item['variant_group_option_id']?.toString();
+          if (pItemId != null &&
+              vOptId != null &&
+              pItemId.isNotEmpty &&
+              vOptId.isNotEmpty) {
+            await _database
+                .into(_database.productItemVariantGroupOptions)
+                .insert(
+                  ProductItemVariantGroupOptionsCompanion.insert(
+                    productItemId: pItemId,
+                    variantGroupOptionId: vOptId,
+                  ),
+                  mode: InsertMode.insertOrReplace,
+                );
+          }
         }
 
         // 9. Insert Modifier Groups
@@ -344,7 +434,8 @@ class InitialSyncService {
                 ProductPricesCompanion.insert(
                   id: item['id'],
                   productId: item['product_id'],
-                  inventoryItemId: Value(item['inventory_item_id'] ?? item['product_item_id']),
+                  productItemId: Value(item['product_item_id']?.toString()),
+                  inventoryItemId: Value(item['inventory_item_id']?.toString()),
                   amount: Value(amountVal),
                 ),
               );

@@ -49,6 +49,11 @@ class OutletSettingsService {
     return _prefs.getBool(_autoPrintKey) ?? true;
   }
 
+  bool isSupervisorPinEnabled() {
+    final settings = getOutletSettings();
+    return settings?['enableSupervisorPin'] == true;
+  }
+
   Future<void> clearAll() async {
     await _prefs.remove(_outletProfileKey);
     await _prefs.remove(_outletSettingsKey);
@@ -139,6 +144,12 @@ class OutletSettingsService {
         structuredSettings['allow_negative_stock'] == true ||
         structuredSettings['allow_negative_stock'] == 1 ||
         (structuredSettings['allow_negative_stock'] == null && (existingSettings?['allowNegativeStock'] ?? true));
+    final bool enableSupervisorPin =
+        structuredSettings['enable_supervisor_pin'] == true ||
+        structuredSettings['enable_supervisor_pin'] == 1 ||
+        structuredSettings['enable_supervisor_pin'] == 'true' ||
+        structuredSettings['enable_supervisor_pin'] == '1' ||
+        (structuredSettings['enable_supervisor_pin'] == null && (existingSettings?['enableSupervisorPin'] == true));
     final List<String> posOrderTypes = (structuredSettings['pos_order_types'] is List)
         ? (structuredSettings['pos_order_types'] as List).map((e) => e.toString()).toList()
         : (existingSettings?['posOrderTypes'] is List
@@ -250,6 +261,7 @@ class OutletSettingsService {
       'roundingEnabled': parsedRoundingEnabled,
       'roundingMode': parsedRoundingMode,
       'allowNegativeStock': allowNegativeStock,
+      'enableSupervisorPin': enableSupervisorPin,
       'posOrderTypes': posOrderTypes,
       'paperSize': paperSize,
       'autoPrint': autoPrint,

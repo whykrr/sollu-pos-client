@@ -77,10 +77,16 @@ class DeltaSyncService {
         // 1. Tangani Soft-Deleted / Disabled Product Items
         if (deletedProductItemIds.isNotEmpty) {
           final stringItemIds = deletedProductItemIds.map((e) => e.toString()).toList();
+          await (_database.delete(_database.productItemVariantGroupOptions)
+                ..where((t) => t.productItemId.isIn(stringItemIds)))
+              .go();
           await (_database.delete(_database.productPrices)
-                ..where((t) => t.inventoryItemId.isIn(stringItemIds)))
+                ..where((t) => t.productItemId.isIn(stringItemIds) | t.inventoryItemId.isIn(stringItemIds)))
               .go();
           await (_database.delete(_database.inventories)
+                ..where((t) => t.productItemId.isIn(stringItemIds) | t.id.isIn(stringItemIds)))
+              .go();
+          await (_database.delete(_database.productItems)
                 ..where((t) => t.id.isIn(stringItemIds)))
               .go();
         }
@@ -88,10 +94,24 @@ class DeltaSyncService {
         // 2. Tangani Soft-Deleted / Disabled Products
         if (deletedProductIds.isNotEmpty) {
           final stringProductIds = deletedProductIds.map((e) => e.toString()).toList();
+          final itemsToDelete = await (_database.selectOnly(_database.productItems)
+                ..addColumns([_database.productItems.id])
+                ..where(_database.productItems.productId.isIn(stringProductIds)))
+              .map((row) => row.read(_database.productItems.id)!)
+              .get();
+          if (itemsToDelete.isNotEmpty) {
+            await (_database.delete(_database.productItemVariantGroupOptions)
+                  ..where((t) => t.productItemId.isIn(itemsToDelete)))
+                .go();
+          }
+
           await (_database.delete(_database.productPrices)
                 ..where((t) => t.productId.isIn(stringProductIds)))
               .go();
           await (_database.delete(_database.inventories)
+                ..where((t) => t.productId.isIn(stringProductIds)))
+              .go();
+          await (_database.delete(_database.productItems)
                 ..where((t) => t.productId.isIn(stringProductIds)))
               .go();
           await (_database.delete(_database.products)
@@ -131,24 +151,51 @@ class DeltaSyncService {
                         item['uom']?.toString() ??
                         'Pcs',
                   ),
+                  hasVariants: Value(
+                    item['has_variant'] == 1 ||
+                        item['has_variant'] == true ||
+                        item['has_variants'] == 1 ||
+                        item['has_variants'] == true,
+                  ),
+                  hasModifiers: Value(
+                    item['has_modifier'] == 1 ||
+                        item['has_modifier'] == true ||
+                        item['has_modifiers'] == 1 ||
+                        item['has_modifiers'] == true,
+                  ),
+                  hasRecipe: Value(
+                    item['has_recipe'] == 1 || item['has_recipe'] == true,
+                  ),
+                  trackInventory: Value(
+                    item['track_inventory'] == 1 ||
+                        item['track_inventory'] == true,
+                  ),
                 ),
               );
         }
 
-        // 4. Upsert Updated Product Items (Varian & Item Standalone)
+        // 4. Upsert Updated Product Items (Unified Item Pattern)
         for (final item in updatedProductItems) {
-          final invItem = item['inventory_item'];
-          final invId = (invItem != null && invItem['id'] != null)
-              ? invItem['id'].toString()
-              : item['id']?.toString() ?? '';
+          final itemId = item['id']?.toString() ?? '';
           final prodId = item['product_id']?.toString() ?? '';
-
-          if (invId.isEmpty || prodId.isEmpty) continue;
+          if (itemId.isEmpty || prodId.isEmpty) continue;
 
           final isTrack =
               item['track_inventory'] == 1 ||
               item['track_inventory'] == true ||
               item['track_inventory'] == 'true';
+
+          final isShow =
+              item['is_show'] == 1 ||
+              item['is_show'] == true ||
+              item['is_show'] == 'true' ||
+              item['is_show'] == null;
+
+          final sellable =
+              item['sellable'] == 1 ||
+              item['sellable'] == true ||
+              item['sellable'] == 'true' ||
+              item['sellable'] == null;
 
           final isActive =
               item['is_active'] == 1 ||
@@ -157,21 +204,46 @@ class DeltaSyncService {
               item['is_active'] == null;
 
           final uomName = item['uom'] != null
-              ? item['uom']['name']?.toString() ?? 'Pcs'
-              : 'Pcs';
+              ? (item['uom'] is Map
+                  ? item['uom']['name']?.toString() ?? 'Pcs'
+                  : item['uom'].toString())
+              : (item['unit']?.toString() ?? 'Pcs');
 
-          await _database.into(_database.inventories).insertOnConflictUpdate(
-                InventoriesCompanion(
-                  id: Value(invId),
+          await _database.into(_database.productItems).insertOnConflictUpdate(
+                ProductItemsCompanion(
+                  id: Value(itemId),
                   productId: Value(prodId),
                   name: Value(item['name']?.toString() ?? ''),
+                  variantCombination:
+                      Value(item['variant_combination']?.toString()),
                   sku: Value(item['sku']?.toString()),
                   barcode: Value(item['barcode']?.toString()),
                   trackInventory: Value(isTrack),
-                  isActive: Value(isActive),
+                  isActive: Value(isActive && isShow && sellable),
+                  sellable: Value(sellable),
                   unit: Value(uomName),
                 ),
               );
+
+          if (item['inventory_item'] != null) {
+            final inv = item['inventory_item'];
+            final invId = inv['id']?.toString() ?? '';
+            if (invId.isNotEmpty) {
+              await _database.into(_database.inventories).insertOnConflictUpdate(
+                    InventoriesCompanion(
+                      id: Value(invId),
+                      productId: Value(prodId),
+                      productItemId: Value(itemId),
+                      name: Value(item['name']?.toString() ?? ''),
+                      sku: Value(item['sku']?.toString()),
+                      barcode: Value(item['barcode']?.toString()),
+                      trackInventory: Value(isTrack),
+                      isActive: Value(isActive),
+                      unit: Value(uomName),
+                    ),
+                  );
+            }
+          }
         }
 
         // 5. Upsert Updated Prices
@@ -182,12 +254,14 @@ class DeltaSyncService {
 
           final rawAmount = p['amount'] ?? p['price'];
           final amountVal = double.tryParse(rawAmount?.toString() ?? '0') ?? 0.0;
-          final invItemId = p['inventory_item_id']?.toString() ?? p['product_item_id']?.toString();
+          final prodItemId = p['product_item_id']?.toString();
+          final invItemId = p['inventory_item_id']?.toString();
 
           await _database.into(_database.productPrices).insertOnConflictUpdate(
                 ProductPricesCompanion(
                   id: Value(priceId),
                   productId: Value(prodId),
+                  productItemId: Value(prodItemId),
                   inventoryItemId: Value(invItemId),
                   amount: Value(amountVal),
                 ),

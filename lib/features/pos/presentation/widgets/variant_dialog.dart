@@ -34,11 +34,52 @@ class VariantDialog extends ConsumerWidget {
     }
 
     final totalPrice = notifier.calculateTotalPrice();
+    final resolvedItem = state.resolvedPosItem;
+
+    final String stockText;
+    if (posItem.isService || resolvedItem?.isService == true) {
+      stockText = 'Layanan';
+    } else if (!state.trackInventory) {
+      stockText = 'Stok: ∞';
+    } else {
+      final unit = resolvedItem?.unit ?? posItem.unit;
+      final stockVal = state.stock;
+      final formatted = stockVal == stockVal.roundToDouble()
+          ? stockVal.toInt().toString()
+          : stockVal.toStringAsFixed(1);
+      stockText = 'Stok: $formatted $unit';
+    }
 
     return AlertDialog(
-      title: Text(
-        'Pesan: ${posItem.name}',
-        style: const TextStyle(fontWeight: FontWeight.bold),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              'Pesan: ${posItem.name}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
+            ),
+            child: Text(
+              stockText,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+              ),
+            ),
+          ),
+        ],
       ),
       content: SizedBox(
         width: 400,
@@ -47,6 +88,41 @@ class VariantDialog extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (state.errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: SolluColors.danger.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: SolluColors.danger.withValues(alpha: 0.3),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: SolluColors.danger,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.errorMessage!,
+                          style: const TextStyle(
+                            color: SolluColors.danger,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               if (state.variantGroups.isNotEmpty) ...[
                 const Text(
                   'Pilih Varian',
@@ -232,29 +308,42 @@ class VariantDialog extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () {
-                    final selectedVariantOptionId =
-                        state.selectedVariants.values.firstOrNull;
+                  onPressed: state.canAddToCart
+                      ? () {
+                          final selectedVariantOptionId =
+                              state.selectedVariants.values.firstOrNull;
 
-                    final cartItem = CartItem(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      productId: posItem.isProductMode
-                          ? posItem.id
-                          : (posItem.inventory?.productId ?? posItem.product?.id ?? posItem.id),
-                      inventoryItemId: posItem.isProductMode ? '' : posItem.id,
-                      variantGroupOptionId: selectedVariantOptionId,
-                      name: posItem.name,
-                      price: totalPrice,
-                      qty: state.qty,
-                      discountType: state.discountType,
-                      discountValue: state.discountValue,
-                      selectedVariants: state.selectedVariants,
-                      selectedModifiers: state.selectedModifiers,
-                    );
+                          final cleanModifiers = Map.fromEntries(
+                            state.selectedModifiers.entries
+                                .where((e) => e.value.isNotEmpty),
+                          );
 
-                    ref.read(cartProvider.notifier).addItem(cartItem);
-                    Navigator.of(context).pop();
-                  },
+                          final cartItem = CartItem(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            productId: posItem.isProductMode
+                                ? posItem.id
+                                : (posItem.product?.id ??
+                                    posItem.inventory?.productId ??
+                                    posItem.id),
+                            productItemId: state.resolvedProductItemId,
+                            inventoryItemId: resolvedItem?.inventory?.id ??
+                                (posItem.isProductMode ? '' : posItem.id),
+                            variantGroupOptionId: selectedVariantOptionId,
+                            name: resolvedItem?.name ?? posItem.name,
+                            variantCombination: state.variantCombination,
+                            trackInventory: state.trackInventory,
+                            price: totalPrice,
+                            qty: state.qty,
+                            discountType: state.discountType,
+                            discountValue: state.discountValue,
+                            selectedVariants: state.selectedVariants,
+                            selectedModifiers: cleanModifiers,
+                          );
+
+                          ref.read(cartProvider.notifier).addItem(cartItem);
+                          Navigator.of(context).pop();
+                        }
+                      : null,
                   child: const Text('Tambah'),
                 ),
               ],

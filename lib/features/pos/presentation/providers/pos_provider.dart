@@ -88,7 +88,13 @@ final filteredPosItemsProvider = Provider<AsyncValue<List<PosItem>>>((ref) {
         final matchesSearch =
             searchQuery.isEmpty ||
             item.name.toLowerCase().contains(searchQuery) ||
+            (item.barcode?.toLowerCase().contains(searchQuery) ?? false) ||
+            (item.sku?.toLowerCase().contains(searchQuery) ?? false) ||
+            (item.variantCombination?.toLowerCase().contains(searchQuery) ??
+                false) ||
             (item.product?.barcode?.toLowerCase().contains(searchQuery) ??
+                false) ||
+            (item.product?.sku?.toLowerCase().contains(searchQuery) ??
                 false) ||
             (item.inventory?.barcode?.toLowerCase().contains(searchQuery) ??
                 false);

@@ -59,3 +59,13 @@ final posOrderTypesProvider = Provider<List<String>>((ref) {
   return const ['walk_in', 'dine_in', 'take_away'];
 });
 
+/// Computed provider for enable supervisor PIN setting (defaults to false)
+final enableSupervisorPinProvider = Provider<bool>((ref) {
+  final settings = ref.watch(outletSettingsProvider);
+  if (settings != null && settings.containsKey('enableSupervisorPin')) {
+    final val = settings['enableSupervisorPin'];
+    return val == true || val == 1 || val == '1' || val == 'true';
+  }
+  return false;
+});
+

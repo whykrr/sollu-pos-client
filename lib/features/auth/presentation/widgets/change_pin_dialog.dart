@@ -263,9 +263,12 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty)
+                  if (val == null || val.isEmpty) {
                     return 'PIN saat ini wajib diisi';
-                  if (val.length != 6) return 'PIN harus 6 digit angka';
+                  }
+                  if (val.length != 6) {
+                    return 'PIN harus 6 digit angka';
+                  }
                   return null;
                 },
               ),
@@ -335,10 +338,12 @@ class _ChangePinDialogState extends ConsumerState<ChangePinDialog> {
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty)
+                  if (val == null || val.isEmpty) {
                     return 'Konfirmasi PIN baru wajib diisi';
-                  if (val != _newPinController.text)
+                  }
+                  if (val != _newPinController.text) {
                     return 'Konfirmasi PIN tidak cocok dengan PIN baru';
+                  }
                   return null;
                 },
               ),

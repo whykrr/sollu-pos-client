@@ -7,13 +7,44 @@ class Products extends Table {
   TextColumn get categoryId => text().nullable()();
   TextColumn get sku => text().nullable()();
   TextColumn get barcode => text().nullable()();
-  RealColumn get price => real()();
+  RealColumn get price => real().withDefault(const Constant(0.0))();
   BoolColumn get isAvailable => boolean().withDefault(const Constant(true))();
   TextColumn get productType => text().withDefault(const Constant('basic'))();
+  TextColumn get unit => text().withDefault(const Constant('Pcs'))();
+  BoolColumn get hasVariants => boolean().withDefault(const Constant(false))();
+  BoolColumn get hasModifiers => boolean().withDefault(const Constant(false))();
+  BoolColumn get hasRecipe => boolean().withDefault(const Constant(false))();
+  BoolColumn get trackInventory => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('ProductItem')
+class ProductItems extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get productId => text().references(Products, #id)();
+  TextColumn get name => text()();
+  TextColumn get variantCombination => text().nullable()();
+  TextColumn get sku => text().nullable()();
+  TextColumn get barcode => text().nullable()();
+  BoolColumn get trackInventory => boolean().withDefault(const Constant(false))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  BoolColumn get sellable => boolean().withDefault(const Constant(true))();
   TextColumn get unit => text().withDefault(const Constant('Pcs'))();
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('ProductItemVariantGroupOption')
+class ProductItemVariantGroupOptions extends Table {
+  TextColumn get productItemId => text().references(ProductItems, #id)();
+  TextColumn get variantGroupOptionId =>
+      text().references(VariantGroupOptions, #id)();
+
+  @override
+  Set<Column> get primaryKey => {productItemId, variantGroupOptionId};
 }
 
 @DataClassName('ProductCategory')
@@ -93,6 +124,8 @@ class ModifierOptions extends Table {
 class ProductPrices extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get productId => text().references(Products, #id)();
+  TextColumn get productItemId =>
+      text().nullable().references(ProductItems, #id)();
   TextColumn get inventoryItemId =>
       text().nullable().references(Inventories, #id)();
   RealColumn get amount => real().withDefault(const Constant(0.0))();
@@ -105,6 +138,8 @@ class ProductPrices extends Table {
 class Inventories extends Table {
   TextColumn get id => text()(); // UUID dari inventory_item_id
   TextColumn get productId => text().references(Products, #id)();
+  TextColumn get productItemId =>
+      text().nullable().references(ProductItems, #id)();
   TextColumn get name => text()();
   TextColumn get sku => text().nullable()();
   TextColumn get barcode => text().nullable()();

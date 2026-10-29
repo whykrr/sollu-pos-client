@@ -188,6 +188,10 @@ class TransactionRepository {
         String? resolvedProductId = cartItem.productId.isNotEmpty
             ? cartItem.productId
             : null;
+        String? resolvedProductItemId = (cartItem.productItemId != null &&
+                cartItem.productItemId!.isNotEmpty)
+            ? cartItem.productItemId
+            : null;
         String? resolvedInventoryItemId = cartItem.inventoryItemId.isNotEmpty
             ? cartItem.inventoryItemId
             : null;
@@ -200,10 +204,61 @@ class TransactionRepository {
               cartItem.selectedVariants.values.firstOrNull;
         }
 
-        // Jika inventoryItemId belum ada, cari dari database
-        if (resolvedInventoryItemId == null && resolvedProductId != null) {
+        // Resolusi productItemId jika belum ada di cartItem
+        if (resolvedProductItemId == null && resolvedProductId != null) {
+          final variantOptionIds = cartItem.selectedVariants.values.toList();
+          if (resolvedVariantGroupOptionId != null &&
+              !variantOptionIds.contains(resolvedVariantGroupOptionId)) {
+            variantOptionIds.add(resolvedVariantGroupOptionId);
+          }
+          if (variantOptionIds.isNotEmpty) {
+            final inClause =
+                List.filled(variantOptionIds.length, '?').join(',');
+            final row = await _database.customSelect(
+              '''
+              SELECT piv.product_item_id
+              FROM product_item_variant_group_options piv
+              INNER JOIN product_items pi ON pi.id = piv.product_item_id
+              WHERE pi.product_id = ? AND piv.variant_group_option_id IN ($inClause)
+              GROUP BY piv.product_item_id
+              HAVING COUNT(DISTINCT piv.variant_group_option_id) = ?
+                AND (SELECT COUNT(*) FROM product_item_variant_group_options WHERE product_item_id = piv.product_item_id) = ?
+              LIMIT 1
+              ''',
+              variables: [
+                Variable.withString(resolvedProductId),
+                ...variantOptionIds.map((id) => Variable.withString(id)),
+                Variable.withInt(variantOptionIds.length),
+                Variable.withInt(variantOptionIds.length),
+              ],
+            ).getSingleOrNull();
+            resolvedProductItemId = row?.read<String>('product_item_id');
+          }
+
+          if (resolvedProductItemId == null) {
+            final pi = await (_database.select(_database.productItems)
+                  ..where((p) => p.productId.equals(resolvedProductId))
+                  ..limit(1))
+                .getSingleOrNull();
+            resolvedProductItemId = pi?.id;
+          }
+        }
+
+        // Jika inventoryItemId belum ada dan trackInventory aktif, cari dari database
+        if (resolvedInventoryItemId == null &&
+            resolvedProductItemId != null &&
+            cartItem.trackInventory) {
+          final inv = await (_database.select(_database.inventories)
+                ..where((i) => i.productItemId.equals(resolvedProductItemId!))
+                ..limit(1))
+              .getSingleOrNull();
+          resolvedInventoryItemId = inv?.id;
+        }
+
+        if (cartItem.trackInventory &&
+            resolvedInventoryItemId == null &&
+            resolvedProductId != null) {
           if (resolvedVariantGroupOptionId != null) {
-            // Cari inventory item yang berelasi dengan variant option ini
             final row = await _database
                 .customSelect(
                   '''
@@ -224,28 +279,24 @@ class TransactionRepository {
             }
           }
 
-          // Jika masih null, ambil inventory item standalone default untuk produk ini
           if (resolvedInventoryItemId == null) {
-            final inv =
-                await (_database.select(_database.inventories)
-                      ..where((i) => i.productId.equals(resolvedProductId)))
-                    .getSingleOrNull();
+            final inv = await (_database.select(_database.inventories)
+                  ..where((i) => i.productId.equals(resolvedProductId)))
+                .getSingleOrNull();
             if (inv != null) {
               resolvedInventoryItemId = inv.id;
             }
           }
         }
 
-        // Jika variantGroupOptionId masih null tapi inventoryItemId ada, cari variantGroupOptionId dari pivot
         if (resolvedVariantGroupOptionId == null &&
             resolvedInventoryItemId != null) {
-          final piv =
-              await (_database.select(
-                    _database.inventoryItemVariantGroupOptions,
-                  )..where(
-                    (p) => p.inventoryItemId.equals(resolvedInventoryItemId!),
-                  ))
-                  .getSingleOrNull();
+          final piv = await (_database.select(
+                _database.inventoryItemVariantGroupOptions,
+              )..where(
+                (p) => p.inventoryItemId.equals(resolvedInventoryItemId!),
+              ))
+              .getSingleOrNull();
           if (piv != null) {
             resolvedVariantGroupOptionId = piv.variantGroupOptionId;
           }
@@ -273,6 +324,7 @@ class TransactionRepository {
                 id: itemId,
                 transactionId: txId,
                 productId: Value(resolvedProductId),
+                productItemId: Value(resolvedProductItemId),
                 inventoryItemId: Value(resolvedInventoryItemId),
                 variantGroupOptionId: Value(resolvedVariantGroupOptionId),
                 productName: cartItem.name,
@@ -292,6 +344,7 @@ class TransactionRepository {
             id: itemId,
             transactionId: txId,
             productId: resolvedProductId,
+            productItemId: resolvedProductItemId,
             inventoryItemId: resolvedInventoryItemId,
             variantGroupOptionId: resolvedVariantGroupOptionId,
             productName: cartItem.name,
@@ -306,8 +359,8 @@ class TransactionRepository {
           ),
         );
 
-        // Potong stok dari database lokal jika produk melacak stok
-        if (resolvedInventoryItemId != null) {
+        // Potong stok dari database lokal HANYA jika produk melacak stok
+        if (cartItem.trackInventory && resolvedInventoryItemId != null) {
           final inventory =
               await (_database.select(_database.inventories)
                     ..where((i) => i.id.equals(resolvedInventoryItemId!)))
@@ -791,6 +844,7 @@ class TransactionRepository {
 
         itemsPayload.add({
           'product_id': item.productId,
+          'product_item_id': item.productItemId,
           'inventory_item_id': isTrackInventory ? item.inventoryItemId : null,
           'track_inventory': isTrackInventory,
           'variant_group_option_id': item.variantGroupOptionId,
@@ -884,6 +938,7 @@ class TransactionRepository {
 
       itemsPayload.add({
         'product_id': item.productId,
+        'product_item_id': item.productItemId,
         'inventory_item_id': isTrackInventory ? item.inventoryItemId : null,
         'track_inventory': isTrackInventory,
         'variant_group_option_id': item.variantGroupOptionId,

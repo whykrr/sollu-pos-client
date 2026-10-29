@@ -675,6 +675,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           await ref
                               .read(heldBillsServiceProvider)
                               .holdCurrentCart(items: cart, holdLabel: label);
+                          if (!context.mounted) return;
                           ref
                               .read(appliedDiscountProvider.notifier)
                               .clearDiscount();

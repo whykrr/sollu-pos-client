@@ -181,6 +181,7 @@ class _PaymentMethodSettingsScreenState
                     vertical: 8,
                   ),
                   itemCount: _currentList!.length,
+                  // ignore: deprecated_member_use
                   onReorder: _handleReorder,
                   itemBuilder: (context, index) {
                     final item = _currentList![index];
