@@ -7,6 +7,7 @@ import 'package:sollu_pos_client/core/theme/sollu_spacing.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
+import 'package:sollu_pos_client/core/database/app_database.dart';
 import 'package:sollu_pos_client/core/utils/currency_input_formatter.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
 
@@ -29,23 +30,94 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog>
   late TabController _tabController;
   final TextEditingController _manualValController = TextEditingController();
   final TextEditingController _manualNameController = TextEditingController();
+  final FocusNode _dialogFocusNode = FocusNode();
+  final FocusNode _manualValFocusNode = FocusNode();
+  final FocusNode _manualNameFocusNode = FocusNode();
+  final ScrollController _promoScrollController = ScrollController();
   String _manualType = 'percentage'; // 'percentage' or 'fixed'
+  int _selectedPromoIndex = 0;
+  bool _isApplying = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!mounted) return;
+      if (_tabController.index == 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _manualValFocusNode.requestFocus();
+        });
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _dialogFocusNode.requestFocus();
+        });
+      }
+      setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _dialogFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _promoScrollController.dispose();
+    _dialogFocusNode.dispose();
+    _manualValFocusNode.dispose();
+    _manualNameFocusNode.dispose();
     _manualValController.dispose();
     _manualNameController.dispose();
     super.dispose();
   }
 
+  void _scrollToSelectedPromo() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_promoScrollController.hasClients) return;
+      const double itemHeight = 76.0;
+      final viewportHeight = _promoScrollController.position.viewportDimension > 0
+          ? _promoScrollController.position.viewportDimension
+          : 250.0;
+      final itemTop = _selectedPromoIndex * itemHeight;
+      final itemBottom = itemTop + itemHeight;
+      final currentOffset = _promoScrollController.offset;
+
+      double targetOffset = currentOffset;
+      if (itemTop < currentOffset) {
+        targetOffset = itemTop;
+      } else if (itemBottom > currentOffset + viewportHeight) {
+        targetOffset = itemBottom - viewportHeight;
+      }
+
+      targetOffset = targetOffset.clamp(0.0, _promoScrollController.position.maxScrollExtent);
+      if ((targetOffset - currentOffset).abs() > 1.0) {
+        _promoScrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
+  void _applyPromo(Promo promo) {
+    if (_isApplying) return;
+    _isApplying = true;
+
+    ref.read(appliedDiscountProvider.notifier).applyPromo(promo);
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Promo "${promo.name}" berhasil diterapkan!'),
+        backgroundColor: SolluColors.success,
+      ),
+    );
+  }
+
   void _applyManualDiscount() {
+    if (_isApplying) return;
+
     final val = _manualType == 'fixed'
         ? CurrencyInputFormatter.parse(_manualValController.text)
         : (double.tryParse(
@@ -62,6 +134,17 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog>
       return;
     }
 
+    if (_manualType == 'percentage' && val > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Persentase diskon tidak boleh melebihi 100%'),
+          backgroundColor: SolluColors.danger,
+        ),
+      );
+      return;
+    }
+
+    _isApplying = true;
     final customName = _manualNameController.text.trim().isNotEmpty
         ? _manualNameController.text.trim()
         : (_manualType == 'percentage'
@@ -81,495 +164,654 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog>
     );
   }
 
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      Navigator.of(context).pop();
+      return KeyEventResult.handled;
+    }
+
+    final isAlt = HardwareKeyboard.instance.isAltPressed;
+    final isCtrl = HardwareKeyboard.instance.isControlPressed;
+    final isShift = HardwareKeyboard.instance.isShiftPressed;
+
+    if (_tabController.index == 0) {
+      final promos = ref.read(activePromosProvider).asData?.value ?? [];
+
+      if (event.logicalKey == LogicalKeyboardKey.tab ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        _tabController.animateTo(1);
+        return KeyEventResult.handled;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        if (promos.isNotEmpty) {
+          setState(() {
+            _selectedPromoIndex = (_selectedPromoIndex + 1).clamp(0, promos.length - 1);
+          });
+          _scrollToSelectedPromo();
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        if (promos.isNotEmpty) {
+          setState(() {
+            _selectedPromoIndex = (_selectedPromoIndex - 1).clamp(0, promos.length - 1);
+          });
+          _scrollToSelectedPromo();
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        if (promos.isNotEmpty && _selectedPromoIndex < promos.length) {
+          _applyPromo(promos[_selectedPromoIndex]);
+          return KeyEventResult.handled;
+        }
+      }
+    }
+
+    if (_tabController.index == 1) {
+      // Ctrl+Tab / Shift+Tab to switch back to Tab 0
+      if ((isCtrl || isShift) && event.logicalKey == LogicalKeyboardKey.tab) {
+        _tabController.animateTo(0);
+        return KeyEventResult.handled;
+      }
+
+      // Alt+1 / Alt+ArrowLeft: Select %
+      if (isAlt && (event.logicalKey == LogicalKeyboardKey.digit1 ||
+          event.logicalKey == LogicalKeyboardKey.numpad1 ||
+          event.logicalKey == LogicalKeyboardKey.arrowLeft)) {
+        setState(() {
+          _manualType = 'percentage';
+          _manualValController.clear();
+        });
+        _manualValFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+
+      // Alt+2 / Alt+ArrowRight: Select Rp
+      if (isAlt && (event.logicalKey == LogicalKeyboardKey.digit2 ||
+          event.logicalKey == LogicalKeyboardKey.numpad2 ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight)) {
+        setState(() {
+          _manualType = 'fixed';
+          _manualValController.clear();
+        });
+        _manualValFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+
+      // ArrowLeft / ArrowRight selection when editing value is empty or not in text field
+      if (!_manualNameFocusNode.hasFocus) {
+        final valText = _manualValController.text.trim();
+        if (valText.isEmpty || !_manualValFocusNode.hasFocus) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            if (_manualType == 'percentage') {
+              setState(() {
+                _manualType = 'fixed';
+                _manualValController.clear();
+              });
+              _manualValFocusNode.requestFocus();
+              return KeyEventResult.handled;
+            }
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            if (_manualType == 'fixed') {
+              setState(() {
+                _manualType = 'percentage';
+                _manualValController.clear();
+              });
+              _manualValFocusNode.requestFocus();
+              return KeyEventResult.handled;
+            } else if (_manualType == 'percentage') {
+              // Return to Tab 0 (Promo Master)
+              _tabController.animateTo(0);
+              return KeyEventResult.handled;
+            }
+          }
+        }
+      }
+
+      // Enter to submit
+      if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        _applyManualDiscount();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     final promosAsync = ref.watch(activePromosProvider);
     final appliedDiscount = ref.watch(appliedDiscountProvider);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: 540,
-        height: 520,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: SolluColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+    return Focus(
+      focusNode: _dialogFocusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 560,
+          height: 540,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: SolluColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.discount_outlined,
+                      color: SolluColors.primary,
+                      size: 24,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.discount_outlined,
-                    color: SolluColors.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Promo & Diskon (F4)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: SolluColors.textDark,
-                        ),
-                      ),
-                      if (appliedDiscount != null)
-                        Text(
-                          'Aktif: ${appliedDiscount.name}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: SolluColors.success,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      else
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         const Text(
-                          'Pilih promo master atau atur diskon manual',
+                          'Promo & Diskon',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: SolluColors.textMuted,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: SolluColors.textDark,
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                if (appliedDiscount != null)
-                  TextButton.icon(
-                    onPressed: () {
-                      ref
-                          .read(appliedDiscountProvider.notifier)
-                          .clearDiscount();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 16,
-                      color: SolluColors.danger,
+                        if (appliedDiscount != null)
+                          Text(
+                            'Aktif: ${appliedDiscount.name}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: SolluColors.success,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        else
+                          const Text(
+                            'Pilih promo master atau atur diskon manual',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: SolluColors.textMuted,
+                            ),
+                          ),
+                      ],
                     ),
-                    label: const Text(
-                      'Hapus Promo',
-                      style: TextStyle(color: SolluColors.danger, fontSize: 12),
-                    ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Tab Bar
-            Container(
-              decoration: BoxDecoration(
-                color: SolluColors.background,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                indicator: BoxDecoration(
-                  color: SolluColors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                labelColor: Colors.white,
-                unselectedLabelColor: SolluColors.textMuted,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                tabs: const [
-                  Tab(text: 'Pilih Promo Master'),
-                  Tab(text: 'Diskon Manual'),
+                  if (appliedDiscount != null)
+                    TextButton.icon(
+                      onPressed: () {
+                        ref
+                            .read(appliedDiscountProvider.notifier)
+                            .clearDiscount();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: SolluColors.danger,
+                      ),
+                      label: const Text(
+                        'Hapus Promo',
+                        style: TextStyle(color: SolluColors.danger, fontSize: 12),
+                      ),
+                    ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            // Tab Views
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Tab 1: Promos List from Master Data
-                  promosAsync.when(
-                    data: (promos) {
-                      if (promos.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.local_offer_outlined,
-                                size: 48,
-                                color: SolluColors.neutralMuted.withValues(
-                                  alpha: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Belum ada promo aktif',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: SolluColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Promo master data dapat disinkronkan dari web backoffice.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: SolluColors.textMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        itemCount: promos.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final promo = promos[index];
-                          final isSelected =
-                              appliedDiscount?.promoId == promo.id;
-
-                          final String discountTag =
-                              promo.promoType == 'percentage'
-                              ? '${promo.discountValue.toInt()}% OFF'
-                              : 'Potongan ${CurrencyFormatter.format(promo.discountValue.toInt())}';
-
-                          final String dateStr = promo.endDate != null
-                              ? 'Berlaku s/d ${DateFormat('dd MMM yyyy').format(promo.endDate!)}'
-                              : 'Berlaku selamanya';
-
-                          return Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? SolluColors.primary.withValues(alpha: 0.06)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected
-                                    ? SolluColors.primary
-                                    : SolluColors.neutral,
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
+              const SizedBox(height: 16),
+              // Tab Bar
+              Container(
+                decoration: BoxDecoration(
+                  color: SolluColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  indicator: BoxDecoration(
+                    color: SolluColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: SolluColors.textMuted,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Pilih Promo Master'),
+                    Tab(text: 'Diskon Manual'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Tab Views
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Promos List from Master Data
+                    promosAsync.when(
+                      data: (promos) {
+                        if (promos.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? SolluColors.primary
-                                        : SolluColors.secondary.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    discountTag,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : SolluColors.secondaryDark,
-                                    ),
+                                Icon(
+                                  Icons.local_offer_outlined,
+                                  size: 48,
+                                  color: SolluColors.neutralMuted.withValues(
+                                    alpha: 0.5,
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        promo.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: SolluColors.textDark,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Target: ${promo.targetType == "product" ? "Per Produk" : "Per Bill"} • $dateStr',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: SolluColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Belum ada promo aktif',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: SolluColors.textDark,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    ref
-                                        .read(appliedDiscountProvider.notifier)
-                                        .applyPromo(promo);
-                                    Navigator.of(context).pop();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Promo "${promo.name}" berhasil diterapkan!',
-                                        ),
-                                        backgroundColor: SolluColors.success,
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isSelected
-                                        ? SolluColors.success
-                                        : SolluColors.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    isSelected ? 'Terpasang' : 'Terapkan',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Promo master data dapat disinkronkan dari web backoffice.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: SolluColors.textMuted,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
                             ),
                           );
-                        },
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, _) =>
-                        Center(child: Text('Gagal memuat promo: $err')),
-                  ),
+                        }
 
-                  // Tab 2: Manual Discount
-                  SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tipe Diskon',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: SolluColors.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => setState(() {
-                                  _manualType = 'percentage';
-                                  _manualValController.clear();
-                                }),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                        return ListView.separated(
+                          controller: _promoScrollController,
+                          itemCount: promos.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final promo = promos[index];
+                            final isApplied =
+                                appliedDiscount?.promoId == promo.id;
+                            final isHighlighted = index == _selectedPromoIndex;
+
+                            final String discountTag =
+                                promo.promoType == 'percentage'
+                                ? '${promo.discountValue.toInt()}% OFF'
+                                : 'Potongan ${CurrencyFormatter.format(promo.discountValue.toInt())}';
+
+                            final String dateStr = promo.endDate != null
+                                ? 'Berlaku s/d ${DateFormat('dd MMM yyyy').format(promo.endDate!)}'
+                                : 'Berlaku selamanya';
+
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedPromoIndex = index;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: isApplied
+                                      ? SolluColors.primary.withValues(alpha: 0.06)
+                                      : isHighlighted
+                                          ? SolluColors.primary.withValues(alpha: 0.04)
+                                          : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isApplied || isHighlighted
+                                        ? SolluColors.primary
+                                        : SolluColors.neutral,
+                                    width: (isApplied || isHighlighted) ? 1.5 : 1,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: _manualType == 'percentage'
-                                        ? SolluColors.primary.withValues(
-                                            alpha: 0.1,
-                                          )
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: _manualType == 'percentage'
-                                          ? SolluColors.primary
-                                          : SolluColors.neutral,
-                                      width: _manualType == 'percentage'
-                                          ? 1.5
-                                          : 1,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isApplied
+                                            ? SolluColors.primary
+                                            : SolluColors.secondary.withValues(
+                                                alpha: 0.15,
+                                              ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        discountTag,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: isApplied
+                                              ? Colors.white
+                                              : SolluColors.secondaryDark,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'Persentase (%)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            promo.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: SolluColors.textDark,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Target: ${promo.targetType == "product" ? "Per Produk" : "Per Bill"} • $dateStr',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: SolluColors.textMuted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    ElevatedButton(
+                                      onPressed: () => _applyPromo(promo),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isApplied
+                                            ? SolluColors.success
+                                            : SolluColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 8,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        isApplied ? 'Terpasang' : 'Terapkan',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) =>
+                          Center(child: Text('Gagal memuat promo: $err')),
+                    ),
+
+                    // Tab 2: Manual Discount
+                    SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Tipe Diskon',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: SolluColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _manualType = 'percentage';
+                                      _manualValController.clear();
+                                    });
+                                    _manualValFocusNode.requestFocus();
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _manualType == 'percentage'
+                                          ? SolluColors.primary.withValues(
+                                              alpha: 0.1,
+                                            )
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
                                         color: _manualType == 'percentage'
                                             ? SolluColors.primary
-                                            : SolluColors.textDark,
+                                            : SolluColors.neutral,
+                                        width: _manualType == 'percentage'
+                                            ? 1.5
+                                            : 1,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'Persentase (%) [Alt+1]',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: _manualType == 'percentage'
+                                              ? SolluColors.primary
+                                              : SolluColors.textDark,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => setState(() {
-                                  _manualType = 'fixed';
-                                  _manualValController.clear();
-                                }),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _manualType == 'fixed'
-                                        ? SolluColors.primary.withValues(
-                                            alpha: 0.1,
-                                          )
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: _manualType == 'fixed'
-                                          ? SolluColors.primary
-                                          : SolluColors.neutral,
-                                      width: _manualType == 'fixed' ? 1.5 : 1,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _manualType = 'fixed';
+                                      _manualValController.clear();
+                                    });
+                                    _manualValFocusNode.requestFocus();
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
                                     ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'Nominal Tetap (Rp)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    decoration: BoxDecoration(
+                                      color: _manualType == 'fixed'
+                                          ? SolluColors.primary.withValues(
+                                              alpha: 0.1,
+                                            )
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
                                         color: _manualType == 'fixed'
                                             ? SolluColors.primary
-                                            : SolluColors.textDark,
+                                            : SolluColors.neutral,
+                                        width: _manualType == 'fixed' ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'Nominal Tetap (Rp) [Alt+2]',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: _manualType == 'fixed'
+                                              ? SolluColors.primary
+                                              : SolluColors.textDark,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _manualType == 'percentage'
-                              ? 'Persentase Diskon (%)'
-                              : 'Jumlah Potongan (Rp)',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: SolluColors.textDark,
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _manualValController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: _manualType == 'fixed'
-                              ? [CurrencyInputFormatter()]
-                              : [],
-                          autofocus: true,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: SolluColors.primary,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: _manualType == 'percentage'
-                                ? 'Contoh: 10'
-                                : 'Contoh: 15000',
-                            prefixText: _manualType == 'fixed' ? 'Rp ' : null,
-                            suffixText: _manualType == 'percentage'
-                                ? '%'
-                                : null,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                          const SizedBox(height: 16),
+                          Text(
+                            _manualType == 'percentage'
+                                ? 'Persentase Diskon (%)'
+                                : 'Jumlah Potongan (Rp)',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: SolluColors.textDark,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Catatan / Keterangan (Opsional)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: SolluColors.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _manualNameController,
-                          decoration: InputDecoration(
-                            hintText: 'Cth: Diskon Khusus Karyawan / Kerabat',
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _manualValController,
+                            focusNode: _manualValFocusNode,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: _manualType == 'fixed'
+                                ? [CurrencyInputFormatter()]
+                                : [],
+                            autofocus: true,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: SolluColors.primary,
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _applyManualDiscount,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: SolluColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
+                            decoration: InputDecoration(
+                              hintText: _manualType == 'percentage'
+                                  ? 'Contoh: 10'
+                                  : 'Contoh: 15000',
+                              prefixText: _manualType == 'fixed' ? 'Rp ' : null,
+                              suffixText: _manualType == 'percentage'
+                                  ? '%'
+                                  : null,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              elevation: 0,
                             ),
-                            child: const Text(
-                              'Terapkan Diskon Manual',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                            onSubmitted: (_) => _applyManualDiscount(),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Catatan / Keterangan (Opsional)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: SolluColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _manualNameController,
+                            focusNode: _manualNameFocusNode,
+                            decoration: InputDecoration(
+                              hintText: 'Cth: Diskon Khusus Karyawan / Kerabat',
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onSubmitted: (_) => _applyManualDiscount(),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _applyManualDiscount,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SolluColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Terapkan Diskon Manual',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  'Tutup (Esc)',
-                  style: TextStyle(color: SolluColors.textMuted),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              // Footer Shortcuts Guide
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: SolluColors.neutral, width: 1.0),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _tabController.index == 0
+                            ? '[Tab / →] Diskon Manual  •  [↑ / ↓] Pilih Promo  •  [Enter] Terapkan  •  [Esc] Tutup'
+                            : '[Ctrl+Tab] Promo Master  •  [←/Alt+1] %  •  [→/Alt+2] Rp  •  [Enter] Terapkan  •  [Esc] Tutup',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: SolluColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Tutup (Esc)',
+                        style: TextStyle(color: SolluColors.textMuted, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -579,8 +821,8 @@ class _DiscountDialogState extends ConsumerState<DiscountDialog>
 class CustomerDialog extends ConsumerStatefulWidget {
   const CustomerDialog({super.key});
 
-  static Future<void> show(BuildContext context) {
-    return showDialog(
+  static Future<Customer?> show(BuildContext context) {
+    return showDialog<Customer?>(
       context: context,
       builder: (context) => const CustomerDialog(),
     );
@@ -603,10 +845,11 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersProvider);
+    final selectedCustomer = ref.watch(selectedCustomerProvider);
 
     return AlertDialog(
       title: const Text(
-        'Pilih Pelanggan (F5)',
+        'Pilih Pelanggan / Member',
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: SolluColors.textDark,
@@ -646,6 +889,7 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
                         const Divider(height: 1, color: SolluColors.neutral),
                     itemBuilder: (context, index) {
                       if (index == 0) {
+                        final isSelected = selectedCustomer == null;
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -666,13 +910,31 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
                               color: SolluColors.textMuted,
                             ),
                           ),
+                          trailing: isSelected
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: SolluColors.primary,
+                                  size: 20,
+                                )
+                              : null,
                           onTap: () {
-                            Navigator.of(context).pop();
+                            ref
+                                .read(selectedCustomerProvider.notifier)
+                                .clearCustomer();
+                            Navigator.of(context).pop(null);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Mode Pelanggan Umum dipilih'),
+                                backgroundColor: SolluColors.info,
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
                           },
                         );
                       }
 
                       final cust = filtered[index - 1];
+                      final isSelected = selectedCustomer?.id == cust.id;
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -693,12 +955,23 @@ class _CustomerDialogState extends ConsumerState<CustomerDialog> {
                             color: SolluColors.textMuted,
                           ),
                         ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: SolluColors.primary,
+                                size: 20,
+                              )
+                            : null,
                         onTap: () {
-                          Navigator.of(context).pop();
+                          ref
+                              .read(selectedCustomerProvider.notifier)
+                              .selectCustomer(cust);
+                          Navigator.of(context).pop(cust);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Pelanggan "${cust.name}" dipilih'),
                               backgroundColor: SolluColors.success,
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         },
@@ -1333,7 +1606,7 @@ class _OpenPriceDialogState extends State<OpenPriceDialog> {
             ),
             const SizedBox(width: 12),
             const Text(
-              'Ubah Harga Jual (F5)',
+              'Ubah Harga Jual',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1563,7 +1836,7 @@ class _QuickCashDialogState extends State<QuickCashDialog> {
             ),
             const SizedBox(width: 12),
             const Text(
-              'Bayar Cepat Tunai (F10)',
+              'Bayar Cepat Tunai',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: SolluColors.textDark),
             ),
           ],

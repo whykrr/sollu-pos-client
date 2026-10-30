@@ -51,13 +51,58 @@ class OutletSettingsService {
 
   bool isSupervisorPinEnabled() {
     final settings = getOutletSettings();
-    return settings?['enableSupervisorPin'] == true;
+    final isConfigured = settings?['enableSupervisorPin'] == true ||
+        settings?['enableSupervisorPin'] == 1 ||
+        settings?['enableSupervisorPin'] == 'true';
+    if (!isConfigured) return false;
+    final features = getActiveFeatures();
+    if (features.isNotEmpty) {
+      return hasFeature('double_authorization');
+    }
+    return true;
+  }
+
+  /// Mengambil daftar kode fitur aktif merchant dari pengaturan lokal
+  List<String> getActiveFeatures() {
+    final settings = getOutletSettings();
+    final raw = settings?['activeFeatures'] ?? settings?['active_features'];
+    if (raw is List) {
+      return raw
+          .map((e) => e.toString().trim().toLowerCase())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  /// Mengecek apakah merchant memiliki hak akses terhadap fitur tertentu
+  bool hasFeature(String featureCode) {
+    final features = getActiveFeatures();
+    return features.contains(featureCode.trim().toLowerCase());
+  }
+
+  static const _posModeKey = 'user_pos_mode_preference';
+
+  /// Simpan preferensi mode tampilan POS kasir
+  Future<void> savePosMode(String mode) async {
+    await _prefs.setString(_posModeKey, mode);
+  }
+
+  /// Ambil preferensi mode tampilan POS kasir
+  String? getPosMode() {
+    return _prefs.getString(_posModeKey);
+  }
+
+  /// Hapus override preferensi mode tampilan POS
+  Future<void> clearPosMode() async {
+    await _prefs.remove(_posModeKey);
   }
 
   Future<void> clearAll() async {
     await _prefs.remove(_outletProfileKey);
     await _prefs.remove(_outletSettingsKey);
     await _prefs.remove(_autoPrintKey);
+    await _prefs.remove(_posModeKey);
   }
 
   /// Sinkronisasikan payload pengaturan & profil outlet dari backend
@@ -150,6 +195,21 @@ class OutletSettingsService {
         structuredSettings['enable_supervisor_pin'] == 'true' ||
         structuredSettings['enable_supervisor_pin'] == '1' ||
         (structuredSettings['enable_supervisor_pin'] == null && (existingSettings?['enableSupervisorPin'] == true));
+
+    final rawActiveFeatures =
+        structuredSettings['active_features'] ?? data['active_features'];
+    final List<String> parsedActiveFeatures = (rawActiveFeatures is List)
+        ? rawActiveFeatures
+            .map((e) => e.toString().trim().toLowerCase())
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : (existingSettings?['activeFeatures'] is List
+            ? (existingSettings!['activeFeatures'] as List)
+                .map((e) => e.toString().trim().toLowerCase())
+                .where((e) => e.isNotEmpty)
+                .toList()
+            : const <String>[]);
+
     final List<String> posOrderTypes = (structuredSettings['pos_order_types'] is List)
         ? (structuredSettings['pos_order_types'] as List).map((e) => e.toString()).toList()
         : (existingSettings?['posOrderTypes'] is List
@@ -255,6 +315,7 @@ class OutletSettingsService {
     }
 
     final settingsToSave = {
+      'activeFeatures': parsedActiveFeatures,
       'taxPercentage': parsedTax,
       'serviceChargePercentage': parsedService,
       'taxIncludedInPrice': parsedTaxIncluded,

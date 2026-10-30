@@ -12633,6 +12633,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $HeldTransactionsTable heldTransactions = $HeldTransactionsTable(
     this,
   );
+  late final Index idxVariantGroupsProductId = Index(
+    'idx_variant_groups_product_id',
+    'CREATE INDEX idx_variant_groups_product_id ON variant_groups (product_id)',
+  );
+  late final Index idxProductModifierGroupsProductId = Index(
+    'idx_product_modifier_groups_product_id',
+    'CREATE INDEX idx_product_modifier_groups_product_id ON product_modifier_groups (product_id)',
+  );
+  late final Index idxProductPricesProductId = Index(
+    'idx_product_prices_product_id',
+    'CREATE INDEX idx_product_prices_product_id ON product_prices (product_id)',
+  );
+  late final Index idxProductPricesProductItemId = Index(
+    'idx_product_prices_product_item_id',
+    'CREATE INDEX idx_product_prices_product_item_id ON product_prices (product_item_id)',
+  );
+  late final Index idxProductPricesInventoryItemId = Index(
+    'idx_product_prices_inventory_item_id',
+    'CREATE INDEX idx_product_prices_inventory_item_id ON product_prices (inventory_item_id)',
+  );
+  late final Index idxInventoriesProductId = Index(
+    'idx_inventories_product_id',
+    'CREATE INDEX idx_inventories_product_id ON inventories (product_id)',
+  );
+  late final Index idxInventoriesProductItemId = Index(
+    'idx_inventories_product_item_id',
+    'CREATE INDEX idx_inventories_product_item_id ON inventories (product_item_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12662,6 +12690,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     employees,
     customers,
     heldTransactions,
+    idxVariantGroupsProductId,
+    idxProductModifierGroupsProductId,
+    idxProductPricesProductId,
+    idxProductPricesProductItemId,
+    idxProductPricesInventoryItemId,
+    idxInventoriesProductId,
+    idxInventoriesProductItemId,
   ];
 }
 

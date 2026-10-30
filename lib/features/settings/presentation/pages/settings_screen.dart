@@ -21,6 +21,7 @@ import 'package:sollu_pos_client/core/services/window_service.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_mode_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -289,6 +290,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
                 const Divider(height: 24),
+                // 1. Tampilan & Mode Operasi POS (Fast Retail vs Visual Touch)
+                Consumer(
+                  builder: (context, ref, child) {
+                    final currentPosMode = ref.watch(posModeProvider);
+                    final isFast = currentPosMode == PosMode.fastRetail;
+
+                    return ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (isFast ? SolluColors.primary : Colors.teal)
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          isFast ? Icons.flash_on : Icons.touch_app,
+                          color: isFast ? SolluColors.primary : Colors.teal,
+                        ),
+                      ),
+                      title: const Text(
+                        'Mode Operasi Kasir POS',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        isFast
+                            ? 'Fast Retail: Tabel lebar dominan, barcode auto-fokus, & keyboard shortcuts (Minimarket/Retail)'
+                            : 'Visual Touch: Grid kartu produk & kategori sidebar (F&B / Kafe)',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: SegmentedButton<PosMode>(
+                        segments: const [
+                          ButtonSegment<PosMode>(
+                            value: PosMode.fastRetail,
+                            label: Text('Fast Retail', style: TextStyle(fontSize: 12)),
+                            icon: Icon(Icons.flash_on, size: 16),
+                          ),
+                          ButtonSegment<PosMode>(
+                            value: PosMode.visualTouch,
+                            label: Text('Visual Touch', style: TextStyle(fontSize: 12)),
+                            icon: Icon(Icons.touch_app, size: 16),
+                          ),
+                        ],
+                        selected: {currentPosMode},
+                        onSelectionChanged: (newSelection) {
+                          ref.read(posModeProvider.notifier).setMode(newSelection.first);
+                        },
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 24),
+                // 2. Pengelompokan Katalog Produk (Produk vs Varian)
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
@@ -302,11 +355,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   title: const Text(
-                    'Mode Tampilan Kasir',
+                    'Tampilan Katalog Produk POS',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: const Text(
-                    'Pilih cara menampilkan produk di layar kasir',
+                    'Pilih cara mengelompokkan produk di katalog kasir',
                   ),
                   trailing: DropdownButton<String>(
                     value: ref.watch(posDisplayModeProvider),

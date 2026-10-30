@@ -14,11 +14,11 @@ Before designing or modifying code, ensure compliance with the standing rules:
 - `02-clean-architecture.md`: Presentation, Domain, Data layers, Riverpod DI.
 - `03-auth-and-enums.md`: Dart Enums SSOT, secure storage, local PIN auth, synced tiered permissions.
 - `04-ui-standards.md`: SolluColors, Plus Jakarta Sans, widget styling.
-- `05-data-standards.md`: Dio repositories, Drift local database.
+- `05-data-standards.md`: Dio repositories, Drift local database, schemaVersion increment & onUpgrade immutability.
 - `06-tooling-and-testing.md`: `flutter_lints`, Mocktail, widget tests.
-- `07-git-and-changelog.md`: SemVer, Conventional Commits.
+- `07-git-and-changelog.md`: SemVer, Conventional Commits, Git Tag SSOT client release parameter.
 - `08-offline-first.md`: Mandatory offline-first design using local DB.
-- `09-api-contract-standards.md`: Syncing models with Laravel backend endpoints.
+- `09-api-contract-standards.md`: Syncing models with Laravel backend endpoints, model resilience & backward compatibility.
 - `10-multi-platform-support.md`: Code compatibility across Android, macOS, and Windows.
 
 ## 3. On-Demand Domain Skills (`.agents/skills/`)

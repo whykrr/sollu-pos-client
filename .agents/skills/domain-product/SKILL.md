@@ -2,10 +2,11 @@
 name: domain-product
 description: >-
     Knowledge and standards for Product & POS Catalog Domain in Sollu POS Client. Covers Drift SQLite
-    schema v10 (ProductItems, ProductItemVariantGroupOptions), PosRepository omni-search,
+    schema v11 (ProductItems, ProductItemVariantGroupOptions, @TableIndex), PosRepository omni-search,
     aggregative parent-child category filter, VariantDialogNotifier SQLite pivot resolution,
-    CartItem & CartProvider modifier deduplication, and decoupled infinite stock (Stok: ∞).
-    Activate whenever working on POS catalog, product search, variant dialog, cart, or sync absorption.
+    CartItem & CartProvider modifier deduplication, decoupled infinite stock (Stok: ∞),
+    Fast Retail keyboard shortcuts, and supervisor void.
+    Activate whenever working on POS catalog, product search, variant dialog, cart, shortcuts, or sync absorption.
 ---
 
 # Domain Skill: Modul Produk & Katalog POS (Product & POS Domain)
@@ -14,7 +15,7 @@ Panduan arsitektur dan aturan baku untuk **Modul Produk & Katalog Kasir** pada *
 
 ---
 
-## 1. Skema Database Lokal Drift (v10)
+## 1. Skema Database Lokal Drift (v11)
 
 Tabel master data didefinisikan di `lib/core/database/tables/master_data_tables.dart`:
 
@@ -36,6 +37,10 @@ Tabel master data didefinisikan di `lib/core/database/tables/master_data_tables.
 ### Karakteristik Kunci
 - `ProductItems.variantCombination`: Berisi string kombinasi (e.g. `"Merah, XL"`) untuk produk varian, atau `null` untuk produk single.
 - Skema v10 menambahkan tabel `ProductItems` dan `ProductItemVariantGroupOptions` dengan foreign key non-destructive migration di `app_database.dart`.
+- Skema v11 menambahkan indeks `@TableIndex` pada foreign keys utama:
+  - `ProductItems`: indeks pada `product_id`, `sku`, `barcode`.
+  - `ProductItemVariantGroupOptions`: indeks pada `product_item_id`, `variant_group_option_id`.
+  - Menjamin performa omni-search $O(1)$ pada puluhan ribu SKU barang retail.
 
 ---
 
@@ -73,3 +78,27 @@ $$\text{COUNT}(variant\_group\_option\_id) = \text{jumlah opsi yang dipilih}$$
 ### Penanganan Stok Decoupled (`track_inventory = false`)
 - Produk tanpa pelacakan stok menampilkan badge visual **`Stok: ∞`** (`Icons.all_inclusive_rounded`).
 - Validasi stok kasir dan `TransactionRepository` tidak pernah memblokir checkout untuk item non-inventori.
+
+---
+
+## 4. Matriks Shortcut Keyboard Kasir Fast Retail
+| Shortcut | Fungsi Operasional Kasir |
+| :--- | :--- |
+| `F1` | Fokus Barcode / Buka Dialog Pencarian Katalog |
+| `F2` | Ubah Kuantitas Item Aktif |
+| `F3` | Pilih / Tambah Pelanggan (CRM) |
+| `F4` | Terapkan Diskon / Promo Transaksi |
+| `F8` | Quick Exact Cash (Bayar Tunai Pas, Cetak & Buka Laci) |
+| `F9` | Tahan Transaksi (Park Bill) |
+| `F10` | Panggil Transaksi Tertahan (Recall Bill) |
+| `F12` / `Enter` | Buka Menu Pembayaran / Selesaikan Transaksi |
+| `Space` | Buka Laci Kasir Manual (Cash Drawer) |
+| `Esc` | Bersihkan Keranjang / Tutup Dialog Aktif |
+| `+` / `-` | Tambah / Kurangi Qty Item Terpilih |
+| `1` – `3` | Shortcut Cepat Metode Pembayaran (Tunai, QRIS, EDC) |
+
+---
+
+## 5. Void Transaksi & Sinkronisasi Multi-Tender & Modifiers JSON
+- Transaksi kasir menyertakan seluruh detail array `payments` (multi-tender) dan `modifiers` JSON per item.
+- Modul Void Transaksi: Memerlukan otorisasi PIN supervisor, membatalkan transaksi hari berjalan pada shift kasir aktif, serta memulihkan saldo inventori dan layer FIFO di cloud.

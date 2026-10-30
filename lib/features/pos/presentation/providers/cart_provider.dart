@@ -46,9 +46,11 @@ class CartNotifier extends Notifier<List<CartItem>> {
       final newState = List<CartItem>.from(state);
       newState[existingIndex] = updatedItem;
       state = newState;
+      ref.read(lastScannedCartItemProvider.notifier).setItem(updatedItem);
     } else {
       // Add new item
       state = [...state, item];
+      ref.read(lastScannedCartItemProvider.notifier).setItem(item);
     }
   }
 
@@ -74,6 +76,11 @@ class CartNotifier extends Notifier<List<CartItem>> {
       }
     }
     state = newState;
+    final currentLast = ref.read(lastScannedCartItemProvider);
+    if (currentLast?.id == id) {
+      final updated = newState.firstWhereOrNull((item) => item.id == id);
+      ref.read(lastScannedCartItemProvider.notifier).setItem(updated ?? newState.lastOrNull);
+    }
   }
 
   void updateItemDetails(
@@ -86,14 +93,17 @@ class CartNotifier extends Notifier<List<CartItem>> {
     final newState = <CartItem>[];
     for (final item in state) {
       if (item.id == id) {
-        newState.add(
-          item.copyWith(
-            qty: qty,
-            discountType: discountType,
-            discountValue: discountValue,
-            notes: notes,
-          ),
+        final updated = item.copyWith(
+          qty: qty,
+          discountType: discountType,
+          discountValue: discountValue,
+          notes: notes,
         );
+        newState.add(updated);
+        final currentLast = ref.read(lastScannedCartItemProvider);
+        if (currentLast?.id == id) {
+          ref.read(lastScannedCartItemProvider.notifier).setItem(updated);
+        }
       } else {
         newState.add(item);
       }
@@ -105,7 +115,12 @@ class CartNotifier extends Notifier<List<CartItem>> {
     final newState = <CartItem>[];
     for (final item in state) {
       if (item.id == id) {
-        newState.add(item.copyWith(price: newPrice));
+        final updated = item.copyWith(price: newPrice);
+        newState.add(updated);
+        final currentLast = ref.read(lastScannedCartItemProvider);
+        if (currentLast?.id == id) {
+          ref.read(lastScannedCartItemProvider.notifier).setItem(updated);
+        }
       } else {
         newState.add(item);
       }
@@ -115,19 +130,39 @@ class CartNotifier extends Notifier<List<CartItem>> {
 
   void removeItem(String id) {
     state = state.where((item) => item.id != id).toList();
+    if (ref.read(lastScannedCartItemProvider)?.id == id) {
+      ref.read(lastScannedCartItemProvider.notifier).setItem(state.lastOrNull);
+    }
   }
 
   void clearCart() {
     state = [];
+    ref.read(lastScannedCartItemProvider.notifier).setItem(null);
   }
 
   void setCart(List<CartItem> items) {
     state = items;
+    ref.read(lastScannedCartItemProvider.notifier).setItem(items.lastOrNull);
   }
 }
 
 final cartProvider = NotifierProvider<CartNotifier, List<CartItem>>(
   CartNotifier.new,
+);
+
+class LastScannedCartItemNotifier extends Notifier<CartItem?> {
+  @override
+  CartItem? build() => null;
+
+  @override
+  set state(CartItem? value) => super.state = value;
+
+  void setItem(CartItem? item) => state = item;
+}
+
+final lastScannedCartItemProvider =
+    NotifierProvider<LastScannedCartItemNotifier, CartItem?>(
+  LastScannedCartItemNotifier.new,
 );
 
 class SelectedCartIndexNotifier extends Notifier<int> {

@@ -44,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -92,6 +92,29 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(inventories, inventories.productItemId);
           await m.addColumn(productPrices, productPrices.productItemId);
           await m.addColumn(transactionItems, transactionItems.productItemId);
+        }
+        if (from < 11) {
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_product_prices_product_id ON product_prices (product_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_product_prices_product_item_id ON product_prices (product_item_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_product_prices_inventory_item_id ON product_prices (inventory_item_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_inventories_product_id ON inventories (product_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_inventories_product_item_id ON inventories (product_item_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_variant_groups_product_id ON variant_groups (product_id);',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_product_modifier_groups_product_id ON product_modifier_groups (product_id);',
+          );
         }
       },
     );

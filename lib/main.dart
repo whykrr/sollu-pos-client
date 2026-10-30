@@ -162,37 +162,7 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
 
           final logicalKey = event.logicalKey;
 
-          if (logicalKey == LogicalKeyboardKey.f1) {
-            ref.read(shortcutProvider.notifier).trigger('F1');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f2) {
-            ref.read(shortcutProvider.notifier).trigger('F2');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f3) {
-            ref.read(shortcutProvider.notifier).trigger('F3');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f4) {
-            ref.read(shortcutProvider.notifier).trigger('F4');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f5) {
-            ref.read(shortcutProvider.notifier).trigger('F5');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f6) {
-            ref.read(shortcutProvider.notifier).trigger('F6');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f7) {
-            ref.read(shortcutProvider.notifier).trigger('F7');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f8) {
-            ref.read(shortcutProvider.notifier).trigger('F8');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f9) {
-            ref.read(shortcutProvider.notifier).trigger('F9');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f10) {
-            ref.read(shortcutProvider.notifier).trigger('F10');
-            return KeyEventResult.handled;
-          } else if (logicalKey == LogicalKeyboardKey.f11) {
+          if (logicalKey == LogicalKeyboardKey.f11) {
             if (WindowService.isDesktop) {
               WindowService.toggleFullScreen().then((isFullScreen) {
                 ref
@@ -201,9 +171,6 @@ class _GlobalShortcutWrapper extends ConsumerWidget {
               });
               return KeyEventResult.handled;
             }
-          } else if (logicalKey == LogicalKeyboardKey.f12) {
-            ref.read(shortcutProvider.notifier).trigger('F12');
-            return KeyEventResult.handled;
           } else if (logicalKey == LogicalKeyboardKey.escape) {
             ref.read(shortcutProvider.notifier).trigger('ESC');
             return KeyEventResult

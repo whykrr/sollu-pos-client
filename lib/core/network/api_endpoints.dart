@@ -23,6 +23,7 @@ class ApiEndpoints {
 
   // --- Transactions ---
   static const String transactions = '$posPrefix/transactions';
+  static String transactionVoid(String id) => '$transactions/$id/void';
 
   // --- Shift Management ---
   static const String shiftsSync = '$posPrefix/shifts/sync';

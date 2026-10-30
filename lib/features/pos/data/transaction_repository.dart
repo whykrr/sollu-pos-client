@@ -134,9 +134,15 @@ class TransactionRepository {
     required double taxAmount,
     double serviceChargeAmount = 0.0,
     required double total,
-    required PaymentMethod paymentMethod,
-    required double cashReceived,
-    required double changeAmount,
+    PaymentMethod? paymentMethod,
+    double? cashReceived,
+    double? changeAmount,
+    List<({
+      String? paymentMethodId,
+      double amount,
+      double changeAmount,
+      String? paymentReference,
+    })>? multiPayments,
     String? notes,
     String outletId = 'default-outlet',
     String type = 'walk_in',
@@ -419,31 +425,64 @@ class TransactionRepository {
         createdModifiersByItemId[itemId] = itemMods;
       }
 
-      // 3. Simpan Pembayaran Transaksi
-      final paymentId = _uuid.v4();
-      final paymentAmount = paymentMethod.type == 'cash' ? cashReceived : total;
+      // 3. Simpan Pembayaran Transaksi (Multi-Tender Support)
+      final List<TransactionPayment> createdPayments = [];
 
-      await _database
-          .into(_database.transactionPayments)
-          .insert(
-            TransactionPaymentsCompanion.insert(
+      if (multiPayments != null && multiPayments.isNotEmpty) {
+        for (final p in multiPayments) {
+          final paymentId = _uuid.v4();
+          await _database.into(_database.transactionPayments).insert(
+                TransactionPaymentsCompanion.insert(
+                  id: paymentId,
+                  transactionId: txId,
+                  paymentMethodId: Value(p.paymentMethodId),
+                  amount: p.amount,
+                  changeAmount: Value(p.changeAmount),
+                  paymentReference: Value(p.paymentReference),
+                  paidAt: Value(now),
+                ),
+              );
+          createdPayments.add(
+            TransactionPayment(
               id: paymentId,
               transactionId: txId,
-              paymentMethodId: Value(paymentMethod.id),
-              amount: paymentAmount,
-              changeAmount: Value(changeAmount),
-              paidAt: Value(now),
+              paymentMethodId: p.paymentMethodId,
+              amount: p.amount,
+              changeAmount: p.changeAmount,
+              paymentReference: p.paymentReference,
+              paidAt: now,
             ),
           );
+        }
+      } else if (paymentMethod != null) {
+        final paymentId = _uuid.v4();
+        final paymentAmount = paymentMethod.type == 'cash'
+            ? (cashReceived ?? total)
+            : total;
+        final resolvedChange = changeAmount ?? 0.0;
 
-      final createdPayment = TransactionPayment(
-        id: paymentId,
-        transactionId: txId,
-        paymentMethodId: paymentMethod.id,
-        amount: paymentAmount,
-        changeAmount: changeAmount,
-        paidAt: now,
-      );
+        await _database.into(_database.transactionPayments).insert(
+              TransactionPaymentsCompanion.insert(
+                id: paymentId,
+                transactionId: txId,
+                paymentMethodId: Value(paymentMethod.id),
+                amount: paymentAmount,
+                changeAmount: Value(resolvedChange),
+                paidAt: Value(now),
+              ),
+            );
+
+        createdPayments.add(
+          TransactionPayment(
+            id: paymentId,
+            transactionId: txId,
+            paymentMethodId: paymentMethod.id,
+            amount: paymentAmount,
+            changeAmount: resolvedChange,
+            paidAt: now,
+          ),
+        );
+      }
 
       // 4. Simpan Promo Transaksi jika ada
       TransactionPromo? createdPromo;
@@ -492,7 +531,7 @@ class TransactionRepository {
         transaction: createdTx,
         items: createdItems,
         modifiersByItemId: createdModifiersByItemId,
-        payments: [createdPayment],
+        payments: createdPayments,
         promo: createdPromo,
         paymentMethod: paymentMethod,
         customer: resolvedCustomer,
@@ -523,9 +562,10 @@ class TransactionRepository {
     required double serviceChargeAmount,
     required double total,
     required List<Map<String, dynamic>> itemsPayload,
-    required String paymentMethodId,
-    required double paymentAmount,
-    required double changeAmount,
+    List<Map<String, dynamic>>? paymentsPayload,
+    String? paymentMethodId,
+    double? paymentAmount,
+    double? changeAmount,
     String? notes,
     String channel = 'pos',
     String type = 'walk_in',
@@ -560,13 +600,15 @@ class TransactionRepository {
           'status': TransactionStatus.completed.value,
           'notes': notes,
           'items': itemsPayload,
-          'payments': [
-            {
-              'payment_method_id': paymentMethodId,
-              'amount': paymentAmount,
-              'change_amount': changeAmount,
-            },
-          ],
+          'payments': (paymentsPayload != null && paymentsPayload.isNotEmpty)
+              ? paymentsPayload
+              : [
+                  {
+                    'payment_method_id': paymentMethodId,
+                    'amount': paymentAmount ?? total,
+                    'change_amount': changeAmount ?? 0.0,
+                  },
+                ],
           if (promoName != null)
             'promos': [
               {
@@ -826,7 +868,7 @@ class TransactionRepository {
         final modPayload = mods
             .map(
               (m) => {
-                'modifier_option_id': null,
+                'modifier_option_id': m.modifierOptionId,
                 'modifier_name': m.modifierName,
                 'price': m.price,
                 'qty': m.qty,
@@ -859,10 +901,20 @@ class TransactionRepository {
         });
       }
 
-      final payment = details.payments.isNotEmpty
-          ? details.payments.first
-          : null;
-      if (payment == null) continue;
+      if (details.payments.isEmpty) continue;
+
+      final paymentsPayload = details.payments
+          .map(
+            (p) => {
+              'payment_method_id': p.paymentMethodId,
+              'amount': p.amount,
+              'change_amount': p.changeAmount,
+              'payment_reference': p.paymentReference,
+            },
+          )
+          .toList();
+
+      final firstPayment = details.payments.first;
 
       final result = await _syncTransactionOnline(
         txId: tx.id,
@@ -879,9 +931,10 @@ class TransactionRepository {
         serviceChargeAmount: tx.serviceChargeAmount,
         total: tx.total,
         itemsPayload: itemsPayload,
-        paymentMethodId: payment.paymentMethodId ?? 'cash',
-        paymentAmount: payment.amount,
-        changeAmount: payment.changeAmount,
+        paymentsPayload: paymentsPayload,
+        paymentMethodId: firstPayment.paymentMethodId ?? 'cash',
+        paymentAmount: firstPayment.amount,
+        changeAmount: firstPayment.changeAmount,
         notes: tx.notes,
         channel: tx.channel,
         type: tx.type,
@@ -920,7 +973,7 @@ class TransactionRepository {
       final modPayload = mods
           .map(
             (m) => {
-              'modifier_option_id': null,
+              'modifier_option_id': m.modifierOptionId,
               'modifier_name': m.modifierName,
               'price': m.price,
               'qty': m.qty,
@@ -953,8 +1006,20 @@ class TransactionRepository {
       });
     }
 
-    final payment = details.payments.isNotEmpty ? details.payments.first : null;
-    if (payment == null) return false;
+    if (details.payments.isEmpty) return false;
+
+    final paymentsPayload = details.payments
+        .map(
+          (p) => {
+            'payment_method_id': p.paymentMethodId,
+            'amount': p.amount,
+            'change_amount': p.changeAmount,
+            'payment_reference': p.paymentReference,
+          },
+        )
+        .toList();
+
+    final firstPayment = details.payments.first;
 
     final result = await _syncTransactionOnline(
       txId: tx.id,
@@ -971,9 +1036,10 @@ class TransactionRepository {
       serviceChargeAmount: tx.serviceChargeAmount,
       total: tx.total,
       itemsPayload: itemsPayload,
-      paymentMethodId: payment.paymentMethodId ?? 'cash',
-      paymentAmount: payment.amount,
-      changeAmount: payment.changeAmount,
+      paymentsPayload: paymentsPayload,
+      paymentMethodId: firstPayment.paymentMethodId ?? 'cash',
+      paymentAmount: firstPayment.amount,
+      changeAmount: firstPayment.changeAmount,
       notes: tx.notes,
     );
 
@@ -1201,6 +1267,94 @@ class TransactionRepository {
     return (_database.select(
       _database.customers,
     )..orderBy([(c) => OrderingTerm(expression: c.name)])).watch();
+  }
+
+  /// Membatalkan (Void) transaksi kasir baik secara lokal maupun ke backend
+  Future<({bool success, String message})> voidTransaction({
+    required String transactionId,
+    required String reason,
+    String? notes,
+    String? supervisorId,
+    String? supervisorPin,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final existingTx = await (_database.select(_database.transactions)
+            ..where((t) => t.id.equals(transactionId)))
+          .getSingleOrNull();
+
+      if (existingTx == null) {
+        return (success: false, message: 'Transaksi tidak ditemukan.');
+      }
+
+      final previousStatus = existingTx.status;
+      final previousNotes = existingTx.notes;
+
+      final fullNotes = notes != null && notes.isNotEmpty
+          ? '[VOID] Alasan: $reason | Catatan: $notes'
+          : '[VOID] Alasan: $reason';
+
+      // 1. Tulis status void secara optimis ke database lokal (Drift)
+      await (_database.update(_database.transactions)
+            ..where((t) => t.id.equals(transactionId)))
+          .write(TransactionsCompanion(
+            status: Value(TransactionStatus.voided.value),
+            notes: Value(fullNotes),
+            updatedAt: Value(now),
+          ));
+
+      // 2. Kirim status void ke backend via API
+      try {
+        final payload = <String, dynamic>{
+          'reason': reason,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        };
+        if (supervisorId != null) {
+          payload['supervisor_id'] = supervisorId;
+        }
+        if (supervisorPin != null) {
+          payload['supervisor_pin'] = supervisorPin;
+        }
+
+        await _dioClient.dio.post(
+          ApiEndpoints.transactionVoid(transactionId),
+          data: payload,
+        );
+      } on DioException catch (dioError) {
+        final statusCode = dioError.response?.statusCode;
+        // Jika server menolak dengan HTTP 422 (PIN salah/invalid) atau 403 (Forbidden)
+        if (statusCode == 422 || statusCode == 403) {
+          // Rollback status lokal ke status awal
+          await (_database.update(_database.transactions)
+                ..where((t) => t.id.equals(transactionId)))
+              .write(TransactionsCompanion(
+                status: Value(previousStatus),
+                notes: Value(previousNotes),
+                updatedAt: Value(now),
+              ));
+
+          final serverMsg = dioError.response?.data is Map
+              ? (dioError.response?.data['message']?.toString() ??
+                  dioError.response?.data['error']?.toString())
+              : null;
+          final errorMsg = serverMsg ??
+              (statusCode == 422
+                  ? 'PIN supervisor tidak valid.'
+                  : 'Tidak memiliki izin untuk membatalkan transaksi.');
+
+          return (success: false, message: errorMsg);
+        }
+        // Jika error jaringan / offline, biarkan void lokal tetap berlaku untuk disinkronkan nanti
+        debugPrint('Warning: Void sync to backend failed (offline/network): $dioError');
+      } catch (dioError) {
+        debugPrint('Warning: Void sync to backend failed: $dioError');
+      }
+
+      return (success: true, message: 'Transaksi berhasil dibatalkan (void).');
+    } catch (e) {
+      debugPrint('Error voiding transaction: $e');
+      return (success: false, message: 'Gagal membatalkan transaksi: $e');
+    }
   }
 }
 

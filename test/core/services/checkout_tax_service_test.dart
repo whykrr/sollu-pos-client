@@ -30,6 +30,7 @@ void main() {
           cartProvider.overrideWith(() => FakeCartNotifier([cartItem])),
           activeTaxRateProvider.overrideWith((ref) => 0.0),
           activeServiceChargeRateProvider.overrideWith((ref) => 0.0),
+          taxIncludedInPriceProvider.overrideWith((ref) => false),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -65,6 +66,7 @@ void main() {
           cartProvider.overrideWith(() => FakeCartNotifier([cartItem])),
           activeTaxRateProvider.overrideWith((ref) => 11.0),
           activeServiceChargeRateProvider.overrideWith((ref) => 5.0),
+          taxIncludedInPriceProvider.overrideWith((ref) => false),
         ],
         child: const MaterialApp(
           home: Scaffold(

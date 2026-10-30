@@ -1,4 +1,6 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +10,7 @@ import '../../../../core/theme/sollu_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/currency_input_formatter.dart';
 import '../providers/cart_provider.dart';
+import '../providers/pos_mode_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/promo_provider.dart';
 import '../providers/transaction_provider.dart';
@@ -19,10 +22,12 @@ import '../../../shift/presentation/providers/shift_provider.dart';
 
 class CheckoutPaymentPane extends ConsumerStatefulWidget {
   final String? initialMethodType;
+  final VoidCallback? onCompleted;
 
   const CheckoutPaymentPane({
     super.key,
     this.initialMethodType,
+    this.onCompleted,
   });
 
   @override
@@ -36,6 +41,9 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
       TextEditingController();
   final TextEditingController _referenceController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final FocusNode _cashReceivedFocusNode = FocusNode();
+  final FocusNode _referenceFocusNode = FocusNode();
+  final FocusNode _notesFocusNode = FocusNode();
   double _cashReceived = 0.0;
   bool _isProcessing = false;
   bool _autoPrintReceipt = true;
@@ -49,11 +57,16 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
         ref.read(outletSettingsServiceProvider).getAutoPrint();
     _autoPrintReceipt = autoPrint;
 
-    final orderTypes = ref.read(posOrderTypesProvider);
-    if (orderTypes.isNotEmpty) {
-      _selectedOrderType = orderTypes.first;
-    } else {
+    final isFastRetail = ref.read(posModeProvider) == PosMode.fastRetail;
+    if (isFastRetail) {
       _selectedOrderType = 'walk_in';
+    } else {
+      final orderTypes = ref.read(posOrderTypesProvider);
+      if (orderTypes.isNotEmpty) {
+        _selectedOrderType = orderTypes.first;
+      } else {
+        _selectedOrderType = 'walk_in';
+      }
     }
   }
 
@@ -62,6 +75,9 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
     _cashReceivedController.dispose();
     _referenceController.dispose();
     _notesController.dispose();
+    _cashReceivedFocusNode.dispose();
+    _referenceFocusNode.dispose();
+    _notesFocusNode.dispose();
     super.dispose();
   }
 
@@ -187,6 +203,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
       final activeEmployee = ref.read(activeEmployeeProvider);
       final taxRate = ref.read(activeTaxRateProvider);
       final serviceChargeRate = ref.read(activeServiceChargeRateProvider);
+      final taxIncluded = ref.read(taxIncludedInPriceProvider);
 
       final double subtotal = cart.fold(
         0.0,
@@ -197,8 +214,11 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
           : 0.0;
       final double taxableAmount =
           (subtotal - discountAmount).clamp(0.0, double.infinity);
-      final double tax =
-          taxRate > 0 ? (taxableAmount * (taxRate / 100.0)) : 0.0;
+      final double tax = calculateTaxAmount(
+        taxableAmount: taxableAmount,
+        taxRate: taxRate,
+        taxIncludedInPrice: taxIncluded,
+      );
       final double serviceCharge = serviceChargeRate > 0
           ? (taxableAmount * (serviceChargeRate / 100.0))
           : 0.0;
@@ -224,7 +244,9 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
         cashReceived: isCash ? _cashReceived : grandTotal,
         changeAmount: changeAmount,
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-        type: _selectedOrderType ?? 'walk_in',
+        type: (ref.read(posModeProvider) == PosMode.fastRetail)
+            ? 'walk_in'
+            : (_selectedOrderType ?? 'walk_in'),
       );
 
       if (mounted) {
@@ -298,139 +320,292 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: SolluColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: SolluColors.neutral, width: 1.0),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFD1FAE5), // Green 100
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  color: SolluColors.success,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Pembayaran Berhasil!',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: SolluColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No. Transaksi: ${tx.transactionNumber}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: SolluColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (changeAmount > 0) ...[
+        void finishAndReturn() {
+          Navigator.of(dialogContext).pop();
+          // Reset cart & diskon
+          ref.read(cartProvider.notifier).clearCart();
+          ref.read(appliedDiscountProvider.notifier).clearDiscount();
+          // Reset filter kategori dan pencarian produk ke kondisi normal
+          ref.read(posSelectedCategoryProvider.notifier).setCategory(null);
+          ref.read(posSearchQueryProvider.notifier).setQuery('');
+          if (widget.onCompleted != null) {
+            widget.onCompleted!();
+          } else {
+            context.go('/pos');
+          }
+        }
+
+        return Focus(
+          autofocus: true,
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.enter ||
+                key == LogicalKeyboardKey.numpadEnter ||
+                key == LogicalKeyboardKey.space ||
+                key == LogicalKeyboardKey.escape) {
+              finishAndReturn();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: AlertDialog(
+            backgroundColor: SolluColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: SolluColors.neutral, width: 1.0),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: SolluColors.success.withValues(alpha: 0.3),
-                      width: 1.0,
-                    ),
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD1FAE5), // Green 100
+                    shape: BoxShape.circle,
                   ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Kembalian',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: SolluColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        CurrencyFormatter.format(changeAmount.toInt()),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: SolluColors.success,
-                        ),
-                      ),
-                    ],
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: SolluColors.success,
+                    size: 40,
                   ),
                 ),
                 const SizedBox(height: 16),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        side: const BorderSide(
-                          color: SolluColors.neutral,
-                          width: 1.0,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                const Text(
+                  'Pembayaran Berhasil!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: SolluColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No. Transaksi: ${tx.transactionNumber}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: SolluColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (changeAmount > 0) ...[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: SolluColors.success.withValues(alpha: 0.3),
+                        width: 1.0,
                       ),
-                      onPressed: () {
-                        final outletProfile = ref.read(outletProfileProvider);
-                        printTransactionReceiptAction(
-                          ref: ref,
-                          transactionId: tx.id,
-                          outletName: outletProfile?['name']?.toString(),
-                        );
-                      },
-                      icon: const Icon(Icons.print, size: 18),
-                      label: const Text('Cetak Struk'),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Kembalian',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: SolluColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.format(changeAmount.toInt()),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: SolluColors.success,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: SolluColors.primary,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 48),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        // Reset cart & diskon
-                        ref.read(cartProvider.notifier).clearCart();
-                        ref.read(appliedDiscountProvider.notifier).clearDiscount();
-                        // Reset filter kategori dan pencarian produk ke kondisi normal
-                        ref.read(posSelectedCategoryProvider.notifier).setCategory(null);
-                        ref.read(posSearchQueryProvider.notifier).setQuery('');
-                        context.go('/pos');
-                      },
-                      child: const Text('Selesai'),
-                    ),
-                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
-            ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          side: const BorderSide(
+                            color: SolluColors.neutral,
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          final outletProfile = ref.read(outletProfileProvider);
+                          printTransactionReceiptAction(
+                            ref: ref,
+                            transactionId: tx.id,
+                            outletName: outletProfile?['name']?.toString(),
+                          );
+                        },
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('Cetak Struk'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SolluColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 48),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: finishAndReturn,
+                        child: const Text('Selesai (Enter)'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  KeyEventResult _handlePaymentShortcuts({
+    required KeyEvent event,
+    required List<PaymentMethod> methods,
+    required double grandTotal,
+    required bool isUnderpaid,
+    required bool roundingEnabled,
+    required String roundingMode,
+    required double baseGrandTotal,
+  }) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    final isEditingText = _cashReceivedFocusNode.hasFocus ||
+        _referenceFocusNode.hasFocus ||
+        _notesFocusNode.hasFocus ||
+        (primaryFocus?.context?.widget is EditableText);
+
+    final isAlt = HardwareKeyboard.instance.isAltPressed;
+    final isShift = HardwareKeyboard.instance.isShiftPressed;
+
+    void selectMethodByIndex(int index) {
+      if (index >= 0 && index < methods.length) {
+        final m = methods[index];
+        setState(() {
+          _selectedMethod = m;
+          final methodIsCash = m.type.toLowerCase() == 'cash' ||
+              m.name.toLowerCase().contains('tunai');
+          if (methodIsCash) {
+            final payable = roundingEnabled
+                ? applyCashRounding(
+                    amount: baseGrandTotal,
+                    roundingEnabled: true,
+                    roundingMode: roundingMode,
+                  )
+                : baseGrandTotal;
+            _cashReceived = payable;
+            _cashReceivedController.text =
+                CurrencyInputFormatter.format(payable.toInt());
+          }
+        });
+      }
+    }
+
+    // Alt + 1..4: Akses cepat metode pembayaran 1..4
+    if (isAlt) {
+      if (event.logicalKey == LogicalKeyboardKey.digit1 || event.logicalKey == LogicalKeyboardKey.numpad1) {
+        selectMethodByIndex(0);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.digit2 || event.logicalKey == LogicalKeyboardKey.numpad2) {
+        selectMethodByIndex(1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.digit3 || event.logicalKey == LogicalKeyboardKey.numpad3) {
+        selectMethodByIndex(2);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.digit4 || event.logicalKey == LogicalKeyboardKey.numpad4) {
+        selectMethodByIndex(3);
+        return KeyEventResult.handled;
+      }
+    }
+
+    // Tab / Shift+Tab / Arrow Left / Arrow Right: Berpindah metode pembayaran saat tidak edit teks
+    if (!isEditingText) {
+      if (event.logicalKey == LogicalKeyboardKey.tab ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        if (methods.isNotEmpty) {
+          final currentIdx = methods.indexWhere((m) => m.id == _selectedMethod?.id);
+          final nextIdx = isShift
+              ? (currentIdx - 1 + methods.length) % methods.length
+              : (currentIdx + 1) % methods.length;
+          selectMethodByIndex(nextIdx);
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        if (methods.isNotEmpty) {
+          final currentIdx = methods.indexWhere((m) => m.id == _selectedMethod?.id);
+          final prevIdx = (currentIdx - 1 + methods.length) % methods.length;
+          selectMethodByIndex(prevIdx);
+          return KeyEventResult.handled;
+        }
+      }
+
+      // 1, 2, 3 direct selection
+      if (event.logicalKey == LogicalKeyboardKey.digit1 ||
+          event.logicalKey == LogicalKeyboardKey.numpad1) {
+        final cashMethod = methods.firstWhereOrNull(
+          (m) =>
+              m.type.toLowerCase() == 'cash' ||
+              m.name.toLowerCase().contains('tunai'),
+        );
+        if (cashMethod != null) {
+          selectMethodByIndex(methods.indexOf(cashMethod));
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.digit2 ||
+          event.logicalKey == LogicalKeyboardKey.numpad2) {
+        final qrisMethod = methods.firstWhereOrNull(
+          (m) =>
+              m.type.toLowerCase() == 'qris' ||
+              m.name.toLowerCase().contains('qris'),
+        );
+        if (qrisMethod != null) {
+          selectMethodByIndex(methods.indexOf(qrisMethod));
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.digit3 ||
+          event.logicalKey == LogicalKeyboardKey.numpad3) {
+        final cardMethod = methods.firstWhereOrNull(
+          (m) =>
+              ['edc', 'debit', 'credit'].contains(m.type.toLowerCase()) ||
+              m.name.toLowerCase().contains('edc') ||
+              m.name.toLowerCase().contains('debit') ||
+              m.name.toLowerCase().contains('kartu'),
+        );
+        if (cardMethod != null) {
+          selectMethodByIndex(methods.indexOf(cardMethod));
+          return KeyEventResult.handled;
+        }
+      }
+    }
+
+    // Enter / NumpadEnter: Selesaikan Pembayaran Tender
+    if ((event.logicalKey == LogicalKeyboardKey.enter && !isEditingText) ||
+        (event.logicalKey == LogicalKeyboardKey.numpadEnter && !isEditingText)) {
+      if (!_isProcessing && !isUnderpaid && _selectedMethod != null) {
+        _handlePaymentSubmit(grandTotal);
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -440,6 +615,9 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
     final appliedDiscount = ref.watch(appliedDiscountProvider);
     final taxRate = ref.watch(activeTaxRateProvider);
     final serviceChargeRate = ref.watch(activeServiceChargeRateProvider);
+    final taxIncluded = ref.watch(taxIncludedInPriceProvider);
+    final roundingEnabled = ref.watch(roundingEnabledProvider);
+    final roundingMode = ref.watch(roundingModeProvider);
 
     final double subtotal = cart.fold(
       0.0,
@@ -450,12 +628,20 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
         : 0.0;
     final double taxableAmount =
         (subtotal - discountAmount).clamp(0.0, double.infinity);
-    final double tax =
-        taxRate > 0 ? (taxableAmount * (taxRate / 100.0)) : 0.0;
+    final double tax = calculateTaxAmount(
+      taxableAmount: taxableAmount,
+      taxRate: taxRate,
+      taxIncludedInPrice: taxIncluded,
+    );
     final double serviceCharge = serviceChargeRate > 0
         ? (taxableAmount * (serviceChargeRate / 100.0))
         : 0.0;
-    final double grandTotal = taxableAmount + tax + serviceCharge;
+    final double baseGrandTotal = calculateGrandTotal(
+      taxableAmount: taxableAmount,
+      taxAmount: tax,
+      serviceChargeAmount: serviceCharge,
+      taxIncludedInPrice: taxIncluded,
+    );
 
     return paymentMethodsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -485,34 +671,66 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
             _selectedMethod = methods.first;
           }
 
+          final initialIsCash = _selectedMethod?.type == 'cash' ||
+              (_selectedMethod?.name.toLowerCase().contains('tunai') ?? false);
+          final initialPayable = initialIsCash && roundingEnabled
+              ? applyCashRounding(
+                  amount: baseGrandTotal,
+                  roundingEnabled: true,
+                  roundingMode: roundingMode,
+                )
+              : baseGrandTotal;
+
           if (_cashReceived == 0.0) {
-            _cashReceived = grandTotal;
+            _cashReceived = initialPayable;
             _cashReceivedController.text =
-                CurrencyInputFormatter.format(grandTotal.toInt());
+                CurrencyInputFormatter.format(initialPayable.toInt());
           }
         }
 
         final isCash = _selectedMethod?.type == 'cash' ||
             (_selectedMethod?.name.toLowerCase().contains('tunai') ?? false);
 
+        final double grandTotal = isCash && roundingEnabled
+            ? applyCashRounding(
+                amount: baseGrandTotal,
+                roundingEnabled: true,
+                roundingMode: roundingMode,
+              )
+            : baseGrandTotal;
+
         final double change = isCash ? (_cashReceived - grandTotal) : 0.0;
         final bool isUnderpaid = isCash && _cashReceived < grandTotal;
 
+        final isFastRetail = ref.watch(posModeProvider) == PosMode.fastRetail;
         final posOrderTypes = ref.watch(posOrderTypesProvider);
-        if (_selectedOrderType == null || !posOrderTypes.contains(_selectedOrderType)) {
+        if (isFastRetail) {
+          _selectedOrderType = 'walk_in';
+        } else if (_selectedOrderType == null || !posOrderTypes.contains(_selectedOrderType)) {
           if (posOrderTypes.isNotEmpty) {
             _selectedOrderType = posOrderTypes.first;
           }
         }
 
-        return Container(
-          color: SolluColors.background,
-          padding: const EdgeInsets.all(20),
+        return Focus(
+          autofocus: true,
+          onKeyEvent: (node, event) => _handlePaymentShortcuts(
+            event: event,
+            methods: methods,
+            grandTotal: grandTotal,
+            isUnderpaid: isUnderpaid,
+            roundingEnabled: roundingEnabled,
+            roundingMode: roundingMode,
+            baseGrandTotal: baseGrandTotal,
+          ),
+          child: Container(
+            color: SolluColors.background,
+            padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Selector Tipe Pesanan (hanya tampil jika > 1 opsi aktif)
-              if (posOrderTypes.length > 1) ...[
+              // Selector Tipe Pesanan (hanya tampil jika bukan Kasir Cepat dan > 1 opsi aktif)
+              if (!isFastRetail && posOrderTypes.length > 1) ...[
                 const Text(
                   'Tipe Pesanan',
                   style: TextStyle(
@@ -618,12 +836,20 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
                         onTap: () {
                           setState(() {
                             _selectedMethod = method;
-                            if (method.type == 'cash' ||
-                                method.name.toLowerCase().contains('tunai')) {
-                              _cashReceived = grandTotal;
+                            final methodIsCash = method.type == 'cash' ||
+                                method.name.toLowerCase().contains('tunai');
+                            final payableTotal = methodIsCash && roundingEnabled
+                                ? applyCashRounding(
+                                    amount: baseGrandTotal,
+                                    roundingEnabled: true,
+                                    roundingMode: roundingMode,
+                                  )
+                                : baseGrandTotal;
+                            if (methodIsCash) {
+                              _cashReceived = payableTotal;
                               _cashReceivedController.text =
                                   CurrencyInputFormatter.format(
-                                grandTotal.toInt(),
+                                payableTotal.toInt(),
                               );
                             }
                           });
@@ -751,7 +977,8 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
               ),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -783,39 +1010,61 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: SolluColors.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: SolluColors.neutral,
-                      width: 1.0,
+                TextField(
+                  controller: _cashReceivedController,
+                  focusNode: _cashReceivedFocusNode,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: SolluColors.primary,
+                  ),
+                  decoration: InputDecoration(
+                    prefixText: 'Rp ',
+                    prefixStyle: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: SolluColors.textDark,
+                    ),
+                    filled: true,
+                    fillColor: SolluColors.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: SolluColors.neutral,
+                        width: 1.0,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: SolluColors.neutral,
+                        width: 1.0,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: SolluColors.primary,
+                        width: 1.5,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Rp ',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: SolluColors.textDark,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          CurrencyInputFormatter.format(_cashReceived.toInt()),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: SolluColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _cashReceived = CurrencyInputFormatter.parse(val);
+                    });
+                  },
+                  onSubmitted: (_) {
+                    if (!_isProcessing && !isUnderpaid && _selectedMethod != null) {
+                      _handlePaymentSubmit(grandTotal);
+                    }
+                  },
                 ),
 
                 const SizedBox(height: 12),
@@ -1057,6 +1306,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
           const SizedBox(height: 6),
           TextField(
             controller: _referenceController,
+            focusNode: _referenceFocusNode,
             decoration: InputDecoration(
               hintText: 'Contoh: 123456789 / REF-001',
               filled: true,
@@ -1093,6 +1343,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
           const SizedBox(height: 6),
           TextField(
             controller: _notesController,
+            focusNode: _notesFocusNode,
             decoration: InputDecoration(
               hintText: 'Contoh: Meja 4 / Atas nama Pak Joko',
               filled: true,

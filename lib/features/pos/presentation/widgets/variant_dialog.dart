@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
@@ -50,7 +51,110 @@ class VariantDialog extends ConsumerWidget {
       stockText = 'Stok: $formatted $unit';
     }
 
-    return AlertDialog(
+    void submitAddToCart() {
+      if (!state.canAddToCart) return;
+      final selectedVariantOptionId =
+          state.selectedVariants.values.firstOrNull;
+
+      final cleanModifiers = Map.fromEntries(
+        state.selectedModifiers.entries
+            .where((e) => e.value.isNotEmpty),
+      );
+
+      final cartItem = CartItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        productId: posItem.isProductMode
+            ? posItem.id
+            : (posItem.product?.id ??
+                posItem.inventory?.productId ??
+                posItem.id),
+        productItemId: state.resolvedProductItemId,
+        inventoryItemId: resolvedItem?.inventory?.id ??
+            (posItem.isProductMode ? '' : posItem.id),
+        variantGroupOptionId: selectedVariantOptionId,
+        name: resolvedItem?.name ?? posItem.name,
+        variantCombination: state.variantCombination,
+        trackInventory: state.trackInventory,
+        price: totalPrice,
+        qty: state.qty,
+        discountType: state.discountType,
+        discountValue: state.discountValue,
+        selectedVariants: state.selectedVariants,
+        selectedModifiers: cleanModifiers,
+      );
+
+      ref.read(cartProvider.notifier).addItem(cartItem);
+      Navigator.of(context).pop();
+    }
+
+    KeyEventResult handleKeyEvent(FocusNode node, KeyEvent event) {
+      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+      final key = event.logicalKey;
+
+      if (key == LogicalKeyboardKey.escape) {
+        Navigator.of(context).pop();
+        return KeyEventResult.handled;
+      }
+
+      if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+        if (state.canAddToCart) {
+          submitAddToCart();
+          return KeyEventResult.handled;
+        }
+      }
+
+      // Digits 1-9 to select variant options
+      final digitKeys = [
+        LogicalKeyboardKey.digit1,
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit3,
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit5,
+        LogicalKeyboardKey.digit6,
+        LogicalKeyboardKey.digit7,
+        LogicalKeyboardKey.digit8,
+        LogicalKeyboardKey.digit9,
+        LogicalKeyboardKey.numpad1,
+        LogicalKeyboardKey.numpad2,
+        LogicalKeyboardKey.numpad3,
+        LogicalKeyboardKey.numpad4,
+        LogicalKeyboardKey.numpad5,
+        LogicalKeyboardKey.numpad6,
+        LogicalKeyboardKey.numpad7,
+        LogicalKeyboardKey.numpad8,
+        LogicalKeyboardKey.numpad9,
+      ];
+
+      if (digitKeys.contains(key)) {
+        int digit = 1;
+        if (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.numpad1) digit = 1;
+        if (key == LogicalKeyboardKey.digit2 || key == LogicalKeyboardKey.numpad2) digit = 2;
+        if (key == LogicalKeyboardKey.digit3 || key == LogicalKeyboardKey.numpad3) digit = 3;
+        if (key == LogicalKeyboardKey.digit4 || key == LogicalKeyboardKey.numpad4) digit = 4;
+        if (key == LogicalKeyboardKey.digit5 || key == LogicalKeyboardKey.numpad5) digit = 5;
+        if (key == LogicalKeyboardKey.digit6 || key == LogicalKeyboardKey.numpad6) digit = 6;
+        if (key == LogicalKeyboardKey.digit7 || key == LogicalKeyboardKey.numpad7) digit = 7;
+        if (key == LogicalKeyboardKey.digit8 || key == LogicalKeyboardKey.numpad8) digit = 8;
+        if (key == LogicalKeyboardKey.digit9 || key == LogicalKeyboardKey.numpad9) digit = 9;
+
+        final optIndex = digit - 1;
+        if (state.variantGroups.isNotEmpty) {
+          final firstGroup = state.variantGroups.first;
+          final options = state.variantOptions[firstGroup.id] ?? [];
+          if (optIndex >= 0 && optIndex < options.length) {
+            notifier.selectVariant(firstGroup.id, options[optIndex].id);
+            return KeyEventResult.handled;
+          }
+        }
+      }
+
+      return KeyEventResult.ignored;
+    }
+
+    return Focus(
+      autofocus: true,
+      onKeyEvent: handleKeyEvent,
+      child: AlertDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -304,46 +408,11 @@ class VariantDialog extends ConsumerWidget {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Batal (Esc)'),
+                  child: const Text('Batal'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: state.canAddToCart
-                      ? () {
-                          final selectedVariantOptionId =
-                              state.selectedVariants.values.firstOrNull;
-
-                          final cleanModifiers = Map.fromEntries(
-                            state.selectedModifiers.entries
-                                .where((e) => e.value.isNotEmpty),
-                          );
-
-                          final cartItem = CartItem(
-                            id: DateTime.now().millisecondsSinceEpoch.toString(),
-                            productId: posItem.isProductMode
-                                ? posItem.id
-                                : (posItem.product?.id ??
-                                    posItem.inventory?.productId ??
-                                    posItem.id),
-                            productItemId: state.resolvedProductItemId,
-                            inventoryItemId: resolvedItem?.inventory?.id ??
-                                (posItem.isProductMode ? '' : posItem.id),
-                            variantGroupOptionId: selectedVariantOptionId,
-                            name: resolvedItem?.name ?? posItem.name,
-                            variantCombination: state.variantCombination,
-                            trackInventory: state.trackInventory,
-                            price: totalPrice,
-                            qty: state.qty,
-                            discountType: state.discountType,
-                            discountValue: state.discountValue,
-                            selectedVariants: state.selectedVariants,
-                            selectedModifiers: cleanModifiers,
-                          );
-
-                          ref.read(cartProvider.notifier).addItem(cartItem);
-                          Navigator.of(context).pop();
-                        }
-                      : null,
+                  onPressed: state.canAddToCart ? submitAddToCart : null,
                   child: const Text('Tambah'),
                 ),
               ],
@@ -351,6 +420,7 @@ class VariantDialog extends ConsumerWidget {
           ],
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }

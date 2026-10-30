@@ -73,13 +73,12 @@ class PosRepository {
         p.has_variants as product_has_variants,
         p.has_modifiers as product_has_modifiers,
         p.has_recipe as product_has_recipe,
-        (SELECT COUNT(id) FROM variant_groups WHERE product_id = p.id) as variant_count,
-        (SELECT COUNT(modifier_group_id) FROM product_modifier_groups WHERE product_id = p.id) as modifier_count,
+        COALESCE(vg.cnt, 0) as variant_count,
+        COALESCE(pmg.cnt, 0) as modifier_count,
         COALESCE(
-          (SELECT amount FROM product_prices WHERE product_item_id = pi.id LIMIT 1),
-          (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
-          (SELECT amount FROM product_prices WHERE product_id = p.id AND product_item_id IS NULL AND inventory_item_id IS NULL LIMIT 1),
-          (SELECT amount FROM product_prices WHERE product_id = p.id LIMIT 1),
+          pp_item.amount,
+          pp_inv.amount,
+          pp_prod.amount,
           p.price,
           0.0
         ) as item_price,
@@ -87,6 +86,19 @@ class PosRepository {
       FROM product_items pi
       INNER JOIN products p ON pi.product_id = p.id
       LEFT JOIN inventories i ON i.product_item_id = pi.id OR (i.product_id = p.id AND pi.variant_combination IS NULL)
+      LEFT JOIN (
+        SELECT product_id, COUNT(id) as cnt 
+        FROM variant_groups 
+        GROUP BY product_id
+      ) vg ON vg.product_id = p.id
+      LEFT JOIN (
+        SELECT product_id, COUNT(modifier_group_id) as cnt 
+        FROM product_modifier_groups 
+        GROUP BY product_id
+      ) pmg ON pmg.product_id = p.id
+      LEFT JOIN product_prices pp_item ON pp_item.product_item_id = pi.id
+      LEFT JOIN product_prices pp_inv ON pp_inv.inventory_item_id = i.id
+      LEFT JOIN product_prices pp_prod ON pp_prod.product_id = p.id AND pp_prod.product_item_id IS NULL AND pp_prod.inventory_item_id IS NULL
       WHERE p.is_available = 1 AND pi.is_active = 1 AND pi.sellable = 1
       ORDER BY pi.name COLLATE NOCASE ASC
       ''',
@@ -601,6 +613,176 @@ class PosRepository {
     }
 
     return null;
+  }
+
+  /// Live Omni-Search untuk Autocomplete Dropdown: Mencocokkan barcode, sku, nama produk, dan kombinasi varian.
+  Future<List<PosItem>> searchItems(String query, {int limit = 10}) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final rows = await _database
+        .customSelect(
+          '''
+      SELECT 
+        pi.id as id,
+        pi.product_id as product_id,
+        pi.name as name,
+        pi.variant_combination as variant_combination,
+        pi.sku as sku,
+        pi.barcode as barcode,
+        pi.track_inventory as track_inventory,
+        pi.is_active as item_is_active,
+        pi.sellable as item_sellable,
+        COALESCE(i.stock, 0.0) as stock,
+        COALESCE(pi.unit, p.unit, 'Pcs') as unit,
+        p.category_id as category_id,
+        COALESCE(p.product_type, 'basic') as product_type,
+        p.is_available as product_is_available,
+        p.has_variants as product_has_variants,
+        p.has_modifiers as product_has_modifiers,
+        p.has_recipe as product_has_recipe,
+        (SELECT COUNT(id) FROM variant_groups WHERE product_id = p.id) as variant_count,
+        (SELECT COUNT(modifier_group_id) FROM product_modifier_groups WHERE product_id = p.id) as modifier_count,
+        COALESCE(
+          (SELECT amount FROM product_prices WHERE product_item_id = pi.id LIMIT 1),
+          (SELECT amount FROM product_prices WHERE inventory_item_id = i.id LIMIT 1),
+          (SELECT amount FROM product_prices WHERE product_id = p.id AND product_item_id IS NULL AND inventory_item_id IS NULL LIMIT 1),
+          (SELECT amount FROM product_prices WHERE product_id = p.id LIMIT 1),
+          p.price,
+          0.0
+        ) as item_price,
+        i.id as inventory_id,
+        p.name as product_name,
+        p.barcode as product_barcode,
+        p.sku as product_sku
+      FROM product_items pi
+      INNER JOIN products p ON pi.product_id = p.id
+      LEFT JOIN inventories i ON i.product_item_id = pi.id OR (i.product_id = p.id AND pi.variant_combination IS NULL)
+      WHERE (
+        pi.barcode = ? OR 
+        pi.sku = ? OR 
+        p.barcode = ? OR 
+        p.sku = ? OR
+        pi.name LIKE ? OR
+        p.name LIKE ? OR
+        pi.variant_combination LIKE ?
+      ) AND pi.is_active = 1 AND pi.sellable = 1 AND p.is_available = 1
+      ORDER BY 
+        CASE 
+          WHEN pi.barcode = ? THEN 1
+          WHEN pi.sku = ? THEN 2
+          WHEN p.barcode = ? THEN 3
+          WHEN p.sku = ? THEN 4
+          WHEN pi.name = ? THEN 5
+          WHEN p.name = ? THEN 6
+          ELSE 7
+        END
+      LIMIT ?
+      ''',
+          variables: [
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString('%$trimmed%'),
+            Variable.withString('%$trimmed%'),
+            Variable.withString('%$trimmed%'),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withString(trimmed),
+            Variable.withInt(limit),
+          ],
+          readsFrom: {
+            _database.productItems,
+            _database.products,
+            _database.inventories,
+            _database.productPrices,
+            _database.variantGroups,
+            _database.productModifierGroups,
+          },
+        )
+        .get();
+
+    return rows.map((row) {
+      final id = row.read<String>('id');
+      final productId = row.read<String>('product_id');
+      final name = row.read<String>('name');
+      final variantCombination = row.read<String?>('variant_combination');
+      final sku = row.read<String?>('sku');
+      final barcode = row.read<String?>('barcode');
+      final trackInventory = row.read<bool>('track_inventory');
+      final isItemActive = row.read<bool>('item_is_active');
+      final isProductAvailable = row.read<bool>('product_is_available');
+      final stock = row.read<double>('stock');
+      final unit = row.read<String>('unit');
+      final categoryId = row.read<String?>('category_id');
+      final productType = row.read<String>('product_type');
+      final variantCount = row.read<int>('variant_count');
+      final modifierCount = row.read<int>('modifier_count');
+      final itemPrice = row.read<double>('item_price');
+      final inventoryId = row.read<String?>('inventory_id');
+      final productName = row.read<String>('product_name');
+      final productBarcode = row.read<String?>('product_barcode');
+      final productSku = row.read<String?>('product_sku');
+      final hasVariants =
+          row.read<bool?>('product_has_variants') ?? (variantCount > 0);
+      final hasModifiers =
+          row.read<bool?>('product_has_modifiers') ?? (modifierCount > 0);
+      final hasRecipe = row.read<bool?>('product_has_recipe') ?? false;
+
+      final effectiveActive = isItemActive && isProductAvailable;
+
+      return PosItem(
+        id: id,
+        name: name,
+        categoryId: categoryId,
+        price: itemPrice,
+        stock: stock,
+        unit: unit,
+        productType: productType,
+        isActive: effectiveActive,
+        hasVariants: hasVariants,
+        hasModifiers: hasModifiers,
+        isProductMode: false,
+        productItemId: id,
+        variantCombination: variantCombination,
+        sku: sku,
+        barcode: barcode,
+        trackInventory: trackInventory,
+        inventory: inventoryId != null
+            ? Inventory(
+                id: inventoryId,
+                productId: productId,
+                productItemId: id,
+                name: name,
+                sku: sku,
+                barcode: barcode,
+                trackInventory: trackInventory,
+                isActive: effectiveActive,
+                stock: stock,
+                unit: unit,
+              )
+            : null,
+        product: Product(
+          id: productId,
+          name: productName,
+          categoryId: categoryId,
+          sku: productSku,
+          barcode: productBarcode,
+          price: itemPrice,
+          isAvailable: isProductAvailable,
+          productType: productType,
+          unit: unit,
+          hasVariants: hasVariants,
+          hasModifiers: hasModifiers,
+          hasRecipe: hasRecipe,
+          trackInventory: trackInventory,
+        ),
+      );
+    }).toList();
   }
 
   /// Resolves the product_item_id for a given product and list of variant group option IDs

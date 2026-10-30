@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sollu_pos_client/core/database/app_database.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
@@ -18,7 +19,7 @@ class SupervisorChallengeDialog extends ConsumerStatefulWidget {
 
   /// Helper statis untuk memanggil dialog otorisasi supervisi.
   /// Mengembalikan Map berisi status otorisasi dan identitas supervisor.
-  static Future<({bool authorized, String? supervisorId, String? supervisorName})>
+  static Future<({bool authorized, String? supervisorId, String? supervisorName, String? pin})>
       authorize(
     BuildContext context, {
     required String actionTitle,
@@ -38,10 +39,11 @@ class SupervisorChallengeDialog extends ConsumerStatefulWidget {
         authorized: true,
         supervisorId: result['supervisorId'] as String?,
         supervisorName: result['supervisorName'] as String?,
+        pin: result['pin'] as String?,
       );
     }
 
-    return (authorized: false, supervisorId: null, supervisorName: null);
+    return (authorized: false, supervisorId: null, supervisorName: null, pin: null);
   }
 
   @override
@@ -134,6 +136,7 @@ class _SupervisorChallengeDialogState
           'authorized': true,
           'supervisorId': authorizedStaff.id,
           'supervisorName': authorizedStaff.name,
+          'pin': _inputPin,
         });
       } else if (mounted) {
         setState(() {
@@ -156,59 +159,116 @@ class _SupervisorChallengeDialogState
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: SolluColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SolluColors.neutral, width: 1.5),
-          ),
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+
+        if (key == LogicalKeyboardKey.escape) {
+          Navigator.of(context).pop();
+          return KeyEventResult.handled;
+        }
+
+        if (key == LogicalKeyboardKey.backspace || key == LogicalKeyboardKey.delete) {
+          _onBackspacePressed();
+          return KeyEventResult.handled;
+        }
+
+        if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+          if (_inputPin.length == 6) {
+            _verifySupervisorPin();
+          }
+          return KeyEventResult.handled;
+        }
+
+        final digitMap = {
+          LogicalKeyboardKey.digit0: '0',
+          LogicalKeyboardKey.numpad0: '0',
+          LogicalKeyboardKey.digit1: '1',
+          LogicalKeyboardKey.numpad1: '1',
+          LogicalKeyboardKey.digit2: '2',
+          LogicalKeyboardKey.numpad2: '2',
+          LogicalKeyboardKey.digit3: '3',
+          LogicalKeyboardKey.numpad3: '3',
+          LogicalKeyboardKey.digit4: '4',
+          LogicalKeyboardKey.numpad4: '4',
+          LogicalKeyboardKey.digit5: '5',
+          LogicalKeyboardKey.numpad5: '5',
+          LogicalKeyboardKey.digit6: '6',
+          LogicalKeyboardKey.numpad6: '6',
+          LogicalKeyboardKey.digit7: '7',
+          LogicalKeyboardKey.numpad7: '7',
+          LogicalKeyboardKey.digit8: '8',
+          LogicalKeyboardKey.numpad8: '8',
+          LogicalKeyboardKey.digit9: '9',
+          LogicalKeyboardKey.numpad9: '9',
+        };
+
+        if (digitMap.containsKey(key)) {
+          _onDigitPressed(digitMap[key]!);
+          return KeyEventResult.handled;
+        }
+
+        return KeyEventResult.ignored;
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: SolluColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: SolluColors.neutral, width: 1.5),
+            ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: SolluColors.warning.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.verified_user_outlined,
-                          color: SolluColors.warning,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Otorisasi Supervisi',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: SolluColors.textDark,
-                            ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: SolluColors.warning.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          Text(
-                            'Hak Akses Diperlukan',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: SolluColors.textMuted,
-                            ),
+                          child: const Icon(
+                            Icons.verified_user_outlined,
+                            color: SolluColors.warning,
+                            size: 24,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Otorisasi Supervisi',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: SolluColors.textDark,
+                                ),
+                              ),
+                              Text(
+                                'Hak Akses Diperlukan',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: SolluColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: SolluColors.textMuted),
@@ -306,8 +366,9 @@ class _SupervisorChallengeDialogState
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildNumpad() {
     return Column(

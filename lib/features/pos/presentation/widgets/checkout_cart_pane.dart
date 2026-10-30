@@ -16,6 +16,7 @@ class CheckoutCartPane extends ConsumerWidget {
     final appliedDiscount = ref.watch(appliedDiscountProvider);
     final taxRate = ref.watch(activeTaxRateProvider);
     final serviceChargeRate = ref.watch(activeServiceChargeRateProvider);
+    final taxIncluded = ref.watch(taxIncludedInPriceProvider);
 
     final double subtotal = cart.fold(
       0.0,
@@ -29,12 +30,20 @@ class CheckoutCartPane extends ConsumerWidget {
       double.infinity,
     );
 
-    final double taxAmount =
-        taxRate > 0 ? (taxableAmount * (taxRate / 100.0)) : 0.0;
+    final double taxAmount = calculateTaxAmount(
+      taxableAmount: taxableAmount,
+      taxRate: taxRate,
+      taxIncludedInPrice: taxIncluded,
+    );
     final double serviceChargeAmount = serviceChargeRate > 0
         ? (taxableAmount * (serviceChargeRate / 100.0))
         : 0.0;
-    final double grandTotal = taxableAmount + taxAmount + serviceChargeAmount;
+    final double grandTotal = calculateGrandTotal(
+      taxableAmount: taxableAmount,
+      taxAmount: taxAmount,
+      serviceChargeAmount: serviceChargeAmount,
+      taxIncludedInPrice: taxIncluded,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -231,7 +240,7 @@ class CheckoutCartPane extends ConsumerWidget {
                   const SizedBox(height: 8),
                   _buildSummaryRow(
                     label:
-                        'Pajak (${taxRate.toStringAsFixed(taxRate.truncateToDouble() == taxRate ? 0 : 1)}%)',
+                        '${taxIncluded ? "Pajak Inklusif" : "Pajak"} (${taxRate.toStringAsFixed(taxRate.truncateToDouble() == taxRate ? 0 : 1)}%)',
                     value: CurrencyFormatter.format(taxAmount.toInt()),
                   ),
                 ],

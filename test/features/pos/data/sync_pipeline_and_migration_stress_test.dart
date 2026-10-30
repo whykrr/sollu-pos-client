@@ -586,10 +586,10 @@ void main() {
     });
   });
 
-  group('Drift Migration v9 to v10 Schema Integrity Test', () {
+  group('Drift Migration v9 to v11 Schema Integrity Test', () {
     test('Migration adds ProductItems, ProductItemVariantGroupOptions and new columns', () async {
-      // Verify schema version is 10
-      expect(db.schemaVersion, 10);
+      // Verify schema version is 11
+      expect(db.schemaVersion, 11);
 
       // Verify we can insert into product_items table
       await db.into(db.products).insert(
@@ -633,7 +633,7 @@ void main() {
       expect(item.unit, 'Cup');
     });
 
-    test('Simulated v9 to v10 onUpgrade creates missing tables and alters columns', () async {
+    test('Simulated v9 to v11 onUpgrade creates missing tables, alters columns, and builds indexes', () async {
       final raw = raw_sqlite.sqlite3.openInMemory();
       raw.execute('PRAGMA user_version = 9;');
       raw.execute('''
@@ -683,10 +683,24 @@ void main() {
         );
       ''');
       raw.execute('''
+        CREATE TABLE variant_groups (
+          id TEXT NOT NULL PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          name TEXT NOT NULL
+        );
+      ''');
+      raw.execute('''
         CREATE TABLE variant_group_options (
           id TEXT NOT NULL PRIMARY KEY,
           variant_group_id TEXT NOT NULL,
           name TEXT NOT NULL
+        );
+      ''');
+      raw.execute('''
+        CREATE TABLE product_modifier_groups (
+          id TEXT NOT NULL PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          modifier_group_id TEXT NOT NULL
         );
       ''');
       raw.execute("INSERT INTO products (id, name, price) VALUES ('p-old', 'Old Product', 5000.0);");
@@ -709,9 +723,9 @@ void main() {
       final newItem = await (appDb.select(appDb.productItems)..where((t) => t.id.equals('pi-new'))).getSingle();
       expect(newItem.name, 'Old Product Default Item');
 
-      // Verify user_version is now 10
+      // Verify user_version is now 11
       final versionResult = await appDb.customSelect('PRAGMA user_version;').getSingle();
-      expect(versionResult.read<int>('user_version'), 10);
+      expect(versionResult.read<int>('user_version'), 11);
 
       await appDb.close();
     });

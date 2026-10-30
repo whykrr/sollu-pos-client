@@ -48,6 +48,32 @@ final customersProvider = StreamProvider<List<Customer>>((ref) {
   return repository.watchCustomers();
 });
 
+// ============================================================================
+// CRM Customer Selection Provider
+// ============================================================================
+
+/// Notifier untuk customer / member CRM yang sedang dipilih di kasir POS
+class SelectedCustomerNotifier extends Notifier<Customer?> {
+  @override
+  Customer? build() => null;
+
+  void selectCustomer(Customer? customer) {
+    state = customer;
+  }
+
+  void clearCustomer() {
+    state = null;
+  }
+
+  @override
+  set state(Customer? value) => super.state = value;
+}
+
+final selectedCustomerProvider =
+    NotifierProvider<SelectedCustomerNotifier, Customer?>(
+  SelectedCustomerNotifier.new,
+);
+
 /// Stream transaksi untuk shift yang sedang aktif
 final currentShiftTransactionsProvider = StreamProvider<List<Transaction>>((
   ref,

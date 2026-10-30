@@ -14,6 +14,8 @@ class CartItem {
   final String? discountType;
   final double? discountValue;
   final String? notes;
+  final String? barcode;
+  final String? sku;
 
   // Storing this for reference/display
   final Map<String, String> selectedVariants;
@@ -33,6 +35,8 @@ class CartItem {
     this.discountType,
     this.discountValue,
     this.notes,
+    this.barcode,
+    this.sku,
     this.selectedVariants = const {},
     this.selectedModifiers = const {},
   });
@@ -68,6 +72,8 @@ class CartItem {
     String? discountType,
     double? discountValue,
     String? notes,
+    String? barcode,
+    String? sku,
     Map<String, String>? selectedVariants,
     Map<String, List<String>>? selectedModifiers,
   }) {
@@ -85,6 +91,8 @@ class CartItem {
       discountType: discountType ?? this.discountType,
       discountValue: discountValue ?? this.discountValue,
       notes: notes ?? this.notes,
+      barcode: barcode ?? this.barcode,
+      sku: sku ?? this.sku,
       selectedVariants: selectedVariants ?? this.selectedVariants,
       selectedModifiers: selectedModifiers ?? this.selectedModifiers,
     );
@@ -107,6 +115,8 @@ class CartItem {
       'discount_type': discountType,
       'discount_value': discountValue,
       'notes': notes,
+      'barcode': barcode,
+      'sku': sku,
       'selected_variants': selectedVariants,
       'selected_modifiers': selectedModifiers,
     };
@@ -129,6 +139,8 @@ class CartItem {
       discountType: json['discount_type'] as String?,
       discountValue: (json['discount_value'] as num?)?.toDouble(),
       notes: json['notes'] as String?,
+      barcode: json['barcode'] as String?,
+      sku: json['sku'] as String?,
       selectedVariants:
           (json['selected_variants'] as Map<String, dynamic>?)?.map(
                 (k, v) => MapEntry(k, v.toString()),
@@ -162,6 +174,8 @@ class CartItem {
         other.discountType == discountType &&
         other.discountValue == discountValue &&
         other.notes == notes &&
+        other.barcode == barcode &&
+        other.sku == sku &&
         const DeepCollectionEquality().equals(other.selectedVariants, selectedVariants) &&
         const DeepCollectionEquality.unordered().equals(other.selectedModifiers, selectedModifiers);
   }
@@ -182,6 +196,8 @@ class CartItem {
       discountType,
       discountValue,
       notes,
+      barcode,
+      sku,
     );
   }
 }

@@ -24,3 +24,18 @@ Sesuaikan desain secara responsif untuk layar sentuh (tablet/mobile Android) ser
 - Gunakan `LayoutBuilder` atau `MediaQuery` untuk merender layout yang berbeda (misal: *Grid* 2 kolom di tablet, 4 kolom di desktop).
 - Jangan gunakan *fixed width/height* secara absolut (`width: 300`) jika bisa menggunakan fleksibilitas layar (`Expanded`, `Flexible`, atau persentase lebar layar).
 - Pastikan interaksi layar sentuh (tablet) memiliki ruang bernapas (*padding*) antar elemen untuk mencegah salah sentuh (*fat finger*), pertahankan *tap target* minimal `48x48 dp`.
+
+## Dual-Mode POS & Fast Retail Keyboard Operation
+- **Auto-Detection Default:**
+  - Desktop (macOS, Windows, Linux) $\rightarrow$ Default ke **Fast Retail Mode** (fokus tabel keranjang ringkas, barcode autofocus terus-menerus, navigasi keyboard penuh).
+  - Tablet / Mobile $\rightarrow$ Default ke **Visual Touch Mode** (katalog grid gambar, tap target besar 48x48 dp).
+  - Kasir dapat mengubah preferensi secara manual melalui Pengaturan Kasir (*manual override*).
+- **Persistent Barcode Autofocus:**
+  - Pada mode Fast Retail, field input barcode/pencarian wajib mempertahankan autofocus terus-menerus (`autofocus: true`, `FocusNode(canRequestFocus: true)`).
+  - Autofocus tidak boleh merebut fokus saat dialog aktif (modal pembayaran, varian, diskon) terbuka.
+- **Standar PPN Inklusif 11% Non-Aditif:**
+  - Pada sistem retail Indonesia dengan harga termasuk pajak (PPN Inklusif), pajak diekstraksi dari total kotor:
+    $$\text{Pajak} = \text{Subtotal} - \left(\frac{\text{Subtotal}}{1 + \frac{\text{TaxRate}}{100}}\right)$$
+  - Pajak **DILARANG** ditambahkan kembali ke grand total. Grand total tetap bernilai subtotal dikurangi diskon.
+- **Pembulatan Uang Tunai (Cash Rounding):**
+  - Pembulatan ke kelipatan Rp 100 terdekat hanya berlaku untuk metode pembayaran Tunai (`Cash`). Pembayaran non-tunai (QRIS, Kartu, Transfer) tetap menggunakan nominal eksak.

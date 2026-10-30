@@ -12,3 +12,10 @@
   - Jika aksi memerlukan otorisasi supervisor (fitur `double_authorization`), tampilkan dialog PIN supervisor dan validasi terhadap staf yang memiliki permission `transaction.validation_supervision`.
   - Jika outlet dinonaktifkan (`is_active = false`), server mengembalikan HTTP 403 `OUTLET_INACTIVE` yang wajib direspons dengan layar peringatan outlet nonaktif.
   - Rujukan arsitektur pembatasan fitur bertingkat lengkap: lihat domain skill `domain-access-and-feature-gating` di backend repository.
+- **Silent Feature Gating (No Blocking/Error Popups):**
+  - Fitur yang dibatasi oleh tier paket langganan merchant (`split_payment`, `crm`, `shift_cashier`, `cash_drawer`, `double_authorization`) WAJIB disembunyikan sepenuhnya dari UI jika tidak aktif pada `active_features`.
+  - DILARANG menampilkan dialog error atau peringatan "Anda tidak memiliki akses" saat alur reguler kasir berjalan; elemen UI terkait cukup di-hide (*graceful degradation*) tanpa merusak fungsi inti kasir.
+- **Supervisor Challenge Dialog Data Return:**
+  - `SupervisorChallengeDialog.authorize()` WAJIB mengembalikan struktur data lengkap ber-record:
+    `({bool authorized, String? supervisorId, String? supervisorName, String? pin})`
+  - PIN supervisor harus dialirkan ke payload API pada endpoint yang memerlukan audit otorisasi (contoh: `POST /api/v1/pos/transactions/{id}/void`).

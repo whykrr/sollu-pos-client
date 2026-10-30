@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/views/fast_retail/fast_retail_checkout_dialog.dart';
 
 import 'package:flutter/services.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/pos_extra_dialogs.dart';
 
 import 'package:sollu_pos_client/features/pos/presentation/providers/promo_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/hold_cart_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/providers/pos_mode_provider.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/pos_provider.dart';
+import 'package:sollu_pos_client/features/pos/presentation/views/visual_touch/visual_touch_checkout_drawer.dart';
 import 'package:sollu_pos_client/features/pos/presentation/widgets/insufficient_stock_dialog.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/outlet_settings_provider.dart';
+import 'package:sollu_pos_client/features/settings/presentation/providers/feature_gating_provider.dart';
 
 class CartPanel extends ConsumerStatefulWidget {
   final FocusNode? focusNode;
@@ -85,6 +88,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
     final appliedDiscount = ref.watch(appliedDiscountProvider);
     final taxRate = ref.watch(activeTaxRateProvider);
     final serviceChargeRate = ref.watch(activeServiceChargeRateProvider);
+    final taxIncluded = ref.watch(taxIncludedInPriceProvider);
 
     final double subtotal = cart.fold(
       0,
@@ -97,9 +101,18 @@ class _CartPanelState extends ConsumerState<CartPanel> {
       0.0,
       double.infinity,
     );
-    final double tax = taxableAmount * (taxRate / 100.0);
+    final double tax = calculateTaxAmount(
+      taxableAmount: taxableAmount,
+      taxRate: taxRate,
+      taxIncludedInPrice: taxIncluded,
+    );
     final double serviceCharge = taxableAmount * (serviceChargeRate / 100.0);
-    final double total = taxableAmount + tax + serviceCharge;
+    final double total = calculateGrandTotal(
+      taxableAmount: taxableAmount,
+      taxAmount: tax,
+      serviceChargeAmount: serviceCharge,
+      taxIncludedInPrice: taxIncluded,
+    );
 
     final isCartFocused = widget.focusNode?.hasFocus ?? false;
     if (_selectedCartIndex >= cart.length && cart.isNotEmpty) {
@@ -133,24 +146,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                     color: SolluColors.textDark,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: SolluColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'F3',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      color: SolluColors.primary,
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 4),
               ],
             ),
           ),
@@ -214,7 +210,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Tekan F2 untuk pilih produk',
+                          'Pilih item dari katalog produk di sebelah kiri',
                           style: TextStyle(
                             color: SolluColors.primary,
                             fontSize: 12,
@@ -566,8 +562,9 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                 ],
                 if (tax > 0) ...[
                   _SummaryRow(
-                    label:
-                        'Pajak (${taxRate % 1 == 0 ? taxRate.toInt() : taxRate}%)',
+                    label: taxIncluded
+                        ? 'Pajak Inklusif (${taxRate % 1 == 0 ? taxRate.toInt() : taxRate}%)'
+                        : 'Pajak (${taxRate % 1 == 0 ? taxRate.toInt() : taxRate}%)',
                     value: CurrencyFormatter.format(tax.toInt()),
                   ),
                   const SizedBox(height: 8),
@@ -697,12 +694,14 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                       isActive: appliedDiscount != null,
                       onTap: () => DiscountDialog.show(context),
                     ),
-                    const SizedBox(width: 8),
-                    _buildActionButton(
-                      Icons.receipt_long_outlined,
-                      'Split Bill',
-                      isDisabled: true,
-                    ),
+                    if (ref.watch(featureGatingProvider).canUseSplitPayment()) ...[
+                      const SizedBox(width: 8),
+                      _buildActionButton(
+                        Icons.receipt_long_outlined,
+                        'Split Bill',
+                        isDisabled: true,
+                      ),
+                    ],
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
@@ -728,7 +727,12 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           }
 
                           if (context.mounted) {
-                            context.push('/checkout');
+                            final posMode = ref.read(posModeProvider);
+                            if (posMode == PosMode.visualTouch) {
+                              VisualTouchCheckoutDrawer.show(context);
+                            } else {
+                              FastRetailCheckoutDialog.show(context);
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -843,14 +847,17 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: SolluColors.textDark,
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: SolluColors.textDark,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: const TextStyle(

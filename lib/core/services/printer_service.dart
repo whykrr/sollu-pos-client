@@ -376,10 +376,18 @@ class PrinterService {
               5)
           .toString(),
     ) ?? 5.0;
+    final bool taxIncluded = (outletSetting?['tax_included_in_price'] ??
+            outletSetting?['taxIncludedInPrice'] ??
+            false) ==
+        true;
 
-    final double taxAmount = subtotal * (taxPct / 100);
+    final double taxAmount = taxIncluded
+        ? (subtotal - (subtotal / (1 + (taxPct / 100.0))))
+        : (subtotal * (taxPct / 100));
     final double serviceAmount = subtotal * (servicePct / 100);
-    final double totalAmount = subtotal + taxAmount + serviceAmount;
+    final double totalAmount = taxIncluded
+        ? (subtotal + serviceAmount)
+        : (subtotal + taxAmount + serviceAmount);
 
     bytes += generator.row([
       PosColumn(text: 'Subtotal', width: 6, styles: regular),
@@ -408,7 +416,9 @@ class PrinterService {
     if (taxAmount > 0) {
       bytes += generator.row([
         PosColumn(
-          text: 'Pajak PPN (${taxPct.toInt()}%)',
+          text: taxIncluded
+              ? 'Pajak Inklusif (${taxPct.toInt()}%)'
+              : 'Pajak PPN (${taxPct.toInt()}%)',
           width: 7,
           styles: regular,
         ),
@@ -732,12 +742,21 @@ class PrinterService {
       ]);
     }
 
+    final bool taxIncluded = (outletSetting?['tax_included_in_price'] ??
+            outletSetting?['taxIncludedInPrice'] ??
+            false) ==
+        true;
+
     if (((outletSetting?['show_tax_detail'] as bool?) ??
             (outletSetting?['showTaxDetail'] as bool?) ??
             true) &&
         tx.taxAmount > 0) {
       bytes += generator.row([
-        PosColumn(text: 'Pajak (PB1/PPN)', width: 6, styles: regular),
+        PosColumn(
+          text: taxIncluded ? 'Pajak Inklusif' : 'Pajak (PB1/PPN)',
+          width: 6,
+          styles: regular,
+        ),
         PosColumn(
           text: CurrencyFormatter.format(tx.taxAmount.toInt()),
           width: 6,

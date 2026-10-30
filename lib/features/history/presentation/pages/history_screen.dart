@@ -5,6 +5,7 @@ import 'package:sollu_pos_client/core/theme/sollu_colors.dart';
 import 'package:sollu_pos_client/core/utils/currency_formatter.dart';
 import 'package:sollu_pos_client/features/pos/presentation/providers/transaction_provider.dart';
 import 'package:sollu_pos_client/features/settings/presentation/providers/printer_provider.dart';
+import '../widgets/void_transaction_dialog.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -86,22 +87,62 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: SolluColors.success.withValues(
-                                  alpha: 0.15,
-                                ),
+                                color: (tx.status == 'void'
+                                        ? SolluColors.danger
+                                        : SolluColors.success)
+                                    .withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                tx.paymentStatus.toUpperCase(),
-                                style: const TextStyle(
+                                tx.status == 'void'
+                                    ? 'VOID'
+                                    : tx.paymentStatus.toUpperCase(),
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: SolluColors.success,
+                                  color: tx.status == 'void'
+                                      ? SolluColors.danger
+                                      : SolluColors.success,
                                 ),
                               ),
                             ),
                           ],
                         ),
+                        if (tx.status == 'void') ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: SolluColors.danger.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: SolluColors.danger.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.cancel_outlined,
+                                  size: 16,
+                                  color: SolluColors.danger,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tx.notes ?? 'Transaksi telah dibatalkan (VOID).',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: SolluColors.danger,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         const Divider(color: SolluColors.neutral),
                         const SizedBox(height: 12),
@@ -368,6 +409,31 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 icon: const Icon(Icons.print_outlined, size: 16),
                 label: const Text('Cetak Struk'),
               ),
+              if (detailAsync.asData?.value?.transaction.status != 'void')
+                TextButton.icon(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    final currentTx = detailAsync.asData?.value?.transaction;
+                    if (currentTx != null) {
+                      await VoidTransactionDialog.show(
+                        context,
+                        transaction: currentTx,
+                      );
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.cancel_outlined,
+                    size: 16,
+                    color: SolluColors.danger,
+                  ),
+                  label: const Text(
+                    'Void Transaksi',
+                    style: TextStyle(
+                      color: SolluColors.danger,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ElevatedButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 style: ElevatedButton.styleFrom(
@@ -806,32 +872,54 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isPaid
-                                      ? SolluColors.success.withValues(
-                                          alpha: 0.15,
-                                        )
-                                      : SolluColors.warning.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  isPaid ? 'Lunas' : tx.paymentStatus,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                              if (tx.status == 'void')
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: SolluColors.danger.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'VOID',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: SolluColors.danger,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
                                     color: isPaid
-                                        ? SolluColors.success
-                                        : SolluColors.warning,
+                                        ? SolluColors.success.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : SolluColors.warning.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    isPaid ? 'Lunas' : tx.paymentStatus,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isPaid
+                                          ? SolluColors.success
+                                          : SolluColors.warning,
+                                    ),
                                   ),
                                 ),
-                              ),
                               if (tx.isOffline) ...[
                                 const SizedBox(width: 6),
                                 Container(
@@ -872,10 +960,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             children: [
                               Text(
                                 CurrencyFormatter.format(tx.total.toInt()),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  color: SolluColors.textDark,
+                                  color: tx.status == 'void'
+                                      ? SolluColors.textMuted
+                                      : SolluColors.textDark,
+                                  decoration: tx.status == 'void'
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                 ),
                               ),
                               const SizedBox(width: 16),

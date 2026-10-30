@@ -59,6 +59,7 @@ class ProductCategories extends Table {
 }
 
 @DataClassName('VariantGroup')
+@TableIndex(name: 'idx_variant_groups_product_id', columns: {#productId})
 class VariantGroups extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get productId => text().references(Products, #id)();
@@ -101,6 +102,10 @@ class ModifierGroups extends Table {
 }
 
 @DataClassName('ProductModifierGroup')
+@TableIndex(
+  name: 'idx_product_modifier_groups_product_id',
+  columns: {#productId},
+)
 class ProductModifierGroups extends Table {
   TextColumn get productId => text().references(Products, #id)();
   TextColumn get modifierGroupId => text().references(ModifierGroups, #id)();
@@ -121,6 +126,12 @@ class ModifierOptions extends Table {
 }
 
 @DataClassName('ProductPrice')
+@TableIndex(name: 'idx_product_prices_product_id', columns: {#productId})
+@TableIndex(name: 'idx_product_prices_product_item_id', columns: {#productItemId})
+@TableIndex(
+  name: 'idx_product_prices_inventory_item_id',
+  columns: {#inventoryItemId},
+)
 class ProductPrices extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get productId => text().references(Products, #id)();
@@ -135,6 +146,8 @@ class ProductPrices extends Table {
 }
 
 @DataClassName('Inventory')
+@TableIndex(name: 'idx_inventories_product_id', columns: {#productId})
+@TableIndex(name: 'idx_inventories_product_item_id', columns: {#productItemId})
 class Inventories extends Table {
   TextColumn get id => text()(); // UUID dari inventory_item_id
   TextColumn get productId => text().references(Products, #id)();
