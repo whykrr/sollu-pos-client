@@ -1,21 +1,21 @@
 ---
 name: domain-product
 description: >-
-    Knowledge and standards for Product & POS Catalog Domain in Sollu POS Client. Covers Drift SQLite
-    schema v11 (ProductItems, ProductItemVariantGroupOptions, @TableIndex), PosRepository omni-search,
-    aggregative parent-child category filter, VariantDialogNotifier SQLite pivot resolution,
-    CartItem & CartProvider modifier deduplication, decoupled infinite stock (Stok: ∞),
-    Fast Retail keyboard shortcuts, and supervisor void.
-    Activate whenever working on POS catalog, product search, variant dialog, cart, shortcuts, or sync absorption.
+    Knowledge and standards for Product, POS Catalog & Payment Domain in Sollu POS Client. Covers Drift SQLite
+    schema v12 (ProductItems, PaymentMethods, @TableIndex), PosRepository omni-search,
+    deterministic industry-standard payment priority, aggregative parent-child category filter,
+    VariantDialogNotifier SQLite pivot resolution, CartItem & CartProvider modifier deduplication,
+    decoupled infinite stock (Stok: ∞), Fast Retail keyboard shortcuts, and supervisor void.
+    Activate whenever working on POS catalog, product search, variant dialog, cart, payment methods, or sync absorption.
 ---
 
-# Domain Skill: Modul Produk & Katalog POS (Product & POS Domain)
+# Domain Skill: Modul Produk, Katalog POS & Metode Pembayaran
 
-Panduan arsitektur dan aturan baku untuk **Modul Produk & Katalog Kasir** pada **Sollu POS Client** (Flutter, Drift SQLite, Riverpod).
+Panduan arsitektur dan aturan baku untuk **Modul Produk, Katalog Kasir, dan Metode Pembayaran** pada **Sollu POS Client** (Flutter, Drift SQLite, Riverpod).
 
 ---
 
-## 1. Skema Database Lokal Drift (v11)
+## 1. Skema Database Lokal Drift (v12)
 
 Tabel master data didefinisikan di `lib/core/database/tables/master_data_tables.dart`:
 
@@ -31,16 +31,25 @@ Tabel master data didefinisikan di `lib/core/database/tables/master_data_tables.
 │ ModifierGroups (+Options)    │ Add-ons & opsi tambahan                 │
 │ Categories                   │ Kategori induk & anak                   │
 │ Inventories                  │ Saldo stok lokal (left joined)          │
+│ PaymentMethods (v12)         │ Metode pembayaran kasir (aturan industri)│
 └──────────────────────────────┴─────────────────────────────────────────┘
 ```
 
 ### Karakteristik Kunci
 - `ProductItems.variantCombination`: Berisi string kombinasi (e.g. `"Merah, XL"`) untuk produk varian, atau `null` untuk produk single.
 - Skema v10 menambahkan tabel `ProductItems` dan `ProductItemVariantGroupOptions` dengan foreign key non-destructive migration di `app_database.dart`.
-- Skema v11 menambahkan indeks `@TableIndex` pada foreign keys utama:
-  - `ProductItems`: indeks pada `product_id`, `sku`, `barcode`.
-  - `ProductItemVariantGroupOptions`: indeks pada `product_item_id`, `variant_group_option_id`.
-  - Menjamin performa omni-search $O(1)$ pada puluhan ribu SKU barang retail.
+- Skema v11 menambahkan indeks `@TableIndex` pada foreign keys utama (`product_id`, `sku`, `barcode`).
+- **Skema v12 (Payment Methods Standar Industri):**
+  - Kolom legacy `sort_order` dan `local_sort_order` dihapus total dari tabel `PaymentMethods`.
+  - Penambahan kolom operasional: `provider`, `account_number`, `account_name`, `reference_policy` ('optional' | 'mandatory' | 'hidden'), `open_cash_drawer`, `instructions`, `qr_image_url`, dan `is_system`.
+  - **Urutan Deterministik Standar Industri:** Seluruh tombol pembayaran kasir diurutkan secara otomatis melalui `activePaymentMethodsProvider`:
+    $$\text{CASH (1)} \rightarrow \text{QRIS (2)} \rightarrow \text{EDC (3)} \rightarrow \text{EWALLET (4)} \rightarrow \text{BANK\_TRANSFER (5)} \rightarrow \text{CUSTOM (6)}$$
+    Di dalam kelompok yang sama, diurutkan berdasarkan $\text{isSystem DESC} \rightarrow \text{name ASC}$.
+  - Kasir UX:
+    - `CASH`: Kembalian cepat, pembukaan laci kasir mengikuti konfigurasi `openCashDrawer`.
+    - `QRIS`: Tampilan QR Statis visual dengan tap-to-zoom modal.
+    - `BANK_TRANSFER`: Kartu informasi rekening lengkap dengan tombol 1-tap "Salin Rekening".
+    - `EDC / EWALLET`: Tampilan provider dan validasi wajib nomor referensi jika `referencePolicy == 'mandatory'`.
 
 ---
 

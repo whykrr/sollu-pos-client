@@ -14,17 +14,22 @@
   - **DILARANG KERAS** mengubah atau menghapus penanganan migrasi versi historis (`if (from < X)`) pada `MigrationStrategy` yang sudah dirilis di git tag sebelumnya.
 - **Kenaikan `schemaVersion` Wajib:**
   - Setiap penambahan kolom, tabel baru, atau perubahan indeks Drift **WAJIB menaikkan `schemaVersion`** secara berurutan di `lib/core/database/app_database.dart` (contoh: dari `11` menjadi `12`).
-- **Strategi `MigrationStrategy.onUpgrade` Non-Destruktif:**
+- **Strategi `MigrationStrategy.onUpgrade` Non-Destruktif & Batas Ganda (Double-Bounded):**
+  - **Batas Ganda Versi Wajib:** Untuk mencegah eksekusi penambahan kolom secara prematur saat test harness melakukan migrasi parsial berjenjang (misalnya migrasi bertahap dari v10 ke v11: `onUpgrade(migrator, 10, 11)`), setiap penanganan migrasi versi baru **WAJIB menggunakan batas ganda** `if (from < X && to >= X)`.
+  - **Pengecekan Defensif Tabel SQLite:** Sebelum memanggil `m.addColumn()`, selalu pastikan tabel target telah eksis di database (cek `sqlite_master`) guna menghindari `SqliteException: no such table` pada instansiasi mock test harness.
   - Seluruh perubahan skema wajib di-handle secara bertahap per versi:
     ```dart
     onUpgrade: (m, from, to) async {
       // Step migrasi historis tetap dipertahankan utuh
-      if (from < 11) {
+      if (from < 11 && to >= 11) {
         await m.createTable(productItemVariantGroupOptions);
       }
-      // Step versi baru
-      if (from < 12) {
-        await m.addColumn(transactions, transactions.voidReason);
+      // Step versi baru dengan batas ganda dan cek defensif
+      if (from < 12 && to >= 12) {
+        final tableExists = await customSelect("SELECT 1 FROM sqlite_master WHERE type='table' AND name='payment_methods'").get();
+        if (tableExists.isNotEmpty) {
+          await m.addColumn(paymentMethods, paymentMethods.provider);
+        }
       }
     }
     ```
