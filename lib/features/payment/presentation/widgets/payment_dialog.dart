@@ -199,8 +199,8 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         Navigator.of(context).pop(); // Tutup dialog bayar
         _showSuccessDialog(tx.transaction, method, changeAmount);
 
-        // Buka laci kasir otomatis jika openCashDrawer aktif (atau fallback tunai)
-        final shouldOpenDrawer = method.openCashDrawer || isCash;
+        // Buka laci kasir otomatis jika openCashDrawer aktif
+        final shouldOpenDrawer = method.openCashDrawer;
         if (shouldOpenDrawer) {
           openCashDrawerAction(ref: ref).then((result) {
             if (!result.success && mounted) {
@@ -768,58 +768,205 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                                 }).toList(),
                           ),
                         ] else ...[
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: SolluColors.background,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: SolluColors.neutral),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      _getIconForType(currentMethod.type),
-                                      color: SolluColors.primary,
-                                      size: 20,
+                          if (currentMethod.type == 'qris') ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: SolluColors.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SolluColors.neutral),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.qr_code_scanner, color: SolluColors.primary, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        currentMethod.name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (currentMethod.qrImageUrl != null && currentMethod.qrImageUrl!.isNotEmpty) ...[
+                                    InkWell(
+                                      onTap: () => _showQrZoomDialog(currentMethod.qrImageUrl!, currentMethod.name),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: SolluColors.neutral),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Image.network(
+                                              currentMethod.qrImageUrl!,
+                                              width: 120,
+                                              height: 120,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                                width: 120,
+                                                height: 120,
+                                                child: Center(
+                                                  child: Icon(Icons.broken_image, size: 36, color: SolluColors.textMuted),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.zoom_in, size: 12, color: SolluColors.primary),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Perbesar QR',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: SolluColors.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Pembayaran ${currentMethod.name}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    const SizedBox(height: 10),
+                                  ],
+                                  Text(
+                                    currentMethod.instructions ??
+                                        'Arahkan pelanggan memindai QRIS melalui aplikasi e-wallet atau mobile banking.',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else if (currentMethod.type == 'bank_transfer' || currentMethod.type == 'transfer') ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: SolluColors.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SolluColors.neutral),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.account_balance, color: SolluColors.primary, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        currentMethod.name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  if (currentMethod.accountNumber != null && currentMethod.accountNumber!.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: SolluColors.neutral),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                currentMethod.accountNumber!,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (currentMethod.accountName != null)
+                                                Text(
+                                                  'a.n. ${currentMethod.accountName}',
+                                                  style: const TextStyle(fontSize: 11, color: SolluColors.textMuted),
+                                                ),
+                                            ],
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.copy, size: 18),
+                                            tooltip: 'Salin Rekening',
+                                            onPressed: () {
+                                              Clipboard.setData(ClipboardData(text: currentMethod.accountNumber!));
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Nomor rekening berhasil disalin!'),
+                                                  duration: Duration(seconds: 2),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Pastikan pelanggan telah menyelesaikan pembayaran sesuai nominal tagihan sebelum memproses.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: SolluColors.textMuted,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  controller: _referenceController,
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        'Nomor Referensi / No Transaksi (Opsional)',
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 10,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
+                          ] else ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: SolluColors.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SolluColors.neutral),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(_getIconForType(currentMethod.type), color: SolluColors.primary, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Pembayaran ${currentMethod.name}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    currentMethod.instructions ??
+                                        'Pastikan pelanggan telah menyelesaikan pembayaran sesuai nominal tagihan sebelum memproses.',
+                                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          if (currentMethod.referencePolicy != 'hidden') ...[
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _referenceController,
+                              decoration: InputDecoration(
+                                labelText: currentMethod.referencePolicy == 'mandatory'
+                                    ? 'Nomor Referensi / Trace No * (Wajib Diisi)'
+                                    : 'Nomor Referensi / Trace No (Opsional)',
+                                labelStyle: TextStyle(
+                                  color: currentMethod.referencePolicy == 'mandatory'
+                                      ? SolluColors.danger
+                                      : SolluColors.textMuted,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
                         ],
                       ],
                     ),

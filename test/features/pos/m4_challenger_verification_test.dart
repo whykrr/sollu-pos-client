@@ -219,9 +219,9 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       final testPaymentMethods = [
-        const PaymentMethod(id: 'pm-1', name: 'Tunai', type: 'cash', sortOrder: 1, isActive: true),
-        const PaymentMethod(id: 'pm-2', name: 'QRIS', type: 'qris', sortOrder: 2, isActive: true),
-        const PaymentMethod(id: 'pm-3', name: 'Debit', type: 'edc', sortOrder: 3, isActive: true),
+        const PaymentMethod(id: 'pm-1', name: 'Tunai', type: 'cash', referencePolicy: 'hidden', openCashDrawer: true, isSystem: true, isActive: true),
+        const PaymentMethod(id: 'pm-2', name: 'QRIS', type: 'qris', referencePolicy: 'optional', openCashDrawer: false, isSystem: false, isActive: true),
+        const PaymentMethod(id: 'pm-3', name: 'Debit', type: 'edc', referencePolicy: 'mandatory', openCashDrawer: false, isSystem: false, isActive: true),
       ];
 
       final testItem = CartItem(id: 'c-1', productId: 'p-1', name: 'Barang Uji', price: 50000.0, qty: 1);
@@ -270,7 +270,7 @@ void main() {
 
       // INVARIANT: Still in Cash mode, did NOT switch to QRIS!
       expect(find.text('Uang Diterima'), findsOneWidget);
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsNothing);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsNothing);
     });
   });
 }

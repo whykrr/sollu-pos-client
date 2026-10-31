@@ -588,8 +588,8 @@ void main() {
 
   group('Drift Migration v9 to v11 Schema Integrity Test', () {
     test('Migration adds ProductItems, ProductItemVariantGroupOptions and new columns', () async {
-      // Verify schema version is 11
-      expect(db.schemaVersion, 11);
+      // Verify schema version is 12 (incremented for payment methods refactor)
+      expect(db.schemaVersion, 12);
 
       // Verify we can insert into product_items table
       await db.into(db.products).insert(
@@ -723,9 +723,9 @@ void main() {
       final newItem = await (appDb.select(appDb.productItems)..where((t) => t.id.equals('pi-new'))).getSingle();
       expect(newItem.name, 'Old Product Default Item');
 
-      // Verify user_version is now 11
+      // Verify user_version is now 12 (latest database schemaVersion)
       final versionResult = await appDb.customSelect('PRAGMA user_version;').getSingle();
-      expect(versionResult.read<int>('user_version'), 11);
+      expect(versionResult.read<int>('user_version'), 12);
 
       await appDb.close();
     });

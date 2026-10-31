@@ -132,8 +132,8 @@ void main() {
   });
 
   final testPaymentMethods = [
-    const PaymentMethod(id: 'pm-cash', name: 'Tunai', type: 'cash', sortOrder: 1, isActive: true),
-    const PaymentMethod(id: 'pm-qris', name: 'QRIS', type: 'qris', sortOrder: 2, isActive: true),
+    const PaymentMethod(id: 'pm-cash', name: 'Tunai', type: 'cash', referencePolicy: 'hidden', openCashDrawer: true, isSystem: true, isActive: true),
+    const PaymentMethod(id: 'pm-qris', name: 'QRIS', type: 'qris', referencePolicy: 'optional', openCashDrawer: false, isSystem: false, isActive: true),
   ];
 
   List<Override> createTestOverrides({PosMode mode = PosMode.fastRetail}) {
@@ -477,7 +477,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
 
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsOneWidget);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsOneWidget);
 
       // Press ArrowLeft to switch back to Cash
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);

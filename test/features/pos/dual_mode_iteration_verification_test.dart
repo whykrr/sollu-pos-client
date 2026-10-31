@@ -136,15 +136,19 @@ final testPaymentMethods = <PaymentMethod>[
     id: 'pm-1',
     name: 'Tunai',
     type: 'cash',
+    referencePolicy: 'hidden',
+    openCashDrawer: true,
+    isSystem: true,
     isActive: true,
-    sortOrder: 1,
   ),
   const PaymentMethod(
     id: 'pm-2',
     name: 'QRIS',
     type: 'qris',
+    referencePolicy: 'optional',
+    openCashDrawer: false,
+    isSystem: false,
     isActive: true,
-    sortOrder: 2,
   ),
 ];
 

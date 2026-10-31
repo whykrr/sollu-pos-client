@@ -86,9 +86,9 @@ void main() {
   });
 
   final testPaymentMethods = [
-    const PaymentMethod(id: 'pm-1', name: 'Tunai', type: 'cash', sortOrder: 1, isActive: true),
-    const PaymentMethod(id: 'pm-2', name: 'QRIS', type: 'qris', sortOrder: 2, isActive: true),
-    const PaymentMethod(id: 'pm-3', name: 'BCA Debit', type: 'edc', sortOrder: 3, isActive: true),
+    const PaymentMethod(id: 'pm-1', name: 'Tunai', type: 'cash', referencePolicy: 'hidden', openCashDrawer: true, isSystem: true, isActive: true),
+    const PaymentMethod(id: 'pm-2', name: 'QRIS', type: 'qris', referencePolicy: 'optional', openCashDrawer: false, isSystem: false, isActive: true),
+    const PaymentMethod(id: 'pm-3', name: 'BCA Debit', type: 'edc', referencePolicy: 'mandatory', openCashDrawer: false, isSystem: false, isActive: true),
   ];
 
   List<Override> createBaseOverrides({
@@ -325,7 +325,7 @@ void main() {
 
       // CRITICAL ASSERTION: We must STILL be in Cash mode! (Tabs must NOT switch to QRIS or EDC)
       expect(find.text('Uang Diterima'), findsOneWidget);
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsNothing);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsNothing);
       expect(find.text('Nomor Referensi / Trace No (Opsional)'), findsNothing);
     });
 
@@ -363,13 +363,13 @@ void main() {
       // Press '2' without focusing any text field -> switches to QRIS
       await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
       await tester.pumpAndSettle();
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsOneWidget);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsOneWidget);
       expect(find.text('Uang Diterima'), findsNothing);
 
       // Press '3' -> switches to BCA Debit (EDC)
       await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
       await tester.pumpAndSettle();
-      expect(find.text('Nomor Referensi / Trace No (Opsional)'), findsOneWidget);
+      expect(find.text('Nomor Referensi / Trace No (Wajib Diisi)'), findsOneWidget);
 
       // Press '1' -> switches back to Tunai (Cash)
       await tester.sendKeyEvent(LogicalKeyboardKey.digit1);

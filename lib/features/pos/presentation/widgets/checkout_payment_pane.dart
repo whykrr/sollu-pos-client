@@ -266,7 +266,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
 
       if (mounted) {
         final printerConfig = ref.read(selectedPrinterProvider);
-        final bool shouldOpenDrawer = (_selectedMethod?.openCashDrawer ?? isCash) && (printerConfig?.openCashDrawer ?? false);
+        final bool shouldOpenDrawer = (_selectedMethod?.openCashDrawer ?? false) && (printerConfig?.openCashDrawer ?? false);
         final outletProfile = ref.read(outletProfileProvider);
         final String? outletName = outletProfile?['name']?.toString();
 
@@ -1629,26 +1629,15 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
           // 2. Input Nomor Referensi (jika tidak hidden)
           if (!isHiddenRef) ...[
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Text(
-                  'Nomor Referensi / Trace No',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isMandatoryRef ? SolluColors.danger : SolluColors.textMuted,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isMandatoryRef ? '(Wajib Diisi)' : '(Opsional)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isMandatoryRef ? FontWeight.bold : FontWeight.normal,
-                    color: isMandatoryRef ? SolluColors.danger : SolluColors.textMuted,
-                  ),
-                ),
-              ],
+            Text(
+              isMandatoryRef
+                  ? 'Nomor Referensi / Trace No (Wajib Diisi)'
+                  : 'Nomor Referensi / Trace No (Opsional)',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isMandatoryRef ? SolluColors.danger : SolluColors.textMuted,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(

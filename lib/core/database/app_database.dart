@@ -116,15 +116,22 @@ class AppDatabase extends _$AppDatabase {
             'CREATE INDEX IF NOT EXISTS idx_product_modifier_groups_product_id ON product_modifier_groups (product_id);',
           );
         }
-        if (from < 12) {
-          await m.addColumn(paymentMethods, paymentMethods.provider);
-          await m.addColumn(paymentMethods, paymentMethods.accountNumber);
-          await m.addColumn(paymentMethods, paymentMethods.accountName);
-          await m.addColumn(paymentMethods, paymentMethods.referencePolicy);
-          await m.addColumn(paymentMethods, paymentMethods.openCashDrawer);
-          await m.addColumn(paymentMethods, paymentMethods.instructions);
-          await m.addColumn(paymentMethods, paymentMethods.qrImageUrl);
-          await m.addColumn(paymentMethods, paymentMethods.isSystem);
+        if (from < 12 && to >= 12) {
+          final tableCheck = await customSelect(
+            "SELECT count(*) as cnt FROM sqlite_master WHERE type='table' AND name='payment_methods'",
+          ).getSingle();
+          if (tableCheck.read<int>('cnt') > 0) {
+            await m.addColumn(paymentMethods, paymentMethods.provider);
+            await m.addColumn(paymentMethods, paymentMethods.accountNumber);
+            await m.addColumn(paymentMethods, paymentMethods.accountName);
+            await m.addColumn(paymentMethods, paymentMethods.referencePolicy);
+            await m.addColumn(paymentMethods, paymentMethods.openCashDrawer);
+            await m.addColumn(paymentMethods, paymentMethods.instructions);
+            await m.addColumn(paymentMethods, paymentMethods.qrImageUrl);
+            await m.addColumn(paymentMethods, paymentMethods.isSystem);
+          } else {
+            await m.createTable(paymentMethods);
+          }
         }
       },
     );

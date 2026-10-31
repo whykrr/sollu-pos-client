@@ -57,21 +57,27 @@ void main() {
       id: 'pm-cash',
       name: 'Tunai',
       type: 'cash',
-      sortOrder: 1,
+      referencePolicy: 'hidden',
+      openCashDrawer: true,
+      isSystem: true,
       isActive: true,
     ),
     const PaymentMethod(
       id: 'pm-qris',
       name: 'QRIS',
       type: 'qris',
-      sortOrder: 2,
+      referencePolicy: 'optional',
+      openCashDrawer: false,
+      isSystem: false,
       isActive: true,
     ),
     const PaymentMethod(
       id: 'pm-edc',
       name: 'BCA Debit',
       type: 'edc',
-      sortOrder: 3,
+      referencePolicy: 'mandatory',
+      openCashDrawer: false,
+      isSystem: false,
       isActive: true,
     ),
   ];
@@ -157,13 +163,13 @@ void main() {
 
       // Initially Tunai (Cash) is selected
       expect(find.text('Uang Diterima'), findsOneWidget);
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsNothing);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsNothing);
 
       // Press '2' (without focusing any input field) -> switches to QRIS
       await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
       await tester.pumpAndSettle();
 
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsOneWidget);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsOneWidget);
       expect(find.text('Uang Diterima'), findsNothing);
 
       // Press '1' -> switches back to Tunai (Cash)
@@ -171,13 +177,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Uang Diterima'), findsOneWidget);
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsNothing);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsNothing);
 
       // Press '3' -> switches to BCA Debit
       await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
       await tester.pumpAndSettle();
 
-      expect(find.text('Nomor Referensi / Trace No (Opsional)'), findsOneWidget);
+      expect(find.text('Nomor Referensi / Trace No (Wajib Diisi)'), findsOneWidget);
     });
 
     testWidgets('Numpad keys type into cash input without switching payment method when editing text', (tester) async {
@@ -235,7 +241,7 @@ void main() {
 
       // CRITICAL INVARIANT: Still in Tunai (Cash) mode, did NOT switch to QRIS!
       expect(find.text('Uang Diterima'), findsOneWidget);
-      expect(find.text('Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.'), findsNothing);
+      expect(find.text('Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.'), findsNothing);
     });
   });
 

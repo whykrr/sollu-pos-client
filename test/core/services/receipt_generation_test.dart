@@ -75,7 +75,9 @@ void main() {
       id: 'method-1',
       name: 'Tunai',
       type: 'cash',
-      sortOrder: 0,
+      referencePolicy: 'hidden',
+      openCashDrawer: true,
+      isSystem: true,
       isActive: true,
     );
 
@@ -178,7 +180,9 @@ void main() {
       id: 'method-1',
       name: 'Tunai',
       type: 'cash',
-      sortOrder: 0,
+      referencePolicy: 'hidden',
+      openCashDrawer: true,
+      isSystem: true,
       isActive: true,
     );
 

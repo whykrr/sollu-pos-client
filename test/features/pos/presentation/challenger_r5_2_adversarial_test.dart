@@ -384,7 +384,9 @@ void main() {
         id: 'pm-qris',
         name: 'QRIS',
         type: 'qris',
-        sortOrder: 2,
+        referencePolicy: 'optional',
+        openCashDrawer: false,
+        isSystem: false,
         isActive: true,
       );
 

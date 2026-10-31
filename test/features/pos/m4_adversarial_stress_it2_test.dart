@@ -59,9 +59,9 @@ void main() {
   });
 
   final testPaymentMethods = [
-    const PaymentMethod(id: 'pm-c', name: 'Tunai', type: 'cash', sortOrder: 1, isActive: true),
-    const PaymentMethod(id: 'pm-q', name: 'QRIS', type: 'qris', sortOrder: 2, isActive: true),
-    const PaymentMethod(id: 'pm-d', name: 'Debit Card', type: 'edc', sortOrder: 3, isActive: true),
+    const PaymentMethod(id: 'pm-c', name: 'Tunai', type: 'cash', referencePolicy: 'hidden', openCashDrawer: true, isSystem: true, isActive: true),
+    const PaymentMethod(id: 'pm-q', name: 'QRIS', type: 'qris', referencePolicy: 'optional', openCashDrawer: false, isSystem: false, isActive: true),
+    const PaymentMethod(id: 'pm-d', name: 'Debit Card', type: 'edc', referencePolicy: 'optional', openCashDrawer: false, isSystem: false, isActive: true),
   ];
 
   List<Override> createPosLayoutOverrides({List<String> activeFeatures = const ['pos', 'crm', 'cash_drawer']}) {

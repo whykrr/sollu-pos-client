@@ -286,7 +286,9 @@ void main() {
         id: 'pm-cash',
         name: 'Tunai',
         type: 'cash',
-        sortOrder: 1,
+        referencePolicy: 'hidden',
+        openCashDrawer: true,
+        isSystem: true,
         isActive: true,
       );
 
