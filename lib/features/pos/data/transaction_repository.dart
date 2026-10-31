@@ -1204,36 +1204,14 @@ class TransactionRepository {
     );
   }
 
-  /// Memantau metode pembayaran aktif dari master data (prioritas localSortOrder lalu sortOrder pusat)
+  /// Memantau metode pembayaran aktif dari master data
   Stream<List<PaymentMethod>> watchActivePaymentMethods() {
     return (_database.select(_database.paymentMethods)
           ..where((m) => m.isActive.equals(true))
           ..orderBy([
-            (m) => OrderingTerm(
-              expression: coalesce([m.localSortOrder, m.sortOrder]),
-              mode: OrderingMode.asc,
-            ),
             (m) => OrderingTerm(expression: m.name, mode: OrderingMode.asc),
           ]))
         .watch();
-  }
-
-  /// Memperbarui urutan lokal metode pembayaran di database SQLite
-  Future<void> updatePaymentMethodsLocalOrder(List<String> orderedIds) async {
-    await _database.transaction(() async {
-      for (int i = 0; i < orderedIds.length; i++) {
-        await (_database.update(_database.paymentMethods)
-              ..where((m) => m.id.equals(orderedIds[i])))
-            .write(PaymentMethodsCompanion(localSortOrder: Value(i)));
-      }
-    });
-  }
-
-  /// Mereset urutan lokal metode pembayaran kembali ke aturan pusat
-  Future<void> resetPaymentMethodsLocalOrder() async {
-    await (_database.update(
-      _database.paymentMethods,
-    )).write(const PaymentMethodsCompanion(localSortOrder: Value(null)));
   }
 
   /// Memantau promo aktif dari master data

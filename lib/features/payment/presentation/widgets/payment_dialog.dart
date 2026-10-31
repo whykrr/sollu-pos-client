@@ -125,6 +125,19 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
       return;
     }
 
+    final policy = method.referencePolicy;
+    if (policy == 'mandatory' && _referenceController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nomor referensi / approval code wajib diisi untuk ${method.name}!',
+          ),
+          backgroundColor: SolluColors.danger,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
     });
@@ -186,8 +199,9 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         Navigator.of(context).pop(); // Tutup dialog bayar
         _showSuccessDialog(tx.transaction, method, changeAmount);
 
-        // Buka laci kasir otomatis jika tipe pembayaran tunai (Cash)
-        if (isCash) {
+        // Buka laci kasir otomatis jika openCashDrawer aktif (atau fallback tunai)
+        final shouldOpenDrawer = method.openCashDrawer || isCash;
+        if (shouldOpenDrawer) {
           openCashDrawerAction(ref: ref).then((result) {
             if (!result.success && mounted) {
               debugPrint('Gagal membuka laci: ${result.message}');
@@ -232,6 +246,74 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
         });
       }
     }
+  }
+
+  void _showQrZoomDialog(String qrImageUrl, String methodName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                methodName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  qrImageUrl,
+                  width: 280,
+                  height: 280,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 280,
+                    height: 280,
+                    color: SolluColors.background,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, size: 48, color: SolluColors.textMuted),
+                          SizedBox(height: 8),
+                          Text('Gagal memuat gambar QR', style: TextStyle(color: SolluColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Arahkan kamera smartphone pelanggan ke QR Code di atas',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: SolluColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SolluColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSuccessDialog(
@@ -438,16 +520,18 @@ class _PaymentDialogState extends ConsumerState<PaymentDialog> {
                         id: 'default-cash',
                         name: 'Tunai',
                         type: 'cash',
-                        sortOrder: 0,
-                        localSortOrder: null,
+                        referencePolicy: 'hidden',
+                        openCashDrawer: true,
+                        isSystem: true,
                         isActive: true,
                       ),
                       PaymentMethod(
                         id: 'default-qris',
                         name: 'QRIS',
                         type: 'qris',
-                        sortOrder: 1,
-                        localSortOrder: null,
+                        referencePolicy: 'optional',
+                        openCashDrawer: false,
+                        isSystem: false,
                         isActive: true,
                       ),
                     ];

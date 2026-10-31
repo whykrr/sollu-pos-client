@@ -4692,28 +4692,102 @@ class $PaymentMethodsTable extends PaymentMethods
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
-    'sortOrder',
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
   );
   @override
-  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
-    'sort_order',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  static const VerificationMeta _localSortOrderMeta = const VerificationMeta(
-    'localSortOrder',
-  );
-  @override
-  late final GeneratedColumn<int> localSortOrder = GeneratedColumn<int>(
-    'local_sort_order',
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
     aliasedName,
     true,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountNumberMeta = const VerificationMeta(
+    'accountNumber',
+  );
+  @override
+  late final GeneratedColumn<String> accountNumber = GeneratedColumn<String>(
+    'account_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountNameMeta = const VerificationMeta(
+    'accountName',
+  );
+  @override
+  late final GeneratedColumn<String> accountName = GeneratedColumn<String>(
+    'account_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _referencePolicyMeta = const VerificationMeta(
+    'referencePolicy',
+  );
+  @override
+  late final GeneratedColumn<String> referencePolicy = GeneratedColumn<String>(
+    'reference_policy',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('optional'),
+  );
+  static const VerificationMeta _openCashDrawerMeta = const VerificationMeta(
+    'openCashDrawer',
+  );
+  @override
+  late final GeneratedColumn<bool> openCashDrawer = GeneratedColumn<bool>(
+    'open_cash_drawer',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("open_cash_drawer" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _instructionsMeta = const VerificationMeta(
+    'instructions',
+  );
+  @override
+  late final GeneratedColumn<String> instructions = GeneratedColumn<String>(
+    'instructions',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _qrImageUrlMeta = const VerificationMeta(
+    'qrImageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> qrImageUrl = GeneratedColumn<String>(
+    'qr_image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSystemMeta = const VerificationMeta(
+    'isSystem',
+  );
+  @override
+  late final GeneratedColumn<bool> isSystem = GeneratedColumn<bool>(
+    'is_system',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_system" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
@@ -4735,8 +4809,14 @@ class $PaymentMethodsTable extends PaymentMethods
     id,
     name,
     type,
-    sortOrder,
-    localSortOrder,
+    provider,
+    accountNumber,
+    accountName,
+    referencePolicy,
+    openCashDrawer,
+    instructions,
+    qrImageUrl,
+    isSystem,
     isActive,
   ];
   @override
@@ -4772,19 +4852,70 @@ class $PaymentMethodsTable extends PaymentMethods
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
-    if (data.containsKey('sort_order')) {
+    if (data.containsKey('provider')) {
       context.handle(
-        _sortOrderMeta,
-        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
       );
     }
-    if (data.containsKey('local_sort_order')) {
+    if (data.containsKey('account_number')) {
       context.handle(
-        _localSortOrderMeta,
-        localSortOrder.isAcceptableOrUnknown(
-          data['local_sort_order']!,
-          _localSortOrderMeta,
+        _accountNumberMeta,
+        accountNumber.isAcceptableOrUnknown(
+          data['account_number']!,
+          _accountNumberMeta,
         ),
+      );
+    }
+    if (data.containsKey('account_name')) {
+      context.handle(
+        _accountNameMeta,
+        accountName.isAcceptableOrUnknown(
+          data['account_name']!,
+          _accountNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reference_policy')) {
+      context.handle(
+        _referencePolicyMeta,
+        referencePolicy.isAcceptableOrUnknown(
+          data['reference_policy']!,
+          _referencePolicyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('open_cash_drawer')) {
+      context.handle(
+        _openCashDrawerMeta,
+        openCashDrawer.isAcceptableOrUnknown(
+          data['open_cash_drawer']!,
+          _openCashDrawerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('instructions')) {
+      context.handle(
+        _instructionsMeta,
+        instructions.isAcceptableOrUnknown(
+          data['instructions']!,
+          _instructionsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('qr_image_url')) {
+      context.handle(
+        _qrImageUrlMeta,
+        qrImageUrl.isAcceptableOrUnknown(
+          data['qr_image_url']!,
+          _qrImageUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_system')) {
+      context.handle(
+        _isSystemMeta,
+        isSystem.isAcceptableOrUnknown(data['is_system']!, _isSystemMeta),
       );
     }
     if (data.containsKey('is_active')) {
@@ -4814,14 +4945,38 @@ class $PaymentMethodsTable extends PaymentMethods
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
-      sortOrder: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}sort_order'],
-      )!,
-      localSortOrder: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}local_sort_order'],
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
       ),
+      accountNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_number'],
+      ),
+      accountName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_name'],
+      ),
+      referencePolicy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference_policy'],
+      )!,
+      openCashDrawer: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}open_cash_drawer'],
+      )!,
+      instructions: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}instructions'],
+      ),
+      qrImageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}qr_image_url'],
+      ),
+      isSystem: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_system'],
+      )!,
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -4839,15 +4994,27 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
   final String id;
   final String name;
   final String type;
-  final int sortOrder;
-  final int? localSortOrder;
+  final String? provider;
+  final String? accountNumber;
+  final String? accountName;
+  final String referencePolicy;
+  final bool openCashDrawer;
+  final String? instructions;
+  final String? qrImageUrl;
+  final bool isSystem;
   final bool isActive;
   const PaymentMethod({
     required this.id,
     required this.name,
     required this.type,
-    required this.sortOrder,
-    this.localSortOrder,
+    this.provider,
+    this.accountNumber,
+    this.accountName,
+    required this.referencePolicy,
+    required this.openCashDrawer,
+    this.instructions,
+    this.qrImageUrl,
+    required this.isSystem,
     required this.isActive,
   });
   @override
@@ -4856,10 +5023,24 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['type'] = Variable<String>(type);
-    map['sort_order'] = Variable<int>(sortOrder);
-    if (!nullToAbsent || localSortOrder != null) {
-      map['local_sort_order'] = Variable<int>(localSortOrder);
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
     }
+    if (!nullToAbsent || accountNumber != null) {
+      map['account_number'] = Variable<String>(accountNumber);
+    }
+    if (!nullToAbsent || accountName != null) {
+      map['account_name'] = Variable<String>(accountName);
+    }
+    map['reference_policy'] = Variable<String>(referencePolicy);
+    map['open_cash_drawer'] = Variable<bool>(openCashDrawer);
+    if (!nullToAbsent || instructions != null) {
+      map['instructions'] = Variable<String>(instructions);
+    }
+    if (!nullToAbsent || qrImageUrl != null) {
+      map['qr_image_url'] = Variable<String>(qrImageUrl);
+    }
+    map['is_system'] = Variable<bool>(isSystem);
     map['is_active'] = Variable<bool>(isActive);
     return map;
   }
@@ -4869,10 +5050,24 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: Value(id),
       name: Value(name),
       type: Value(type),
-      sortOrder: Value(sortOrder),
-      localSortOrder: localSortOrder == null && nullToAbsent
+      provider: provider == null && nullToAbsent
           ? const Value.absent()
-          : Value(localSortOrder),
+          : Value(provider),
+      accountNumber: accountNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountNumber),
+      accountName: accountName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountName),
+      referencePolicy: Value(referencePolicy),
+      openCashDrawer: Value(openCashDrawer),
+      instructions: instructions == null && nullToAbsent
+          ? const Value.absent()
+          : Value(instructions),
+      qrImageUrl: qrImageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(qrImageUrl),
+      isSystem: Value(isSystem),
       isActive: Value(isActive),
     );
   }
@@ -4886,8 +5081,14 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       type: serializer.fromJson<String>(json['type']),
-      sortOrder: serializer.fromJson<int>(json['sortOrder']),
-      localSortOrder: serializer.fromJson<int?>(json['localSortOrder']),
+      provider: serializer.fromJson<String?>(json['provider']),
+      accountNumber: serializer.fromJson<String?>(json['accountNumber']),
+      accountName: serializer.fromJson<String?>(json['accountName']),
+      referencePolicy: serializer.fromJson<String>(json['referencePolicy']),
+      openCashDrawer: serializer.fromJson<bool>(json['openCashDrawer']),
+      instructions: serializer.fromJson<String?>(json['instructions']),
+      qrImageUrl: serializer.fromJson<String?>(json['qrImageUrl']),
+      isSystem: serializer.fromJson<bool>(json['isSystem']),
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
@@ -4898,8 +5099,14 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'type': serializer.toJson<String>(type),
-      'sortOrder': serializer.toJson<int>(sortOrder),
-      'localSortOrder': serializer.toJson<int?>(localSortOrder),
+      'provider': serializer.toJson<String?>(provider),
+      'accountNumber': serializer.toJson<String?>(accountNumber),
+      'accountName': serializer.toJson<String?>(accountName),
+      'referencePolicy': serializer.toJson<String>(referencePolicy),
+      'openCashDrawer': serializer.toJson<bool>(openCashDrawer),
+      'instructions': serializer.toJson<String?>(instructions),
+      'qrImageUrl': serializer.toJson<String?>(qrImageUrl),
+      'isSystem': serializer.toJson<bool>(isSystem),
       'isActive': serializer.toJson<bool>(isActive),
     };
   }
@@ -4908,17 +5115,29 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
     String? id,
     String? name,
     String? type,
-    int? sortOrder,
-    Value<int?> localSortOrder = const Value.absent(),
+    Value<String?> provider = const Value.absent(),
+    Value<String?> accountNumber = const Value.absent(),
+    Value<String?> accountName = const Value.absent(),
+    String? referencePolicy,
+    bool? openCashDrawer,
+    Value<String?> instructions = const Value.absent(),
+    Value<String?> qrImageUrl = const Value.absent(),
+    bool? isSystem,
     bool? isActive,
   }) => PaymentMethod(
     id: id ?? this.id,
     name: name ?? this.name,
     type: type ?? this.type,
-    sortOrder: sortOrder ?? this.sortOrder,
-    localSortOrder: localSortOrder.present
-        ? localSortOrder.value
-        : this.localSortOrder,
+    provider: provider.present ? provider.value : this.provider,
+    accountNumber: accountNumber.present
+        ? accountNumber.value
+        : this.accountNumber,
+    accountName: accountName.present ? accountName.value : this.accountName,
+    referencePolicy: referencePolicy ?? this.referencePolicy,
+    openCashDrawer: openCashDrawer ?? this.openCashDrawer,
+    instructions: instructions.present ? instructions.value : this.instructions,
+    qrImageUrl: qrImageUrl.present ? qrImageUrl.value : this.qrImageUrl,
+    isSystem: isSystem ?? this.isSystem,
     isActive: isActive ?? this.isActive,
   );
   PaymentMethod copyWithCompanion(PaymentMethodsCompanion data) {
@@ -4926,10 +5145,26 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       type: data.type.present ? data.type.value : this.type,
-      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
-      localSortOrder: data.localSortOrder.present
-          ? data.localSortOrder.value
-          : this.localSortOrder,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      accountNumber: data.accountNumber.present
+          ? data.accountNumber.value
+          : this.accountNumber,
+      accountName: data.accountName.present
+          ? data.accountName.value
+          : this.accountName,
+      referencePolicy: data.referencePolicy.present
+          ? data.referencePolicy.value
+          : this.referencePolicy,
+      openCashDrawer: data.openCashDrawer.present
+          ? data.openCashDrawer.value
+          : this.openCashDrawer,
+      instructions: data.instructions.present
+          ? data.instructions.value
+          : this.instructions,
+      qrImageUrl: data.qrImageUrl.present
+          ? data.qrImageUrl.value
+          : this.qrImageUrl,
+      isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
@@ -4940,16 +5175,34 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('localSortOrder: $localSortOrder, ')
+          ..write('provider: $provider, ')
+          ..write('accountNumber: $accountNumber, ')
+          ..write('accountName: $accountName, ')
+          ..write('referencePolicy: $referencePolicy, ')
+          ..write('openCashDrawer: $openCashDrawer, ')
+          ..write('instructions: $instructions, ')
+          ..write('qrImageUrl: $qrImageUrl, ')
+          ..write('isSystem: $isSystem, ')
           ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, type, sortOrder, localSortOrder, isActive);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    type,
+    provider,
+    accountNumber,
+    accountName,
+    referencePolicy,
+    openCashDrawer,
+    instructions,
+    qrImageUrl,
+    isSystem,
+    isActive,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4957,8 +5210,14 @@ class PaymentMethod extends DataClass implements Insertable<PaymentMethod> {
           other.id == this.id &&
           other.name == this.name &&
           other.type == this.type &&
-          other.sortOrder == this.sortOrder &&
-          other.localSortOrder == this.localSortOrder &&
+          other.provider == this.provider &&
+          other.accountNumber == this.accountNumber &&
+          other.accountName == this.accountName &&
+          other.referencePolicy == this.referencePolicy &&
+          other.openCashDrawer == this.openCashDrawer &&
+          other.instructions == this.instructions &&
+          other.qrImageUrl == this.qrImageUrl &&
+          other.isSystem == this.isSystem &&
           other.isActive == this.isActive);
 }
 
@@ -4966,16 +5225,28 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> type;
-  final Value<int> sortOrder;
-  final Value<int?> localSortOrder;
+  final Value<String?> provider;
+  final Value<String?> accountNumber;
+  final Value<String?> accountName;
+  final Value<String> referencePolicy;
+  final Value<bool> openCashDrawer;
+  final Value<String?> instructions;
+  final Value<String?> qrImageUrl;
+  final Value<bool> isSystem;
   final Value<bool> isActive;
   final Value<int> rowid;
   const PaymentMethodsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
-    this.sortOrder = const Value.absent(),
-    this.localSortOrder = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.accountNumber = const Value.absent(),
+    this.accountName = const Value.absent(),
+    this.referencePolicy = const Value.absent(),
+    this.openCashDrawer = const Value.absent(),
+    this.instructions = const Value.absent(),
+    this.qrImageUrl = const Value.absent(),
+    this.isSystem = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -4983,8 +5254,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     required String id,
     required String name,
     required String type,
-    this.sortOrder = const Value.absent(),
-    this.localSortOrder = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.accountNumber = const Value.absent(),
+    this.accountName = const Value.absent(),
+    this.referencePolicy = const Value.absent(),
+    this.openCashDrawer = const Value.absent(),
+    this.instructions = const Value.absent(),
+    this.qrImageUrl = const Value.absent(),
+    this.isSystem = const Value.absent(),
     this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -4994,8 +5271,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? type,
-    Expression<int>? sortOrder,
-    Expression<int>? localSortOrder,
+    Expression<String>? provider,
+    Expression<String>? accountNumber,
+    Expression<String>? accountName,
+    Expression<String>? referencePolicy,
+    Expression<bool>? openCashDrawer,
+    Expression<String>? instructions,
+    Expression<String>? qrImageUrl,
+    Expression<bool>? isSystem,
     Expression<bool>? isActive,
     Expression<int>? rowid,
   }) {
@@ -5003,8 +5286,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (type != null) 'type': type,
-      if (sortOrder != null) 'sort_order': sortOrder,
-      if (localSortOrder != null) 'local_sort_order': localSortOrder,
+      if (provider != null) 'provider': provider,
+      if (accountNumber != null) 'account_number': accountNumber,
+      if (accountName != null) 'account_name': accountName,
+      if (referencePolicy != null) 'reference_policy': referencePolicy,
+      if (openCashDrawer != null) 'open_cash_drawer': openCashDrawer,
+      if (instructions != null) 'instructions': instructions,
+      if (qrImageUrl != null) 'qr_image_url': qrImageUrl,
+      if (isSystem != null) 'is_system': isSystem,
       if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
     });
@@ -5014,8 +5303,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? type,
-    Value<int>? sortOrder,
-    Value<int?>? localSortOrder,
+    Value<String?>? provider,
+    Value<String?>? accountNumber,
+    Value<String?>? accountName,
+    Value<String>? referencePolicy,
+    Value<bool>? openCashDrawer,
+    Value<String?>? instructions,
+    Value<String?>? qrImageUrl,
+    Value<bool>? isSystem,
     Value<bool>? isActive,
     Value<int>? rowid,
   }) {
@@ -5023,8 +5318,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
-      sortOrder: sortOrder ?? this.sortOrder,
-      localSortOrder: localSortOrder ?? this.localSortOrder,
+      provider: provider ?? this.provider,
+      accountNumber: accountNumber ?? this.accountNumber,
+      accountName: accountName ?? this.accountName,
+      referencePolicy: referencePolicy ?? this.referencePolicy,
+      openCashDrawer: openCashDrawer ?? this.openCashDrawer,
+      instructions: instructions ?? this.instructions,
+      qrImageUrl: qrImageUrl ?? this.qrImageUrl,
+      isSystem: isSystem ?? this.isSystem,
       isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
     );
@@ -5042,11 +5343,29 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
-    if (sortOrder.present) {
-      map['sort_order'] = Variable<int>(sortOrder.value);
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
     }
-    if (localSortOrder.present) {
-      map['local_sort_order'] = Variable<int>(localSortOrder.value);
+    if (accountNumber.present) {
+      map['account_number'] = Variable<String>(accountNumber.value);
+    }
+    if (accountName.present) {
+      map['account_name'] = Variable<String>(accountName.value);
+    }
+    if (referencePolicy.present) {
+      map['reference_policy'] = Variable<String>(referencePolicy.value);
+    }
+    if (openCashDrawer.present) {
+      map['open_cash_drawer'] = Variable<bool>(openCashDrawer.value);
+    }
+    if (instructions.present) {
+      map['instructions'] = Variable<String>(instructions.value);
+    }
+    if (qrImageUrl.present) {
+      map['qr_image_url'] = Variable<String>(qrImageUrl.value);
+    }
+    if (isSystem.present) {
+      map['is_system'] = Variable<bool>(isSystem.value);
     }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
@@ -5063,8 +5382,14 @@ class PaymentMethodsCompanion extends UpdateCompanion<PaymentMethod> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder, ')
-          ..write('localSortOrder: $localSortOrder, ')
+          ..write('provider: $provider, ')
+          ..write('accountNumber: $accountNumber, ')
+          ..write('accountName: $accountName, ')
+          ..write('referencePolicy: $referencePolicy, ')
+          ..write('openCashDrawer: $openCashDrawer, ')
+          ..write('instructions: $instructions, ')
+          ..write('qrImageUrl: $qrImageUrl, ')
+          ..write('isSystem: $isSystem, ')
           ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -18532,8 +18857,14 @@ typedef $$PaymentMethodsTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String type,
-      Value<int> sortOrder,
-      Value<int?> localSortOrder,
+      Value<String?> provider,
+      Value<String?> accountNumber,
+      Value<String?> accountName,
+      Value<String> referencePolicy,
+      Value<bool> openCashDrawer,
+      Value<String?> instructions,
+      Value<String?> qrImageUrl,
+      Value<bool> isSystem,
       Value<bool> isActive,
       Value<int> rowid,
     });
@@ -18542,8 +18873,14 @@ typedef $$PaymentMethodsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> type,
-      Value<int> sortOrder,
-      Value<int?> localSortOrder,
+      Value<String?> provider,
+      Value<String?> accountNumber,
+      Value<String?> accountName,
+      Value<String> referencePolicy,
+      Value<bool> openCashDrawer,
+      Value<String?> instructions,
+      Value<String?> qrImageUrl,
+      Value<bool> isSystem,
       Value<bool> isActive,
       Value<int> rowid,
     });
@@ -18609,13 +18946,43 @@ class $$PaymentMethodsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get localSortOrder => $composableBuilder(
-    column: $table.localSortOrder,
+  ColumnFilters<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountName => $composableBuilder(
+    column: $table.accountName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get referencePolicy => $composableBuilder(
+    column: $table.referencePolicy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get openCashDrawer => $composableBuilder(
+    column: $table.openCashDrawer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get instructions => $composableBuilder(
+    column: $table.instructions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get qrImageUrl => $composableBuilder(
+    column: $table.qrImageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSystem => $composableBuilder(
+    column: $table.isSystem,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18674,13 +19041,43 @@ class $$PaymentMethodsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get sortOrder => $composableBuilder(
-    column: $table.sortOrder,
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get localSortOrder => $composableBuilder(
-    column: $table.localSortOrder,
+  ColumnOrderings<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountName => $composableBuilder(
+    column: $table.accountName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get referencePolicy => $composableBuilder(
+    column: $table.referencePolicy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get openCashDrawer => $composableBuilder(
+    column: $table.openCashDrawer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get instructions => $composableBuilder(
+    column: $table.instructions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get qrImageUrl => $composableBuilder(
+    column: $table.qrImageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSystem => $composableBuilder(
+    column: $table.isSystem,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -18708,13 +19105,41 @@ class $$PaymentMethodsTableAnnotationComposer
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<int> get sortOrder =>
-      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
 
-  GeneratedColumn<int> get localSortOrder => $composableBuilder(
-    column: $table.localSortOrder,
+  GeneratedColumn<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get accountName => $composableBuilder(
+    column: $table.accountName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get referencePolicy => $composableBuilder(
+    column: $table.referencePolicy,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get openCashDrawer => $composableBuilder(
+    column: $table.openCashDrawer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get instructions => $composableBuilder(
+    column: $table.instructions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get qrImageUrl => $composableBuilder(
+    column: $table.qrImageUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSystem =>
+      $composableBuilder(column: $table.isSystem, builder: (column) => column);
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -18779,16 +19204,28 @@ class $$PaymentMethodsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> type = const Value.absent(),
-                Value<int> sortOrder = const Value.absent(),
-                Value<int?> localSortOrder = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> accountNumber = const Value.absent(),
+                Value<String?> accountName = const Value.absent(),
+                Value<String> referencePolicy = const Value.absent(),
+                Value<bool> openCashDrawer = const Value.absent(),
+                Value<String?> instructions = const Value.absent(),
+                Value<String?> qrImageUrl = const Value.absent(),
+                Value<bool> isSystem = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaymentMethodsCompanion(
                 id: id,
                 name: name,
                 type: type,
-                sortOrder: sortOrder,
-                localSortOrder: localSortOrder,
+                provider: provider,
+                accountNumber: accountNumber,
+                accountName: accountName,
+                referencePolicy: referencePolicy,
+                openCashDrawer: openCashDrawer,
+                instructions: instructions,
+                qrImageUrl: qrImageUrl,
+                isSystem: isSystem,
                 isActive: isActive,
                 rowid: rowid,
               ),
@@ -18797,16 +19234,28 @@ class $$PaymentMethodsTableTableManager
                 required String id,
                 required String name,
                 required String type,
-                Value<int> sortOrder = const Value.absent(),
-                Value<int?> localSortOrder = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> accountNumber = const Value.absent(),
+                Value<String?> accountName = const Value.absent(),
+                Value<String> referencePolicy = const Value.absent(),
+                Value<bool> openCashDrawer = const Value.absent(),
+                Value<String?> instructions = const Value.absent(),
+                Value<String?> qrImageUrl = const Value.absent(),
+                Value<bool> isSystem = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PaymentMethodsCompanion.insert(
                 id: id,
                 name: name,
                 type: type,
-                sortOrder: sortOrder,
-                localSortOrder: localSortOrder,
+                provider: provider,
+                accountNumber: accountNumber,
+                accountName: accountName,
+                referencePolicy: referencePolicy,
+                openCashDrawer: openCashDrawer,
+                instructions: instructions,
+                qrImageUrl: qrImageUrl,
+                isSystem: isSystem,
                 isActive: isActive,
                 rowid: rowid,
               ),

@@ -100,14 +100,6 @@ class InitialSyncService {
             (double.tryParse(bal['current_stock'].toString()) ?? 0.0);
       }
 
-      // Simpan urutan lokal metode pembayaran sebelum di-reset
-      final existingPaymentMethods =
-          await _database.select(_database.paymentMethods).get();
-      final Map<String, int?> localSortOrderMap = {
-        for (var pm in existingPaymentMethods)
-          if (pm.localSortOrder != null) pm.id: pm.localSortOrder,
-      };
-
       await _database.transaction(() async {
         // Clear old catalog data in FK safe order
         await _database.delete(_database.productItemVariantGroupOptions).go();
@@ -233,16 +225,32 @@ class InitialSyncService {
 
         // 2. Insert Payment Methods
         for (final item in paymentMethods) {
-          final methodId = item['id'];
+          final methodId = item['id']?.toString() ?? '';
+          if (methodId.isEmpty) continue;
+
           await _database.into(_database.paymentMethods).insert(
                 PaymentMethodsCompanion.insert(
                   id: methodId,
-                  name: item['name'],
-                  type: item['type'],
-                  sortOrder: Value(
-                    int.tryParse(item['sort_order']?.toString() ?? '0') ?? 0,
+                  name: item['name']?.toString() ?? '',
+                  type: item['type']?.toString() ?? 'cash',
+                  provider: Value(item['provider']?.toString()),
+                  accountNumber: Value(item['account_number']?.toString()),
+                  accountName: Value(item['account_name']?.toString()),
+                  referencePolicy: Value(
+                    item['reference_policy']?.toString() ?? 'optional',
                   ),
-                  localSortOrder: Value(localSortOrderMap[methodId]),
+                  openCashDrawer: Value(
+                    item['open_cash_drawer'] == 1 ||
+                        item['open_cash_drawer'] == true ||
+                        item['open_cash_drawer'] == 'true',
+                  ),
+                  instructions: Value(item['instructions']?.toString()),
+                  qrImageUrl: Value(item['qr_image_url']?.toString()),
+                  isSystem: Value(
+                    item['is_system'] == 1 ||
+                        item['is_system'] == true ||
+                        item['is_system'] == 'true',
+                  ),
                   isActive: Value(
                     item['is_active'] == 1 ||
                         item['is_active'] == true ||

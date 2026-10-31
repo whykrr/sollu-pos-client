@@ -172,9 +172,17 @@ class Inventories extends Table {
 class PaymentMethods extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get name => text()();
-  TextColumn get type => text()(); // cash, qris, edc, transfer
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  IntColumn get localSortOrder => integer().nullable()();
+  TextColumn get type => text()(); // cash, qris, edc, ewallet, bank_transfer, custom
+  TextColumn get provider => text().nullable()();
+  TextColumn get accountNumber => text().nullable()();
+  TextColumn get accountName => text().nullable()();
+  TextColumn get referencePolicy =>
+      text().withDefault(const Constant('optional'))(); // optional, mandatory, hidden
+  BoolColumn get openCashDrawer =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get instructions => text().nullable()();
+  TextColumn get qrImageUrl => text().nullable()();
+  BoolColumn get isSystem => boolean().withDefault(const Constant(false))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   @override

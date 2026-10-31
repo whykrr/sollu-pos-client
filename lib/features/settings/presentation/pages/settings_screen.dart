@@ -226,29 +226,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
                 const Divider(height: 24),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.payments_outlined,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  title: const Text(
-                    'Metode Pembayaran',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text(
-                    'Atur urutan tombol pembayaran kasir di perangkat ini',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/settings/payment-methods'),
-                ),
-                const Divider(height: 24),
                 Builder(
                   builder: (context) {
                     final activeEmployee = ref.watch(activeEmployeeProvider);

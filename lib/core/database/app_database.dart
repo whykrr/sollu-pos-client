@@ -44,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -115,6 +115,16 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_product_modifier_groups_product_id ON product_modifier_groups (product_id);',
           );
+        }
+        if (from < 12) {
+          await m.addColumn(paymentMethods, paymentMethods.provider);
+          await m.addColumn(paymentMethods, paymentMethods.accountNumber);
+          await m.addColumn(paymentMethods, paymentMethods.accountName);
+          await m.addColumn(paymentMethods, paymentMethods.referencePolicy);
+          await m.addColumn(paymentMethods, paymentMethods.openCashDrawer);
+          await m.addColumn(paymentMethods, paymentMethods.instructions);
+          await m.addColumn(paymentMethods, paymentMethods.qrImageUrl);
+          await m.addColumn(paymentMethods, paymentMethods.isSystem);
         }
       },
     );

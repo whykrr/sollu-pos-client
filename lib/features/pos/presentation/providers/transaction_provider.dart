@@ -19,17 +19,39 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   );
 });
 
-/// Stream metode pembayaran aktif dari SQLite lokal (diurutkan berdasarkan kolom localSortOrder jika dikustomisasi per device, fallback ke sortOrder pusat)
+/// Stream metode pembayaran aktif dari SQLite lokal (diurutkan otomatis standar industri platform POS)
 final activePaymentMethodsProvider = StreamProvider<List<PaymentMethod>>((ref) {
   final repository = ref.watch(transactionRepositoryProvider);
+
+  int getPaymentTypePriority(String type) {
+    switch (type.toLowerCase()) {
+      case 'cash':
+        return 1;
+      case 'qris':
+        return 2;
+      case 'edc':
+        return 3;
+      case 'ewallet':
+        return 4;
+      case 'bank_transfer':
+      case 'transfer':
+        return 5;
+      default:
+        return 6;
+    }
+  }
 
   return repository.watchActivePaymentMethods().map((methods) {
     final sorted = List<PaymentMethod>.from(methods);
     sorted.sort((a, b) {
-      final orderA = a.localSortOrder ?? a.sortOrder;
-      final orderB = b.localSortOrder ?? b.sortOrder;
-      final compareOrder = orderA.compareTo(orderB);
-      if (compareOrder != 0) return compareOrder;
+      final priorityA = getPaymentTypePriority(a.type);
+      final priorityB = getPaymentTypePriority(b.type);
+      final comparePriority = priorityA.compareTo(priorityB);
+      if (comparePriority != 0) return comparePriority;
+
+      final compareSystem = (b.isSystem ? 1 : 0).compareTo(a.isSystem ? 1 : 0);
+      if (compareSystem != 0) return compareSystem;
+
       return a.name.compareTo(b.name);
     });
     return sorted;

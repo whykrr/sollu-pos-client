@@ -179,6 +179,21 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
       return;
     }
 
+    // Validasi nomor referensi jika kebijakan wajib diisi (mandatory)
+    final policy = _selectedMethod!.referencePolicy;
+    if (policy == 'mandatory' && _referenceController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nomor referensi / approval code wajib diisi untuk ${_selectedMethod!.name}!',
+          ),
+          backgroundColor: SolluColors.danger,
+        ),
+      );
+      _referenceFocusNode.requestFocus();
+      return;
+    }
+
     // Validasi ketersediaan stok jika toleransi stok minus dinonaktifkan
     final allowNegativeStock = ref.read(allowNegativeStockProvider);
     if (!allowNegativeStock) {
@@ -251,7 +266,7 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
 
       if (mounted) {
         final printerConfig = ref.read(selectedPrinterProvider);
-        final bool shouldOpenDrawer = isCash && (printerConfig?.openCashDrawer ?? false);
+        final bool shouldOpenDrawer = (_selectedMethod?.openCashDrawer ?? isCash) && (printerConfig?.openCashDrawer ?? false);
         final outletProfile = ref.read(outletProfileProvider);
         final String? outletName = outletProfile?['name']?.toString();
 
@@ -1254,84 +1269,427 @@ class _CheckoutPaymentPaneState extends ConsumerState<CheckoutPaymentPane> {
     );
   }
 
+  void _showQrZoomDialog(String qrImageUrl, String methodName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                methodName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: SolluColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  qrImageUrl,
+                  width: 280,
+                  height: 280,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 280,
+                    height: 280,
+                    color: SolluColors.background,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, size: 48, color: SolluColors.textMuted),
+                          SizedBox(height: 8),
+                          Text('Gagal memuat gambar QR', style: TextStyle(color: SolluColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Arahkan kamera smartphone pelanggan ke QR Code di atas',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: SolluColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SolluColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNonCashPaymentSection() {
+    final method = _selectedMethod;
+    final type = method?.type.toLowerCase() ?? 'custom';
+    final policy = method?.referencePolicy ?? 'optional';
+    final isMandatoryRef = policy == 'mandatory';
+    final isHiddenRef = policy == 'hidden';
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: SolluColors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: SolluColors.neutral, width: 1.0),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  _getIconForType(_selectedMethod?.type ?? ''),
-                  size: 48,
-                  color: SolluColors.primary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _selectedMethod?.name ?? 'Non-Tunai',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: SolluColors.textDark,
+          // 1. Specialized Payment Method Card
+          if (type == 'qris') ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SolluColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: SolluColors.neutral, width: 1.0),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.qr_code_scanner, color: SolluColors.primary, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        method?.name ?? 'QRIS',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: SolluColors.textDark,
+                        ),
+                      ),
+                      if (method?.provider != null && method!.provider!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: SolluColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            method.provider!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: SolluColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Silakan arahkan pelanggan untuk menyelesaikan pembayaran melalui QRIS/Mesin EDC/Transfer.',
-                  textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                  if (method?.qrImageUrl != null && method!.qrImageUrl!.isNotEmpty) ...[
+                    InkWell(
+                      onTap: () => _showQrZoomDialog(method.qrImageUrl!, method.name),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: SolluColors.neutral),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                method.qrImageUrl!,
+                                width: 150,
+                                height: 150,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                  width: 150,
+                                  height: 150,
+                                  child: Center(
+                                    child: Icon(Icons.broken_image, size: 40, color: SolluColors.textMuted),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.zoom_in, size: 14, color: SolluColors.primary),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Ketuk untuk memperbesar',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: SolluColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Text(
+                    method?.instructions?.isNotEmpty == true
+                        ? method!.instructions!
+                        : 'Arahkan pelanggan untuk memindai QRIS melalui aplikasi mobile banking atau e-wallet mereka.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (type == 'bank_transfer' || type == 'transfer') ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SolluColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: SolluColors.neutral, width: 1.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: SolluColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.account_balance, color: SolluColors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              method?.name ?? 'Transfer Bank',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: SolluColors.textDark,
+                              ),
+                            ),
+                            if (method?.provider != null && method!.provider!.isNotEmpty)
+                              Text(
+                                'Bank: ${method.provider}',
+                                style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (method?.accountNumber != null && method!.accountNumber!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: SolluColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: SolluColors.neutral),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Nomor Rekening',
+                                  style: TextStyle(fontSize: 11, color: SolluColors.textMuted),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  method.accountNumber!,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                    color: SolluColors.textDark,
+                                  ),
+                                ),
+                                if (method.accountName != null && method.accountName!.isNotEmpty)
+                                  Text(
+                                    'a.n. ${method.accountName}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: SolluColors.textMuted,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: method.accountNumber!));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Nomor rekening berhasil disalin!'),
+                                  duration: Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.copy, size: 14),
+                            label: const Text('Salin', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: SolluColors.primary,
+                              side: const BorderSide(color: SolluColors.primary),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (method?.instructions != null && method!.instructions!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      method.instructions!,
+                      style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ] else ...[
+            // EDC / EWALLET / CUSTOM
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SolluColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: SolluColors.neutral, width: 1.0),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    _getIconForType(method?.type ?? ''),
+                    size: 40,
+                    color: SolluColors.primary,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    method?.name ?? 'Non-Tunai',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: SolluColors.textDark,
+                    ),
+                  ),
+                  if (method?.provider != null && method!.provider!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Provider / Mesin: ${method.provider}',
+                      style: const TextStyle(fontSize: 13, color: SolluColors.primary, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
+                    method?.instructions?.isNotEmpty == true
+                        ? method!.instructions!
+                        : 'Pastikan proses transaksi pada mesin EDC / E-Wallet telah berhasil dan disetujui.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: SolluColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // 2. Input Nomor Referensi (jika tidak hidden)
+          if (!isHiddenRef) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(
+                  'Nomor Referensi / Trace No',
                   style: TextStyle(
                     fontSize: 13,
-                    color: SolluColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                    color: isMandatoryRef ? SolluColors.danger : SolluColors.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isMandatoryRef ? '(Wajib Diisi)' : '(Opsional)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isMandatoryRef ? FontWeight.bold : FontWeight.normal,
+                    color: isMandatoryRef ? SolluColors.danger : SolluColors.textMuted,
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Nomor Referensi / Trace No (Opsional)',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: SolluColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _referenceController,
-            focusNode: _referenceFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Contoh: 123456789 / REF-001',
-              filled: true,
-              fillColor: SolluColors.surface,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: SolluColors.neutral,
-                  width: 1.0,
+            const SizedBox(height: 6),
+            TextField(
+              controller: _referenceController,
+              focusNode: _referenceFocusNode,
+              decoration: InputDecoration(
+                hintText: isMandatoryRef
+                    ? 'Masukkan approval code / trace no *'
+                    : 'Contoh: 123456789 / REF-001',
+                filled: true,
+                fillColor: SolluColors.surface,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isMandatoryRef ? SolluColors.danger.withValues(alpha: 0.5) : SolluColors.neutral,
+                    width: 1.0,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isMandatoryRef ? SolluColors.danger.withValues(alpha: 0.5) : SolluColors.neutral,
+                    width: 1.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isMandatoryRef ? SolluColors.danger : SolluColors.primary,
+                    width: 1.5,
+                  ),
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: SolluColors.neutral,
-                  width: 1.0,
-                ),
-              ),
             ),
-          ),
-          const SizedBox(height: 16),
+          ],
+
+          const SizedBox(height: 14),
           const Text(
             'Catatan Transaksi (Opsional)',
             style: TextStyle(
